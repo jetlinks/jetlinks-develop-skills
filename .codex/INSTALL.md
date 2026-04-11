@@ -19,14 +19,14 @@ Create the skills symlink:
 
 ```bash
 mkdir -p ~/.agents/skills
-ln -s ~/.codex/jetlinks-develop-skills/skills ~/.agents/skills/jetlinks-develop-skills
+ln -s ~/.codex/jetlinks-develop-skills ~/.agents/skills/jetlinks-develop-skills
 ```
 
 Windows (PowerShell):
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
-cmd /c mklink /J "$env:USERPROFILE\.agents\skills\jetlinks-develop-skills" "$env:USERPROFILE\.codex\jetlinks-develop-skills\skills"
+cmd /c mklink /J "$env:USERPROFILE\.agents\skills\jetlinks-develop-skills" "$env:USERPROFILE\.codex\jetlinks-develop-skills"
 ```
 
 Restart Codex after installation so it can discover the skills.
@@ -43,8 +43,7 @@ cd ~/.codex/jetlinks-develop-skills && git pull
 ```
 
 Recreate the skills symlink using the commands above. Native discovery should
-point `~/.agents/skills/jetlinks-develop-skills` at the repository's `skills/`
-directory.
+point `~/.agents/skills/jetlinks-develop-skills` at the repository root.
 
 Remove any older bootstrap instructions or duplicate copied skill directories
 that are no longer needed.
@@ -60,7 +59,7 @@ ls -la ~/.agents/skills/jetlinks-develop-skills
 You should see a symlink, or a junction on Windows, pointing to:
 
 ```text
-~/.codex/jetlinks-develop-skills/skills
+~/.codex/jetlinks-develop-skills
 ```
 
 ## Updating
