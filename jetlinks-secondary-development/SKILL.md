@@ -5,12 +5,12 @@ description: Analyze and implement JetLinks-based scaffold tasks in the current 
 
 # JetLinks Secondary Development
 
-Read [`ai-prompt.md`](../../../ai-prompt.md) first. Treat it as the routing index.
+Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing index.
 
 ## Workflow
 
 1. Classify the task.
-2. If the workspace structure is unclear, open [`.prompt/module-list.md`](../../../.prompt/module-list.md).
+2. If the workspace structure is unclear, open [`references/module-list.md`](references/module-list.md).
 3. Load only the minimum rule files needed for the task.
 4. Read adjacent production code before changing anything.
 5. If a candidate module is a symbolic link, inspect both the linked workspace path and the real target path.
@@ -21,16 +21,16 @@ Read [`ai-prompt.md`](../../../ai-prompt.md) first. Treat it as the routing inde
 
 ## Routing
 
-- Unknown module, directory, or capability location: [`.prompt/module-list.md`](../../../.prompt/module-list.md)
-- Unsure whether to use direct dependency, command service, event, or subscription: [`.prompt/module-reference.md`](../../../.prompt/module-reference.md)
-- Need annotation or import confirmation: [`.prompt/annotations-and-imports-reference.md`](../../../.prompt/annotations-and-imports-reference.md)
-- Creating a new module: [`.prompt/module-creation-rules.md`](../../../.prompt/module-creation-rules.md)
-- Standard CRUD work: [`.prompt/common-crud-rules.md`](../../../.prompt/common-crud-rules.md)
-- Complex CRUD, query, batch, or sync logic: [`.prompt/advanced-crud-rules.md`](../../../.prompt/advanced-crud-rules.md)
-- Cross-boundary calls or command providers: [`.prompt/cross-service-call-rules.md`](../../../.prompt/cross-service-call-rules.md)
-- Topic/message subscriptions: [`.prompt/realtime-subscription-rules.md`](../../../.prompt/realtime-subscription-rules.md)
-- Entity lifecycle or domain events: [`.prompt/event-driven-rules.md`](../../../.prompt/event-driven-rules.md)
-- User-facing text and localization: [`.prompt/i18n.md`](../../../.prompt/i18n.md)
+- Unknown module, directory, or capability location: [`references/module-list.md`](references/module-list.md)
+- Unsure whether to use direct dependency, command service, event, or subscription: [`references/module-reference.md`](references/module-reference.md)
+- Need annotation or import confirmation: [`references/annotations-and-imports-reference.md`](references/annotations-and-imports-reference.md)
+- Creating a new module: [`references/module-creation-rules.md`](references/module-creation-rules.md)
+- Standard CRUD work: [`references/common-crud-rules.md`](references/common-crud-rules.md)
+- Complex CRUD, query, batch, or sync logic: [`references/advanced-crud-rules.md`](references/advanced-crud-rules.md)
+- Cross-boundary calls or command providers: [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md)
+- Topic/message subscriptions: [`references/realtime-subscription-rules.md`](references/realtime-subscription-rules.md)
+- Entity lifecycle or domain events: [`references/event-driven-rules.md`](references/event-driven-rules.md)
+- User-facing text and localization: [`references/i18n.md`](references/i18n.md)
 
 ## Required Constraints
 

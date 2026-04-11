@@ -63,7 +63,7 @@
 ### 先看哪些模块、能力和目录
 
 读取：
-- [`.prompt/module-list.md`](.prompt/module-list.md)
+- [`references/module-list.md`](./module-list.md)
 
 适用：
 - 不知道代码应该落在哪个模块
@@ -73,7 +73,7 @@
 ### 判断“直接依赖 / 命令调用 / 事件 / 订阅”
 
 读取：
-- [`.prompt/module-reference.md`](.prompt/module-reference.md)
+- [`references/module-reference.md`](./module-reference.md)
 
 适用：
 - 需要使用其他模块能力
@@ -83,7 +83,7 @@
 ### 确认注解、包名、导入
 
 读取：
-- [`.prompt/annotations-and-imports-reference.md`](.prompt/annotations-and-imports-reference.md)
+- [`references/annotations-and-imports-reference.md`](./annotations-and-imports-reference.md)
 
 适用：
 - 不确定 `javax`/`jakarta`
@@ -92,7 +92,7 @@
 ### 创建新模块或聚合模块
 
 读取：
-- [`.prompt/module-creation-rules.md`](.prompt/module-creation-rules.md)
+- [`references/module-creation-rules.md`](./module-creation-rules.md)
 
 适用：
 - 新建 manager/core/adapter 模块
@@ -102,7 +102,7 @@
 ### 标准 CRUD
 
 读取：
-- [`.prompt/common-crud-rules.md`](.prompt/common-crud-rules.md)
+- [`references/common-crud-rules.md`](./common-crud-rules.md)
 
 适用：
 - Entity / Service / Controller 的常规新增或修改
@@ -113,7 +113,7 @@
 ### 复杂 CRUD / 查询 / 批处理
 
 读取：
-- [`.prompt/advanced-crud-rules.md`](.prompt/advanced-crud-rules.md)
+- [`references/advanced-crud-rules.md`](./advanced-crud-rules.md)
 
 适用：
 - 复杂条件查询、分页、聚合、批量修改、关系同步
@@ -122,7 +122,7 @@
 ### 跨服务或跨边界调用
 
 读取：
-- [`.prompt/cross-service-call-rules.md`](.prompt/cross-service-call-rules.md)
+- [`references/cross-service-call-rules.md`](./cross-service-call-rules.md)
 
 适用：
 - 命令服务
@@ -132,7 +132,7 @@
 ### 实时消息 / Topic 订阅
 
 读取：
-- [`.prompt/realtime-subscription-rules.md`](.prompt/realtime-subscription-rules.md)
+- [`references/realtime-subscription-rules.md`](./realtime-subscription-rules.md)
 
 适用：
 - `@Subscribe`
@@ -142,7 +142,7 @@
 ### 领域事件 / 生命周期事件
 
 读取：
-- [`.prompt/event-driven-rules.md`](.prompt/event-driven-rules.md)
+- [`references/event-driven-rules.md`](./event-driven-rules.md)
 
 适用：
 - `@EventListener`
@@ -152,7 +152,7 @@
 ### 国际化
 
 读取：
-- [`.prompt/i18n.md`](.prompt/i18n.md)
+- [`references/i18n.md`](./i18n.md)
 
 适用：
 - 新增枚举、实体字段、权限、操作、错误消息、提示消息
