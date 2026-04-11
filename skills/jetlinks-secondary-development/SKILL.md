@@ -1,6 +1,6 @@
 ---
 name: jetlinks-secondary-development
-description: Analyze and implement JetLinks-based scaffold tasks in the current workspace. Use when Codex needs to create or modify modules, CRUD code, command services, event-driven logic, realtime subscriptions, i18n, imports, or module boundaries while following the local .prompt rules and existing code conventions.
+description: Analyze and implement JetLinks-based scaffold tasks in the current workspace. Use when Codex needs to create or modify modules, CRUD code, command services, event-driven logic, realtime subscriptions, imports, or module boundaries while following the local .prompt rules and existing code conventions.
 ---
 
 # JetLinks Secondary Development
@@ -30,7 +30,8 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Cross-boundary calls or command providers: [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md)
 - Topic/message subscriptions: [`references/realtime-subscription-rules.md`](references/realtime-subscription-rules.md)
 - Entity lifecycle or domain events: [`references/event-driven-rules.md`](references/event-driven-rules.md)
-- User-facing text and localization: [`references/i18n.md`](references/i18n.md)
+- User-facing text and localization: **REQUIRED SUB-SKILL:** Use
+  `jetlinks-i18n`
 
 ## Required Constraints
 
@@ -41,7 +42,9 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - When local examples are missing, fall back to the local pom/layout plus the `.prompt` rules, and clearly separate defaults from verified workspace facts.
 - In low-context scaffolds, prefer event-driven side effects over inline CRUD orchestration, and prefer direct dependency over command boundaries unless the command framework is already present or explicitly requested.
 - Prefer existing framework abstractions over new custom patterns.
-- Add i18n only when the current module or scaffold already uses that convention, or the user explicitly asks for it.
+- For i18n work, use `jetlinks-i18n`. Do not add i18n unless the current
+  module or scaffold already uses that convention, or the user explicitly asks
+  for it.
 
 ## Response Shape
 

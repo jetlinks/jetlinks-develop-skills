@@ -152,7 +152,7 @@
 ### 国际化
 
 读取：
-- [`references/i18n.md`](./i18n.md)
+- **REQUIRED SUB-SKILL:** Use `jetlinks-i18n`
 
 适用：
 - 新增枚举、实体字段、权限、操作、错误消息、提示消息
@@ -163,7 +163,7 @@
   - `module-list.md`
   - `module-creation-rules.md`
   - `common-crud-rules.md`
-  - `i18n.md`
+  - `jetlinks-i18n`
 
 - 在现有模块补一个查询接口
   - `module-list.md`
