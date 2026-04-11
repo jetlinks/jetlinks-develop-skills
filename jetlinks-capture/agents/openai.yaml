@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Capture"
+  short_description: "JetLinks 知识沉淀与经验归档"
+  default_prompt: "使用 $jetlinks-capture 判断这次 JetLinks 任务是否值得沉淀，先给出推荐的沉淀形式与路径，并在用户确认后写入统一目录；如果已经成熟到可抽成通用 skill，再询问是否并入 jetlinks-develop-skills 并准备官方 PR。"

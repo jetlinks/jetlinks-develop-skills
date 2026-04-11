@@ -15,6 +15,8 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 4. Read adjacent production code before changing anything.
 5. Implement complete changes, not pseudo-code.
 6. Verify the final solution against the focused skills you used.
+7. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
+8. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
 
 ## Routing
 
@@ -24,6 +26,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Standard or advanced CRUD work: [`../jetlinks-crud/SKILL.md`](../jetlinks-crud/SKILL.md)
 - Direct dependency, command service, or proxy boundaries: [`../jetlinks-boundary/SKILL.md`](../jetlinks-boundary/SKILL.md)
 - Domain events, lifecycle events, and real-time subscriptions: [`../jetlinks-events/SKILL.md`](../jetlinks-events/SKILL.md)
+- Knowledge capture and reusable summary output: [`../jetlinks-capture/SKILL.md`](../jetlinks-capture/SKILL.md)
 - Branch strategy, commit titles, tests, and PR text: [`../jetlinks-delivery/SKILL.md`](../jetlinks-delivery/SKILL.md)
 
 ## Required Constraints
@@ -49,4 +52,4 @@ When implementing:
 2. Load the needed focused skill or skills
 3. Edit the code
 4. Run the needed tests and collect evidence when relevant
-5. Summarize what changed, which focused skills were used, and what was verified
+5. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository

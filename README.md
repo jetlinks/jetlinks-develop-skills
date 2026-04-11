@@ -18,6 +18,7 @@ jetlinks-develop-skills/
 ├── jetlinks-crud/
 ├── jetlinks-boundary/
 ├── jetlinks-events/
+├── jetlinks-capture/
 └── jetlinks-delivery/
 ```
 
@@ -57,6 +58,10 @@ jetlinks-develop-skills/
 
 用于领域事件、生命周期事件、Topic 订阅和消息流处理。
 
+### `jetlinks-capture`
+
+用于任务结束后的知识沉淀判断、经验归档、playbook 生成，以及决定是否需要继续更新 prompt 或 skill。
+
 ### `jetlinks-delivery`
 
 用于提交标题、分支策略、测试证据和 PR 描述整理。
@@ -72,6 +77,7 @@ jetlinks-develop-skills/
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`
 - 只想处理跨边界调用：`$jetlinks-boundary`
 - 只想处理事件或订阅：`$jetlinks-events`
+- 只想判断是否值得沉淀知识：`$jetlinks-capture`
 - 只想整理提交、测试和 PR：`$jetlinks-delivery`
 
 ## Install
