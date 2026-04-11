@@ -1,6 +1,6 @@
 ---
 name: jetlinks-secondary-development
-description: Analyze and implement JetLinks-based scaffold tasks in the current workspace. Use when Codex needs to create or modify modules, CRUD code, command services, event-driven logic, realtime subscriptions, i18n, imports, or module boundaries while following the local .prompt rules and existing code conventions.
+description: Analyze and implement JetLinks-based scaffold tasks in the current workspace. Use when Codex needs to create or modify modules, CRUD code, command services, event-driven logic, realtime subscriptions, i18n, imports, module boundaries, or prepare compliant JetLinks commits and PRs while following the local references and existing code conventions.
 ---
 
 # JetLinks Secondary Development
@@ -17,7 +17,8 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 6. Follow the local module's reactive/blocking style, import family, and naming.
 7. Implement complete changes, not pseudo-code.
 8. Verify dependencies, imports, permissions, i18n, and boundary choices before finishing.
-9. If the repository is only a scaffold with little or no reference code, switch to a minimal scaffold mode and generate the first compliant example instead of stopping.
+9. When the task includes delivery, follow the Git, branch, PR, and testing rules before considering the work complete.
+10. If the repository is only a scaffold with little or no reference code, switch to a minimal scaffold mode and generate the first compliant example instead of stopping.
 
 ## Routing
 
@@ -31,6 +32,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Topic/message subscriptions: [`references/realtime-subscription-rules.md`](references/realtime-subscription-rules.md)
 - Entity lifecycle or domain events: [`references/event-driven-rules.md`](references/event-driven-rules.md)
 - User-facing text and localization: [`references/i18n.md`](references/i18n.md)
+- Commit, branch, PR, and testing delivery rules: [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md)
 
 ## Required Constraints
 
@@ -42,13 +44,15 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - In low-context scaffolds, prefer event-driven side effects over inline CRUD orchestration, and prefer direct dependency over command boundaries unless the command framework is already present or explicitly requested.
 - Prefer existing framework abstractions over new custom patterns.
 - Add i18n only when the current module or scaffold already uses that convention, or the user explicitly asks for it.
+- Do not push directly to protected mainline branches such as `master`, `main`, `2.11`, or `2.12`; use a topic branch and PR.
+- Do not describe work as ready for merge without test evidence and coverage evidence, or a clearly stated blocker.
 
 ## Response Shape
 
 When analyzing first:
 
 1. Task classification
-2. Rule files to load
+2. Reference files to load
 3. Workspace facts to confirm
 4. Proposed code locations
 
@@ -57,4 +61,6 @@ When implementing:
 1. Quietly classify and inspect
 2. Load the needed reference files
 3. Edit the code
-4. Summarize what changed, which reference files were used, and what was verified
+4. Run the needed tests and collect numeric evidence
+5. If asked to submit, prepare a compliant branch, commit title, and PR description
+6. Summarize what changed, which reference files were used, and what was verified

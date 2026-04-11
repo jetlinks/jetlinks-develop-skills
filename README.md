@@ -80,6 +80,101 @@ Use $jetlinks-secondary-development to analyze this JetLinks scaffold task, find
 - 使用 `$jetlinks-secondary-development` 判断这个能力应该走直接依赖、命令服务还是事件机制，再实现代码。
 - 使用 `$jetlinks-secondary-development` 在现有模块中增加订阅逻辑和对应的国际化文本。
 
+## Git And PR Convention
+
+JetLinks 项目交付代码时，默认遵循以下规范：
+
+### Commit Title
+
+- 提交标题优先对齐现有历史风格，采用 `type(scope): summary`。
+- `type` 使用当前仓库已有语义，例如 `feat`、`fix`、`refactor`、`docs`、`test`。
+- `scope` 使用受影响的业务域或模块名，例如 `基础模块`、`设备管理`、`prompt`。
+- `summary` 使用简洁中文动宾短语，直接说明变更结果，避免空泛描述。
+
+参考当前仓库已有风格：
+
+- `refactor(prompt): 扩展低上下文边界决策规则`
+- `refactor(基础模块): 优化菜单逻辑`
+- `refactor(设备管理): 优化实体拓展型`
+
+不建议：
+
+- `update`
+- `fix bug`
+- `misc changes`
+- 缺少 scope 的泛化标题，除非仓库历史本身就允许
+
+### Branch Policy
+
+- 禁止直接 push 到主干或集成分支，例如 `master`、`main`、`2.11`、`2.12`。
+- 必须从目标基线分支拉出临时开发分支，再提交代码并发起 PR。
+- 如果任务目标是发布到某个版本线，PR 的 base 必须明确指向对应版本分支。
+
+推荐流程：
+
+1. 从目标基线分支同步最新代码。
+2. 创建临时分支实现需求或修复。
+3. 完成测试后 push 临时分支。
+4. 通过 PR 合入目标版本分支。
+
+### Testing Requirement
+
+- 本次提交必须经过单元测试或集成测试，至少覆盖本次改动涉及的核心路径。
+- 如果仓库已配置覆盖率阈值，提交前必须满足阈值。
+- 如果仓库没有统一阈值，也必须在 PR 中给出可验证的覆盖证据，而不是只写“已测试”。
+- 不能提供测试结果、覆盖率结果或失败原因的提交，不应进入待合并状态。
+
+PR 中至少应提供这些数据：
+
+- 执行过的测试命令
+- 测试类型：单元测试、集成测试、端到端测试中的哪些
+- 通过数量、失败数量、跳过数量
+- 覆盖率数据，例如 line、branch、changed files 或 changed classes 的覆盖结果
+- 若存在限制或未覆盖项，明确列出风险边界
+
+### PR Description
+
+PR 描述必须聚焦事实和结果，至少包含：
+
+- 目的：为什么要做这次改动
+- 核心变动：改了哪些模块、行为和边界
+- 测试结果：命令、通过数、失败数、跳过数、覆盖率数据
+- 风险与影响面：哪些场景受影响，哪些场景未覆盖
+
+推荐模板：
+
+```md
+## 目的
+
+- 修复 / 优化 / 新增什么能力
+- 解决了什么问题
+
+## 核心变动
+
+- 模块 A：做了什么调整
+- 模块 B：新增了什么约束或行为
+
+## 测试结果
+
+- 命令：`mvn -pl xxx -am test`
+- 单元测试：42 passed, 0 failed, 1 skipped
+- 集成测试：8 passed, 0 failed
+- 覆盖率：line 81.4%, branch 73.2%
+
+## 风险与说明
+
+- 影响范围：
+- 未覆盖场景：
+- 回滚方式：
+```
+
+结论要求：
+
+- 用数据说话，不要只写“测试通过”
+- 没有覆盖率数据时，至少说明为什么缺失，以及提供了哪些替代证据
+- 没有 PR 的直推提交流程，视为不符合规范
+- 仓库默认模板见 `.github/pull_request_template.md`
+
 ## Skill Authoring Notes
 
 为保证该仓库可持续扩展，新增 skill 时遵循这些规则：
