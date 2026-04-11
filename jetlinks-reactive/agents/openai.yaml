@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Reactive"
+  short_description: "JetLinks 响应式编程与非阻塞实践"
+  default_prompt: "Use $jetlinks-reactive to keep this JetLinks change consistent with the local Mono or Flux style and avoid blocking mistakes."
