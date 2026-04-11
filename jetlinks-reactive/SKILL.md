@@ -1,6 +1,6 @@
 ---
 name: jetlinks-reactive
-description: Apply JetLinks reactive and non-blocking implementation practices in the current workspace. Use when Codex needs to work with Mono or Flux chains, avoid blocking calls, batch reactive CRUD side effects, or decide how reactive handlers should interact with events, subscriptions, and remote calls.
+description: 在当前 JetLinks 工作区中应用响应式与非阻塞实现实践。适用于需要处理 Mono 或 Flux 链路、避免阻塞调用、批量化响应式 CRUD 副作用，或判断响应式处理器如何与事件、订阅和远程调用协作的场景。
 ---
 
 # JetLinks Reactive

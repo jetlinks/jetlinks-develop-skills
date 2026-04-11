@@ -1,6 +1,6 @@
 ---
 name: jetlinks-conventions
-description: Apply shared JetLinks coding conventions in the current workspace. Use when Codex needs to confirm annotations and imports, follow local naming and package patterns, keep changes minimal, or add i18n only when the module already uses it.
+description: 在当前 JetLinks 工作区中应用共享编码规范。适用于需要确认注解和导入、遵循本地命名与包结构、保持最小改动，或仅在模块已使用 i18n 约定时补充国际化内容的场景。
 ---
 
 # JetLinks Conventions

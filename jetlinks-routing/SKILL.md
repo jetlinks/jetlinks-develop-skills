@@ -1,6 +1,6 @@
 ---
 name: jetlinks-routing
-description: Discover JetLinks workspace structure and choose the correct module or create a new one. Use when Codex needs to map the current repository, locate the right business module, understand symlinked modules, or create a new module in a low-context scaffold.
+description: 发现 JetLinks 工作区结构并选择正确模块，必要时创建新模块。适用于需要梳理当前仓库结构、定位业务模块、识别软链接模块，或在低上下文脚手架中创建新模块的场景。
 ---
 
 # JetLinks Routing

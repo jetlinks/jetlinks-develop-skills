@@ -1,6 +1,6 @@
 ---
 name: jetlinks-delivery
-description: Prepare JetLinks code changes for compliant delivery. Use when Codex needs to create branch-safe commits, follow JetLinks commit title conventions, avoid pushing to protected branches, collect test evidence, or draft PR descriptions with concrete test and coverage data.
+description: 为 JetLinks 代码变更准备合规交付内容。适用于需要创建符合分支策略的提交、遵循 JetLinks 提交标题规范、避免直推受保护分支、收集测试证据，或编写包含测试与覆盖率数据的 PR 描述的场景。
 ---
 
 # JetLinks Delivery

@@ -1,6 +1,6 @@
 ---
 name: jetlinks-boundary
-description: Choose and implement JetLinks cross-boundary interaction patterns. Use when Codex needs to decide between direct dependency, command service, proxy, or other cross-module access patterns, especially in reactive or low-context scaffolds.
+description: 在当前 JetLinks 工作区中选择并实现跨边界交互方式。适用于需要在直接依赖、命令服务、代理或其他跨模块访问模式之间做决策和落地的场景，尤其是响应式模块或低上下文脚手架中的边界选择。
 ---
 
 # JetLinks Boundary

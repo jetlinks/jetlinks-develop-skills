@@ -1,6 +1,6 @@
 ---
 name: jetlinks-crud
-description: Implement standard or advanced CRUD work in JetLinks scaffolds. Use when Codex needs to add or modify entities, services, controllers, query flows, batch updates, or CRUD-related side effects while following the local module style.
+description: 在 JetLinks 脚手架中实现标准或高级 CRUD 开发。适用于需要新增或修改实体、服务、控制器、查询流程、批量更新，或处理与 CRUD 相关副作用，同时遵循当前模块现有风格的场景。
 ---
 
 # JetLinks CRUD

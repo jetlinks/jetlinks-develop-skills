@@ -1,6 +1,6 @@
 ---
 name: jetlinks-events
-description: Implement JetLinks event-driven and subscription-based flows. Use when Codex needs to add entity lifecycle listeners, domain events, topic subscriptions, message handlers, or other asynchronous side effects in the current workspace.
+description: 在当前 JetLinks 工作区中实现事件驱动和订阅处理流程。适用于需要新增实体生命周期监听、领域事件、主题订阅、消息处理器，或其他异步副作用逻辑的场景。
 ---
 
 # JetLinks Events

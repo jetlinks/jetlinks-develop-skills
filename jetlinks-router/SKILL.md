@@ -1,6 +1,6 @@
 ---
 name: jetlinks-router
-description: Route JetLinks development requests to the right focused skill in the current workspace. Use when the correct JetLinks skill is unclear, or when a task spans module routing, shared coding conventions, reactive practice, CRUD work, cross-boundary calls, event or subscription flows, and delivery preparation.
+description: 将 JetLinks 开发请求路由到当前工作区中最合适的 focused skill。适用于尚不确定应使用哪个 JetLinks 技能，或任务同时涉及模块落点、通用编码规范、响应式实践、CRUD、跨边界调用、事件与订阅流程以及交付准备的场景。
 ---
 
 # JetLinks Router
