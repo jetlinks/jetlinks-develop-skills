@@ -82,7 +82,22 @@ jetlinks-develop-skills/
 
 ## Install
 
-### Option 1: Use Codex skill installer
+### Option 1: Use CC Switch (Recommended)
+
+如果你用 CC Switch 管理 Claude Code、Codex、Cursor 等工具的 skills / prompts，推荐直接将本仓库作为 skill repository 接入：
+
+1. 在 CC Switch 中添加仓库：`https://github.com/jetlinks/jetlinks-develop-skills`
+2. 以仓库根目录作为扫描入口，不要额外指定 `skills/` 子目录
+3. 同步或启用需要的 skill，例如 `jetlinks-router`、`jetlinks-crud`、`jetlinks-events`
+4. 刷新或重启目标工具，使新 skill 被重新发现
+
+校验方式：
+
+```text
+使用 $jetlinks-router 分类当前 JetLinks 二开任务，并选择最少必要的 focused skills 落地。
+```
+
+### Option 2: Use Codex skill installer
 
 如果当前环境带有 `$skill-installer`，可直接按仓库路径安装：
 
@@ -104,7 +119,7 @@ python /path/to/install-skill-from-github.py \
   --path jetlinks-router
 ```
 
-### Option 2: Manual install
+### Option 3: Manual install
 
 将目标 skill 目录复制到本地 Codex skills 目录：
 
@@ -131,6 +146,14 @@ Focused skill 示例：
 - 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
 - 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
 - 使用 `$jetlinks-delivery` 整理提交标题、测试证据和 PR 描述。
+
+## Best Practices
+
+完整实践见 [SECONDARY_DEVELOPMENT_PLAYBOOK.md](SECONDARY_DEVELOPMENT_PLAYBOOK.md)，涵盖：
+
+- Claude Code / Codex / Cursor 的推荐协作方式
+- 使用 CC Switch 安装本技能库的建议流程
+- 简单 CRUD、复杂业务、测试修复等提示词模板与落地约束
 
 ## Git And PR Convention
 
@@ -224,6 +247,8 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 - 用数据说话，不要只写“测试通过”
 - 没有覆盖率数据时，至少说明为什么缺失，以及提供了哪些替代证据
+- 如果仓库远端是 GitHub，默认优先使用 `gh pr create` 创建 PR
+- 在带沙箱的 agent 环境中，`gh` 命令应申请非沙箱执行
 - 没有 PR 的直推提交流程，视为不符合规范
 - 仓库默认模板见 `.github/pull_request_template.md`
 
