@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks CRUD"
+  short_description: "JetLinks CRUD 与复杂查询实现"
+  default_prompt: "Use $jetlinks-crud to add or change JetLinks entities, services, controllers, queries, and batch CRUD logic in the local module style."

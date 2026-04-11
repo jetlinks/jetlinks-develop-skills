@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Router"
+  short_description: "JetLinks 二开总路由与多技能入口"
+  default_prompt: "Use $jetlinks-router to classify this JetLinks task, choose the right focused skills, and implement the change in the local workspace style."

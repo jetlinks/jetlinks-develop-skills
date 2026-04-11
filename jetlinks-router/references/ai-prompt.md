@@ -1,6 +1,6 @@
 # JetLinks AI 开发规则索引
 
-本文件是 JetLinks 系脚手架的通用总路由，用来帮助智能体在二次开发时先判断任务类型，再只读取必要规则，最后按当前工作区的真实实现落地。
+本文件是 JetLinks 系脚手架的总路由，用来帮助智能体先判断任务类型，再切换到最合适的 focused skill，最后按当前工作区的真实实现落地。
 
 它不提供仓库快照，不硬编码模块清单、包名、版本号或固定目录结构。所有这类信息都必须从当前工作区现有代码、`pom.xml`、资源目录和相邻模块中发现。
 
@@ -10,9 +10,9 @@
    - 不凭记忆假设模块名、注解包、依赖坐标、命令 ID、Topic、资源路径。
    - 先查看当前工作区的相邻代码、父子模块结构、现有配置和示例。
 
-2. 只读取必要规则
+2. 只切换必要 skill
    - 本文件只做路由。
-   - 进入某个场景后，只打开最少数量的 `.prompt/*.md` 文件。
+   - 进入某个场景后，只加载最少数量的 focused skill。
 
 3. 优先复用现有抽象
    - JetLinks 系项目通常已经提供 CRUD 基类、命令服务、事件、订阅、国际化约定。
@@ -35,11 +35,9 @@
    - 在这种情况下，允许退化到“模板仓库模式”：基于根 `pom.xml`、目录结构、已有依赖和本规则集生成最小可用骨架。
    - 退化模式不仅适用于模块创建，也适用于 CRUD、权限、命令边界、事件驱动和基础 i18n 决策。
 
-8. 交付必须遵循分支、提交、PR 和测试规范
-   - 需要提交代码或发起合并时，先判断目标分支是否是主干或版本线。
-   - 不直接 push 到 `master`、`main`、`2.11`、`2.12` 这类主线分支。
-   - 提交标题优先对齐仓库历史风格。
-   - PR 描述必须包含核心变动、目的、测试结果和覆盖率数据。
+8. 一个任务可以同时使用多个 focused skill
+   - 例如“新建模块并补 CRUD”通常会同时使用模块路由、通用规范和 CRUD skill。
+   - 例如“改事件处理器并整理 PR”通常会同时使用事件订阅、响应式实践和 Git 交付 skill。
 
 ## 标准工作流
 
@@ -50,8 +48,8 @@
    - 查看根目录、父 `pom.xml`、聚合模块、相邻模块、资源目录和已有实现。
    - 额外检查符号链接目录，确认是否有链接进来的外部模块、组件或子工程。
 
-3. 加载最少规则
-   - 只打开覆盖当前任务的规则文件。
+3. 切换最少 skill
+   - 只切到覆盖当前任务的 focused skill。
 
 4. 找相邻示例
    - 在目标模块或相似模块中定位同类实现。
@@ -65,7 +63,7 @@
    - 检查依赖、注解、导入、编程模型、权限、i18n、事件或 Topic 是否与当前工作区一致。
 
 7. 交付
-   - 如果任务包含提交、推送或发 PR，读取 `git-and-pr-rules.md`。
+   - 如果任务包含提交、推送或发 PR，切换到 `$jetlinks-delivery`。
    - 先跑改单涉及的单元测试或集成测试，再整理 commit 和 PR 信息。
    - 输出测试命令、通过数、失败数、跳过数和覆盖率数据。
 
@@ -73,8 +71,8 @@
 
 ### 先看哪些模块、能力和目录
 
-读取：
-- [`references/module-list.md`](./module-list.md)
+切换：
+- [`$jetlinks-routing`](../../jetlinks-routing/SKILL.md)
 
 适用：
 - 不知道代码应该落在哪个模块
@@ -83,8 +81,8 @@
 
 ### 判断“直接依赖 / 命令调用 / 事件 / 订阅”
 
-读取：
-- [`references/module-reference.md`](./module-reference.md)
+切换：
+- [`$jetlinks-boundary`](../../jetlinks-boundary/SKILL.md)
 
 适用：
 - 需要使用其他模块能力
@@ -93,8 +91,8 @@
 
 ### 确认注解、包名、导入
 
-读取：
-- [`references/annotations-and-imports-reference.md`](./annotations-and-imports-reference.md)
+切换：
+- [`$jetlinks-conventions`](../../jetlinks-conventions/SKILL.md)
 
 适用：
 - 不确定 `javax`/`jakarta`
@@ -102,8 +100,8 @@
 
 ### 创建新模块或聚合模块
 
-读取：
-- [`references/module-creation-rules.md`](./module-creation-rules.md)
+切换：
+- [`$jetlinks-routing`](../../jetlinks-routing/SKILL.md)
 
 适用：
 - 新建 manager/core/adapter 模块
@@ -112,8 +110,8 @@
 
 ### 标准 CRUD
 
-读取：
-- [`references/common-crud-rules.md`](./common-crud-rules.md)
+切换：
+- [`$jetlinks-crud`](../../jetlinks-crud/SKILL.md)
 
 适用：
 - Entity / Service / Controller 的常规新增或修改
@@ -123,8 +121,8 @@
 
 ### 复杂 CRUD / 查询 / 批处理
 
-读取：
-- [`references/advanced-crud-rules.md`](./advanced-crud-rules.md)
+切换：
+- [`$jetlinks-crud`](../../jetlinks-crud/SKILL.md)
 
 适用：
 - 复杂条件查询、分页、聚合、批量修改、关系同步
@@ -132,8 +130,8 @@
 
 ### 跨服务或跨边界调用
 
-读取：
-- [`references/cross-service-call-rules.md`](./cross-service-call-rules.md)
+切换：
+- [`$jetlinks-boundary`](../../jetlinks-boundary/SKILL.md)
 
 适用：
 - 命令服务
@@ -142,8 +140,8 @@
 
 ### 实时消息 / Topic 订阅
 
-读取：
-- [`references/realtime-subscription-rules.md`](./realtime-subscription-rules.md)
+切换：
+- [`$jetlinks-events`](../../jetlinks-events/SKILL.md)
 
 适用：
 - `@Subscribe`
@@ -152,8 +150,8 @@
 
 ### 领域事件 / 生命周期事件
 
-读取：
-- [`references/event-driven-rules.md`](./event-driven-rules.md)
+切换：
+- [`$jetlinks-events`](../../jetlinks-events/SKILL.md)
 
 适用：
 - `@EventListener`
@@ -162,16 +160,16 @@
 
 ### 国际化
 
-读取：
-- [`references/i18n.md`](./i18n.md)
+切换：
+- [`$jetlinks-conventions`](../../jetlinks-conventions/SKILL.md)
 
 适用：
 - 新增枚举、实体字段、权限、操作、错误消息、提示消息
 
 ### 提交、分支、PR 与测试交付
 
-读取：
-- [`references/git-and-pr-rules.md`](./git-and-pr-rules.md)
+切换：
+- [`$jetlinks-delivery`](../../jetlinks-delivery/SKILL.md)
 
 适用：
 - 需要 commit、push、发起 PR
@@ -182,32 +180,31 @@
 ## 常见组合
 
 - 新建模块并提供 CRUD
-  - `module-list.md`
-  - `module-creation-rules.md`
-  - `common-crud-rules.md`
-  - `i18n.md`
+  - `$jetlinks-routing`
+  - `$jetlinks-crud`
+  - `$jetlinks-conventions`
 
 - 在现有模块补一个查询接口
-  - `module-list.md`
-  - `common-crud-rules.md`
-  - 如查询复杂，再加 `advanced-crud-rules.md`
+  - `$jetlinks-routing`
+  - `$jetlinks-crud`
+  - 如模块是响应式，再加 `$jetlinks-reactive`
 
 - 调用其他模块能力
-  - `module-reference.md`
-  - `cross-service-call-rules.md`
+  - `$jetlinks-boundary`
+  - 如是响应式模块，再加 `$jetlinks-reactive`
 
 - CRUD 后要同步其他数据
-  - `common-crud-rules.md`
-  - `event-driven-rules.md`
-  - 如涉及批量更新，再加 `advanced-crud-rules.md`
+  - `$jetlinks-crud`
+  - `$jetlinks-events`
+  - 如涉及响应式链路，再加 `$jetlinks-reactive`
 
 - 处理设备或系统消息流
-  - `realtime-subscription-rules.md`
-  - 如需要持久化或反查实体，再加 `advanced-crud-rules.md`
+  - `$jetlinks-events`
+  - 如需要持久化或反查实体，再加 `$jetlinks-crud`
 
 - 提交并发起 PR
-  - `git-and-pr-rules.md`
-  - 如改动涉及具体模块，再加对应业务规则文件
+  - `$jetlinks-delivery`
+  - 如改动涉及具体模块，再加对应业务 skill
 
 ## 输出要求
 
@@ -215,7 +212,7 @@
 
 输出：
 1. 任务分类
-2. 需要读取的规则文件
+2. 需要切换的 focused skill
 3. 需要先确认的工作区事实
 4. 建议落点和实现边界
 5. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
@@ -224,7 +221,7 @@
 
 执行顺序：
 1. 静默完成分类
-2. 读取最少规则
+2. 切换最少 focused skill
 3. 查看相邻代码
 4. 直接实现
 5. 如果任务要求交付，再补测试、提交与 PR 规范检查

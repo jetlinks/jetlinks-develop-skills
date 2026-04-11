@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Events"
+  short_description: "JetLinks 事件驱动与订阅处理"
+  default_prompt: "Use $jetlinks-events to implement JetLinks event listeners, domain events, and real-time subscription handlers in the local style."

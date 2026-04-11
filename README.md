@@ -2,40 +2,77 @@
 
 JetLinks 团队自定义的 Codex skills 仓库。
 
-仓库结构参考通用 skills 仓库约定，按 `skills/<skill-name>/` 组织，每个 skill 保持自包含，便于安装、分发和后续扩展。
+仓库结构参考 `awesome-claude-skills` 这类可直接扫描的仓库约定，skill 目录直接位于仓库根目录，每个 skill 保持自包含，便于安装、分发和自动识别。
 
 ## Repository Layout
 
 ```text
 jetlinks-develop-skills/
 ├── README.md
-└── skills/
-    └── jetlinks-secondary-development/
-        ├── SKILL.md
-        ├── agents/
-        │   └── openai.yaml
-        └── references/
-            ├── ai-prompt.md
-            ├── module-list.md
-            ├── module-reference.md
-            └── ...
+├── .github/
+│   └── pull_request_template.md
+├── jetlinks-router/
+├── jetlinks-conventions/
+├── jetlinks-reactive/
+├── jetlinks-routing/
+├── jetlinks-crud/
+├── jetlinks-boundary/
+├── jetlinks-events/
+└── jetlinks-delivery/
 ```
 
 约定说明：
 
-- 仓库根目录使用 `skills/` 作为技能集合入口，便于托管多个 skill。
+- 每个 skill 目录直接位于仓库根目录，方便被只做浅层扫描的工具自动发现。
 - 每个 skill 目录只保留运行所需文件，例如 `SKILL.md`、`agents/`、`references/`、`scripts/`、`assets/`。
 - 仓库级说明放在根 `README.md`，不要在 skill 目录里额外堆叠说明性文档。
 
 ## Available Skills
 
-### `jetlinks-secondary-development`
+### `jetlinks-router`
 
-用于 JetLinks 脚手架二开场景，帮助 Codex 在当前工作区内完成以下任务：
+总入口 skill，用于 JetLinks 二开场景下的任务分类与路由。
 
-- 分析模块边界、目录落点和能力归属
-- 按需加载 CRUD、事件、订阅、跨服务调用、i18n 等规则
-- 基于当前仓库真实代码风格实现修改，而不是生成脱离上下文的模板代码
+### `jetlinks-conventions`
+
+用于共享编码规范、注解/导入确认、命名约束和 i18n 判断。
+
+### `jetlinks-reactive`
+
+用于响应式编程实践、非阻塞链路、批处理和 reactive 风险控制。
+
+### `jetlinks-routing`
+
+用于工作区结构发现、模块落点判断和新模块创建。
+
+### `jetlinks-crud`
+
+用于标准 CRUD、复杂查询、批量处理和 CRUD 相关副作用。
+
+### `jetlinks-boundary`
+
+用于直接依赖、命令服务、代理和跨模块边界选择。
+
+### `jetlinks-events`
+
+用于领域事件、生命周期事件、Topic 订阅和消息流处理。
+
+### `jetlinks-delivery`
+
+用于提交标题、分支策略、测试证据和 PR 描述整理。
+
+## Scenario Routing
+
+推荐按场景直接使用 focused skill，不确定时再走总入口：
+
+- 不确定该用哪个 skill：`$jetlinks-router`
+- 只想确认代码规范、导入、i18n：`$jetlinks-conventions`
+- 只想处理响应式链路：`$jetlinks-reactive`
+- 只想找模块或新建模块：`$jetlinks-routing`
+- 只想做 CRUD 或复杂查询：`$jetlinks-crud`
+- 只想处理跨边界调用：`$jetlinks-boundary`
+- 只想处理事件或订阅：`$jetlinks-events`
+- 只想整理提交、测试和 PR：`$jetlinks-delivery`
 
 ## Install
 
@@ -44,7 +81,13 @@ jetlinks-develop-skills/
 如果当前环境带有 `$skill-installer`，可直接按仓库路径安装：
 
 ```text
-Use $skill-installer to install skill from https://github.com/jetlinks/jetlinks-develop-skills/tree/master/skills/jetlinks-secondary-development
+Use $skill-installer to install skill from https://github.com/jetlinks/jetlinks-develop-skills/tree/master/jetlinks-router
+```
+
+也可以安装 focused skill，例如：
+
+```text
+Use $skill-installer to install skill from https://github.com/jetlinks/jetlinks-develop-skills/tree/master/jetlinks-reactive
 ```
 
 也可以使用安装脚本：
@@ -52,7 +95,7 @@ Use $skill-installer to install skill from https://github.com/jetlinks/jetlinks-
 ```bash
 python /path/to/install-skill-from-github.py \
   --repo jetlinks/jetlinks-develop-skills \
-  --path skills/jetlinks-secondary-development
+  --path jetlinks-router
 ```
 
 ### Option 2: Manual install
@@ -61,24 +104,27 @@ python /path/to/install-skill-from-github.py \
 
 ```bash
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-cp -R skills/jetlinks-secondary-development "${CODEX_HOME:-$HOME/.codex}/skills/"
+cp -R jetlinks-router "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 安装完成后重启 Codex，使新 skill 被重新发现。
 
 ## Usage
 
-显式调用：
+总入口调用：
 
 ```text
-Use $jetlinks-secondary-development to analyze this JetLinks scaffold task, find the correct module, load only the needed references, and implement the change.
+Use $jetlinks-router to classify this JetLinks scaffold task, choose the right focused skills, and implement the change.
 ```
 
-典型请求示例：
+Focused skill 示例：
 
-- 使用 `$jetlinks-secondary-development` 为设备管理模块新增一个查询接口，并保持当前模块的响应式风格。
-- 使用 `$jetlinks-secondary-development` 判断这个能力应该走直接依赖、命令服务还是事件机制，再实现代码。
-- 使用 `$jetlinks-secondary-development` 在现有模块中增加订阅逻辑和对应的国际化文本。
+- 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
+- 使用 `$jetlinks-crud` 为设备管理模块新增一个查询接口。
+- 使用 `$jetlinks-reactive` 优化当前 `Mono` / `Flux` 链路并避免阻塞。
+- 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
+- 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
+- 使用 `$jetlinks-delivery` 整理提交标题、测试证据和 PR 描述。
 
 ## Git And PR Convention
 
