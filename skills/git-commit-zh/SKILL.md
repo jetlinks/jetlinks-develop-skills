@@ -1,6 +1,6 @@
 ---
 name: git-commit-zh
-description: Use when a repository expects Chinese Conventional Commits or similar team rules, and the correct type, scope, body, footer, breaking-change marker, or trailer needs to be chosen or checked.
+description: Use when a repository expects Chinese Conventional Commits or similar team rules, and the correct type, scope, body, footer, breaking-change marker, trailer, or shell-specific commit command needs to be chosen, checked, or fixed.
 ---
 
 # Git Commit Zh
@@ -19,6 +19,9 @@ options or a compliance review.
 - The user wants to check whether an existing message is compliant.
 - `type`, `scope`, `body`, `footer`, or trailer usage is unclear.
 - The change may need `!` or `BREAKING CHANGE:`.
+- The user wants a ready-to-run commit command for bash, zsh, PowerShell, or
+  cmd.
+- A previous commit message accidentally contains literal `\n`.
 
 ## Commit Format
 
@@ -90,6 +93,16 @@ If the repository clearly uses a smaller allowed set, stay within that set.
 - Refining: preserve intent, but tighten `type`, `scope`, and wording.
 - Reviewing: return `是否合规`, then problems, then a corrected version if needed.
 
+## Shell Commands
+
+- If the user asks for the commit message only, return only the message.
+- If the user asks for a ready-to-run command, match the current shell.
+- For header-only commits, `git commit -m "<header>"` is fine on all platforms.
+- For multi-line commits, do not rely on literal `\n` inside `git commit -m`.
+- Prefer the shell-native patterns in `shell-commit-examples.md`.
+- If the shell is unclear, prefer returning the final message plus a short note
+  that the command form depends on bash/zsh, PowerShell, or cmd.
+
 ## Self-Check
 
 - The output fits the user's mode: draft, refine, or review.
@@ -98,6 +111,8 @@ If the repository clearly uses a smaller allowed set, stay within that set.
 - The selected `type` matches the dominant change.
 - `scope` is useful rather than decorative.
 - Breaking changes use `!` and/or `BREAKING CHANGE:` when needed.
+- Any ready-to-run command matches the user's shell and does not depend on a
+  fake `\n` escape.
 - Keep lines within 72 characters when possible; never exceed 100.
 - No placeholder text or explanatory prose leaks into the final commit message.
 
@@ -108,6 +123,7 @@ If the repository clearly uses a smaller allowed set, stay within that set.
 - Repeating the header in the body instead of adding rationale or impact.
 - Writing free-form footer prose when a trailer would be clearer.
 - Forgetting to mark a breaking change.
+- Returning `git commit -m "header\n\nbody"` as a generic multi-line solution.
 
 ## Examples
 

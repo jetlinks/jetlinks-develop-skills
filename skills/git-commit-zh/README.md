@@ -9,6 +9,7 @@ similar team rules.
 - Refines existing commit messages.
 - Reviews whether a commit message is compliant.
 - Helps choose `type`, `scope`, `body`, `footer`, `!`, and standard trailers.
+- Includes shell-specific examples for bash, zsh, PowerShell, and cmd.
 
 ## Files
 
@@ -16,6 +17,7 @@ similar team rules.
 git-commit-zh/
   SKILL.md
   README.md
+  shell-commit-examples.md
 ```
 
 `SKILL.md` is the actual skill definition. This `README.md` is only a short
