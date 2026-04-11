@@ -18,6 +18,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 
 ## Routing
 
+- Protocol package registration, transport codecs, and binary packet handling: [`../jetlinks-protocol/SKILL.md`](../jetlinks-protocol/SKILL.md)
 - Shared coding conventions, imports, and i18n habits: [`../jetlinks-conventions/SKILL.md`](../jetlinks-conventions/SKILL.md)
 - Reactive and non-blocking implementation practice: [`../jetlinks-reactive/SKILL.md`](../jetlinks-reactive/SKILL.md)
 - Workspace discovery, module placement, and module creation: [`../jetlinks-routing/SKILL.md`](../jetlinks-routing/SKILL.md)
