@@ -64,7 +64,7 @@ jetlinks-develop-skills/
 
 ### `jetlinks-delivery`
 
-用于提交标题、分支策略、测试证据和 PR 描述整理。
+用于提交信息、提交命令、分支策略、测试证据和 PR 描述整理。
 
 ## Scenario Routing
 
@@ -78,7 +78,7 @@ jetlinks-develop-skills/
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`
 - 只想处理跨边界调用：`$jetlinks-boundary`
 - 只想处理事件或订阅：`$jetlinks-events`
-- 只想整理提交、测试和 PR：`$jetlinks-delivery`
+- 只想整理提交信息、提交命令、测试和 PR：`$jetlinks-delivery`
 
 ## Install
 
@@ -131,7 +131,7 @@ Focused skill 示例：
 - 使用 `$jetlinks-reactive` 优化当前 `Mono` / `Flux` 链路并避免阻塞。
 - 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
 - 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
-- 使用 `$jetlinks-delivery` 整理提交标题、测试证据和 PR 描述。
+- 使用 `$jetlinks-delivery` 起草中文 commit、生成 shell 提交命令、整理测试证据和 PR 描述。
 
 ## Git And PR Convention
 
