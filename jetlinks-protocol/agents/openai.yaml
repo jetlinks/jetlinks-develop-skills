@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Protocol"
+  short_description: "JetLinks 协议包开发、阅读、二进制报文分析与联调排障"
+  default_prompt: "Use $jetlinks-protocol to inspect this JetLinks protocol package, locate the transport or binary codec path, and implement the required protocol change."

@@ -2,6 +2,11 @@
 
 当任务不仅涉及“写代码”，还涉及“提交代码、准备交付、发起 PR、说明测试结果”时，读取本文件。
 
+如果任务重点是中文 commit message 起草、合规审查或 shell 提交命令，继续读取：
+
+- [`commit-message-zh.md`](commit-message-zh.md)
+- [`shell-commit-examples.md`](shell-commit-examples.md)
+
 ## 目标
 
 确保 JetLinks 项目的交付过程符合以下要求：
@@ -40,6 +45,10 @@ type(scope): summary
 - `misc`
 - `test`
 - 无法体现模块和结果的空泛标题
+
+如需进一步决定 `type`、`scope`、`body`、`footer` 或 ready-to-run 命令形式，转到
+[`commit-message-zh.md`](commit-message-zh.md) 和
+[`shell-commit-examples.md`](shell-commit-examples.md)。
 
 ## 分支与合并策略
 
@@ -198,6 +207,7 @@ PR 描述必须是结果导向，不写空话。
 1. 先检查当前分支是否为主干或版本分支。
 2. 如果是主干或版本分支，不直接 push，先创建临时分支。
 3. 根据仓库历史整理合规的 commit title。
+   - 如果用户要的是完整 commit message、合规审查或 shell 命令，加载 `commit-message-zh.md` 与 `shell-commit-examples.md`。
 4. 运行与改动相关的单元测试或集成测试。
 5. 收集测试通过数、失败数、跳过数和覆盖率结果。
 6. 判断本次改动是否过大、是否混入多个主题；如果是，先建议拆分 PR。

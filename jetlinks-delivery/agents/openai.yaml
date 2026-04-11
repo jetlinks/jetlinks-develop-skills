@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Delivery"
-  short_description: "JetLinks 提交、测试与PR交付规范"
-  default_prompt: "Use $jetlinks-delivery to prepare this JetLinks change with the correct branch strategy, commit title, test evidence, and PR description, confirm whether the task is complete before choosing draft or ready-for-review status, keep PR scope small, and prefer gh outside the sandbox when opening a GitHub PR."
+  short_description: "JetLinks 提交信息、提交命令、测试与PR交付规范"
+  default_prompt: "Use $jetlinks-delivery to draft a compliant Chinese commit message and, when needed, prepare the shell-safe commit command, test evidence, and PR description for this JetLinks change."

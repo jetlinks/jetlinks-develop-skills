@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Conventions"
-  short_description: "JetLinks 通用规范、导入与 i18n"
-  default_prompt: "Use $jetlinks-conventions to inspect the local coding conventions, imports, naming, and i18n habits before implementing a JetLinks change."
+  short_description: "JetLinks 通用规范、导入与国际化实现"
+  default_prompt: "Use $jetlinks-conventions to inspect local coding conventions, imports, naming, and i18n rules before implementing this JetLinks change."

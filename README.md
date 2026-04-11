@@ -12,6 +12,7 @@ jetlinks-develop-skills/
 ├── .github/
 │   └── pull_request_template.md
 ├── jetlinks-router/
+├── jetlinks-protocol/
 ├── jetlinks-conventions/
 ├── jetlinks-reactive/
 ├── jetlinks-routing/
@@ -34,9 +35,13 @@ jetlinks-develop-skills/
 
 总入口 skill，用于 JetLinks 二开场景下的任务分类与路由。
 
+### `jetlinks-protocol`
+
+用于协议包开发、协议阅读、传输编解码、二进制报文分析和联调排障。
+
 ### `jetlinks-conventions`
 
-用于共享编码规范、注解/导入确认、命名约束和 i18n 判断。
+用于共享编码规范、注解/导入确认、命名约束，以及 i18n 判断与实现。
 
 ### `jetlinks-reactive`
 
@@ -64,14 +69,15 @@ jetlinks-develop-skills/
 
 ### `jetlinks-delivery`
 
-用于提交标题、分支策略、测试证据和 PR 描述整理。
+用于提交信息、提交命令、分支策略、测试证据和 PR 描述整理。
 
 ## Scenario Routing
 
 推荐按场景直接使用 focused skill，不确定时再走总入口：
 
 - 不确定该用哪个 skill：`$jetlinks-router`
-- 只想确认代码规范、导入、i18n：`$jetlinks-conventions`
+- 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
+- 只想确认代码规范、导入、i18n 判断或国际化实现：`$jetlinks-conventions`
 - 只想处理响应式链路：`$jetlinks-reactive`
 - 只想找模块或新建模块：`$jetlinks-routing`
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`
@@ -141,11 +147,12 @@ Use $jetlinks-router to classify this JetLinks scaffold task, choose the right f
 Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
+- 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。
 - 使用 `$jetlinks-crud` 为设备管理模块新增一个查询接口。
 - 使用 `$jetlinks-reactive` 优化当前 `Mono` / `Flux` 链路并避免阻塞。
 - 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
 - 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
-- 使用 `$jetlinks-delivery` 整理提交标题、测试证据和 PR 描述。
+- 使用 `$jetlinks-delivery` 起草中文 commit、生成 shell 提交命令、整理测试证据和 PR 描述。
 
 ## Best Practices
 
@@ -259,7 +266,7 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 为保证该仓库可持续扩展，新增 skill 时遵循这些规则：
 
-- 新 skill 放在 `skills/<skill-name>/` 下。
+- 新 skill 放在仓库根目录的 `<skill-name>/` 下。
 - `SKILL.md` 只保留触发描述和执行流程，不放仓库级使用文档。
 - 详细规则、索引和参考资料放入 `references/`。
 - 需要 UI 元数据时，在 `agents/openai.yaml` 中维护。
@@ -267,7 +274,7 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 ```bash
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" \
-  skills/<skill-name>
+  <skill-name>
 ```
 
 ## References

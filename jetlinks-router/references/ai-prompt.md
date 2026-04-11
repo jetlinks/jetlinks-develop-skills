@@ -101,6 +101,16 @@
 - 不确定是加 Maven 依赖、调用命令服务、发布事件还是订阅消息
 - 空脚手架中首次建立模块边界约定
 
+### 协议包 / 编解码 / 二进制报文
+
+切换：
+- [`$jetlinks-protocol`](../../jetlinks-protocol/SKILL.md)
+
+适用：
+- 需要修改 `ProtocolSupportProvider`、`DeviceMessageCodec`、传输路由或认证流程
+- 需要分析 MQTT、HTTP、TCP、UDP、CoAP 等协议接入方式
+- 需要阅读或调整二进制报文、ACK、消息序号或属性和功能消息映射
+
 ### 确认注解、包名、导入
 
 切换：
@@ -177,6 +187,8 @@
 
 适用：
 - 新增枚举、实体字段、权限、操作、错误消息、提示消息
+- 需要判断当前模块是否应该补 i18n
+- 需要处理 `LocaleUtils`、`I18nEnumDict`、`messages_zh/messages_en` 等实现细节
 
 ### 知识沉淀与经验归档
 
@@ -196,7 +208,9 @@
 
 适用：
 - 需要 commit、push、发起 PR
-- 需要整理提交标题、PR 标题或 PR 描述
+- 需要起草或审查中文 commit message
+- 需要生成 shell 可执行的 git commit 命令
+- 需要整理提交信息、PR 标题或 PR 描述
 - 需要确认是否允许直接推送到目标分支
 - 需要给出测试和覆盖率证明
 
@@ -215,6 +229,10 @@
 - 调用其他模块能力
   - `$jetlinks-boundary`
   - 如是响应式模块，再加 `$jetlinks-reactive`
+
+- 修改协议包或联调设备接入
+  - `$jetlinks-protocol`
+  - 如涉及提交与测试证据，再加 `$jetlinks-delivery`
 
 - CRUD 后要同步其他数据
   - `$jetlinks-crud`
