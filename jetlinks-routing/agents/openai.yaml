@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Routing"
+  short_description: "JetLinks 模块发现与落点判断"
+  default_prompt: "Use $jetlinks-routing to inspect this JetLinks workspace, locate the right module, and decide whether a new module is actually needed."

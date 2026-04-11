@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Boundary"
+  short_description: "JetLinks 跨模块边界与命令调用"
+  default_prompt: "Use $jetlinks-boundary to decide whether this JetLinks change should use direct dependency, command service, proxy, or another boundary pattern."
