@@ -41,7 +41,7 @@ jetlinks-develop-skills/
 
 ### `jetlinks-conventions`
 
-用于共享编码规范、注解/导入确认、命名约束和 i18n 判断。
+用于共享编码规范、注解/导入确认、命名约束，以及 i18n 判断与实现。
 
 ### `jetlinks-reactive`
 
@@ -77,7 +77,7 @@ jetlinks-develop-skills/
 
 - 不确定该用哪个 skill：`$jetlinks-router`
 - 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
-- 只想确认代码规范、导入、i18n：`$jetlinks-conventions`
+- 只想确认代码规范、导入、i18n 判断或国际化实现：`$jetlinks-conventions`
 - 只想处理响应式链路：`$jetlinks-reactive`
 - 只想找模块或新建模块：`$jetlinks-routing`
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`

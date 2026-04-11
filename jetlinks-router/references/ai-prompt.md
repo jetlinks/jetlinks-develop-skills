@@ -187,6 +187,8 @@
 
 适用：
 - 新增枚举、实体字段、权限、操作、错误消息、提示消息
+- 需要判断当前模块是否应该补 i18n
+- 需要处理 `LocaleUtils`、`I18nEnumDict`、`messages_zh/messages_en` 等实现细节
 
 ### 知识沉淀与经验归档
 
