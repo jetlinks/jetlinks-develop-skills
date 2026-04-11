@@ -24,20 +24,19 @@ These examples work well in bash and zsh.
 ### Header Only
 
 ```bash
-git commit -m "feat(skills): 新增中文提交信息技能并整理仓库布局"
+git commit -m "feat(api): 支持批量导入任务"
 ```
 
 ### Multi-Line Message With Here-Doc
 
 ```bash
 git commit -F- <<'EOF'
-feat(skills): 新增中文提交信息技能并整理仓库布局
+feat(api): 支持批量导入任务
 
-新增 git-commit-zh 技能及说明文件，
-用于生成、润色和校验中文 Conventional Commits。
+新增批量导入任务创建和状态查询流程，
+便于前端轮询任务执行结果。
 
-将现有 jetlinks-secondary-development
-迁移到 skills/ 目录下，并补充 Codex 安装说明。
+Refs: #123
 EOF
 ```
 
@@ -45,11 +44,10 @@ EOF
 
 ```bash
 git commit \
-  -m "feat(skills): 新增中文提交信息技能并整理仓库布局" \
-  -m "新增 git-commit-zh 技能及说明文件。
+  -m "feat(api): 支持批量导入任务" \
+  -m "新增批量导入任务创建和状态查询流程。
 
-将现有 jetlinks-secondary-development
-迁移到 skills/ 目录下，并补充 Codex 安装说明。"
+Refs: #123"
 ```
 
 ## Windows PowerShell
@@ -59,20 +57,19 @@ PowerShell should prefer a here-string piped into `git commit -F -`.
 ### Header Only
 
 ```powershell
-git commit -m "feat(skills): 新增中文提交信息技能并整理仓库布局"
+git commit -m "feat(api): 支持批量导入任务"
 ```
 
 ### Multi-Line Message With Here-String
 
 ```powershell
 @"
-feat(skills): 新增中文提交信息技能并整理仓库布局
+feat(api): 支持批量导入任务
 
-新增 git-commit-zh 技能及说明文件，
-用于生成、润色和校验中文 Conventional Commits。
+新增批量导入任务创建和状态查询流程，
+便于前端轮询任务执行结果。
 
-将现有 jetlinks-secondary-development
-迁移到 skills/ 目录下，并补充 Codex 安装说明。
+Refs: #123
 "@ | git commit -F -
 ```
 
@@ -89,20 +86,19 @@ CMD is awkward for multi-line inline strings. Prefer a temporary file.
 ### Header Only
 
 ```bat
-git commit -m "feat(skills): 新增中文提交信息技能并整理仓库布局"
+git commit -m "feat(api): 支持批量导入任务"
 ```
 
 ### Multi-Line Message With Temporary File
 
 ```bat
 (
-echo feat(skills): 新增中文提交信息技能并整理仓库布局
+echo feat(api): 支持批量导入任务
 echo.
-echo 新增 git-commit-zh 技能及说明文件，
-echo 用于生成、润色和校验中文 Conventional Commits。
+echo 新增批量导入任务创建和状态查询流程，
+echo 便于前端轮询任务执行结果。
 echo.
-echo 将现有 jetlinks-secondary-development
-echo 迁移到 skills/ 目录下，并补充 Codex 安装说明。
+echo Refs: #123
 ) > commit-message.txt
 
 git commit -F commit-message.txt
