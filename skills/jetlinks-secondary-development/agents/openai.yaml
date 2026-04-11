@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Secondary Development"
+  short_description: "JetLinks 脚手架二开规则路由与实现助手"
+  default_prompt: "Use $jetlinks-secondary-development to classify a JetLinks-based scaffold task, inspect the local module conventions, read only the needed bundled references, and implement the change."
