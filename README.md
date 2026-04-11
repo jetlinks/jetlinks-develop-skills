@@ -19,6 +19,7 @@ jetlinks-develop-skills/
 ├── jetlinks-crud/
 ├── jetlinks-boundary/
 ├── jetlinks-events/
+├── jetlinks-capture/
 └── jetlinks-delivery/
 ```
 
@@ -62,6 +63,10 @@ jetlinks-develop-skills/
 
 用于领域事件、生命周期事件、Topic 订阅和消息流处理。
 
+### `jetlinks-capture`
+
+用于任务结束后的知识沉淀判断、经验归档、playbook 生成，以及决定是否需要继续更新 prompt 或 skill。
+
 ### `jetlinks-delivery`
 
 用于提交信息、提交命令、分支策略、测试证据和 PR 描述整理。
@@ -78,11 +83,27 @@ jetlinks-develop-skills/
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`
 - 只想处理跨边界调用：`$jetlinks-boundary`
 - 只想处理事件或订阅：`$jetlinks-events`
-- 只想整理提交信息、提交命令、测试和 PR：`$jetlinks-delivery`
+- 只想判断是否值得沉淀知识：`$jetlinks-capture`
+- 只想整理提交、测试和 PR：`$jetlinks-delivery`
 
 ## Install
 
-### Option 1: Use Codex skill installer
+### Option 1: Use CC Switch (Recommended)
+
+如果你用 CC Switch 管理 Claude Code、Codex、Cursor 等工具的 skills / prompts，推荐直接将本仓库作为 skill repository 接入：
+
+1. 在 CC Switch 中添加仓库：`https://github.com/jetlinks/jetlinks-develop-skills`
+2. 以仓库根目录作为扫描入口，不要额外指定 `skills/` 子目录
+3. 同步或启用需要的 skill，例如 `jetlinks-router`、`jetlinks-crud`、`jetlinks-events`
+4. 刷新或重启目标工具，使新 skill 被重新发现
+
+校验方式：
+
+```text
+使用 $jetlinks-router 分类当前 JetLinks 二开任务，并选择最少必要的 focused skills 落地。
+```
+
+### Option 2: Use Codex skill installer
 
 如果当前环境带有 `$skill-installer`，可直接按仓库路径安装：
 
@@ -104,7 +125,7 @@ python /path/to/install-skill-from-github.py \
   --path jetlinks-router
 ```
 
-### Option 2: Manual install
+### Option 3: Manual install
 
 将目标 skill 目录复制到本地 Codex skills 目录：
 
@@ -132,6 +153,14 @@ Focused skill 示例：
 - 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
 - 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
 - 使用 `$jetlinks-delivery` 起草中文 commit、生成 shell 提交命令、整理测试证据和 PR 描述。
+
+## Best Practices
+
+完整实践见 [SECONDARY_DEVELOPMENT_PLAYBOOK.md](SECONDARY_DEVELOPMENT_PLAYBOOK.md)，涵盖：
+
+- Claude Code / Codex / Cursor 的推荐协作方式
+- 使用 CC Switch 安装本技能库的建议流程
+- 简单 CRUD、复杂业务、测试修复等提示词模板与落地约束
 
 ## Git And PR Convention
 
@@ -168,7 +197,8 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 1. 从目标基线分支同步最新代码。
 2. 创建临时分支实现需求或修复。
 3. 完成测试后 push 临时分支。
-4. 通过 PR 合入目标版本分支。
+4. 创建 PR 前先确认任务是否已完成：未完成用 draft，已完成再进入 review。
+5. 通过 PR 合入目标版本分支。
 
 ### Testing Requirement
 
@@ -225,6 +255,10 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 - 用数据说话，不要只写“测试通过”
 - 没有覆盖率数据时，至少说明为什么缺失，以及提供了哪些替代证据
+- 创建 PR 前先确认任务是否已完成：未完成使用 draft PR，已完成且用户确认后再 ready for review
+- 默认不要在一个 PR 中提交大量代码，优先按清晰主题拆分
+- 如果仓库远端是 GitHub，默认优先使用 `gh pr create` 创建 PR
+- 在带沙箱的 agent 环境中，`gh` 命令应申请非沙箱执行
 - 没有 PR 的直推提交流程，视为不符合规范
 - 仓库默认模板见 `.github/pull_request_template.md`
 
