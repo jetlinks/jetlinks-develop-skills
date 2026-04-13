@@ -20,7 +20,7 @@
 
 ### 首选：CC Switch
 
-推荐用 CC Switch 管理本仓库，因为它更适合在多个 AI 工具之间复用同一套 skills / prompts。
+推荐用 [CC Switch](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/1-getting-started/1.2-installation.md) 管理本仓库，因为它更适合在多个 AI 工具之间复用同一套 skills / prompts。
 
 建议流程：
 
