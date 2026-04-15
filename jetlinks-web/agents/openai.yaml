@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Web"
+  short_description: "JetLinks 前端页面开发、能力复用与质量约束"
+  default_prompt: "使用 $jetlinks-web 在当前前端任务中优先复用 @jetlinks-web-core/@jetlinks-web 的组件、hooks、utils，并按目录结构、状态管理、类型安全与质量约束完成实现。"

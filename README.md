@@ -19,6 +19,7 @@ jetlinks-develop-skills/
 ├── jetlinks-crud/
 ├── jetlinks-boundary/
 ├── jetlinks-events/
+├── jetlinks-web/
 ├── jetlinks-capture/
 └── jetlinks-delivery/
 ```
@@ -63,6 +64,10 @@ jetlinks-develop-skills/
 
 用于领域事件、生命周期事件、Topic 订阅和消息流处理。
 
+### `jetlinks-web`
+
+用于 JetLinks 前端页面开发、组件/hook/utils 能力复用、目录落点判断、状态管理与类型质量约束。
+
 ### `jetlinks-capture`
 
 用于任务结束后的知识沉淀判断、经验归档、playbook 生成，以及决定是否需要继续更新 prompt 或 skill。
@@ -83,6 +88,7 @@ jetlinks-develop-skills/
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`
 - 只想处理跨边界调用：`$jetlinks-boundary`
 - 只想处理事件或订阅：`$jetlinks-events`
+- 只想处理前端页面改造、能力复用或前端质量约束：`$jetlinks-web`
 - 只想判断是否值得沉淀知识：`$jetlinks-capture`
 - 只想整理提交、测试和 PR：`$jetlinks-delivery`
 
@@ -94,7 +100,7 @@ jetlinks-develop-skills/
 
 1. 在 CC Switch 中添加仓库：`https://github.com/jetlinks/jetlinks-develop-skills`
 2. 以仓库根目录作为扫描入口，不要额外指定 `skills/` 子目录
-3. 同步或启用需要的 skill，例如 `jetlinks-router`、`jetlinks-crud`、`jetlinks-events`
+3. 同步或启用需要的 skill，例如 `jetlinks-router`、`jetlinks-crud`、`jetlinks-events`、`jetlinks-web`
 4. 刷新或重启目标工具，使新 skill 被重新发现
 
 校验方式：
@@ -115,6 +121,12 @@ Use $skill-installer to install skill from https://github.com/jetlinks/jetlinks-
 
 ```text
 Use $skill-installer to install skill from https://github.com/jetlinks/jetlinks-develop-skills/tree/master/jetlinks-reactive
+```
+
+或：
+
+```text
+Use $skill-installer to install skill from https://github.com/jetlinks/jetlinks-develop-skills/tree/master/jetlinks-web
 ```
 
 也可以使用安装脚本：
@@ -152,6 +164,7 @@ Focused skill 示例：
 - 使用 `$jetlinks-reactive` 优化当前 `Mono` / `Flux` 链路并避免阻塞。
 - 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
 - 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
+- 使用 `$jetlinks-web` 在前端改造中优先复用 `@jetlinks-web-core/@jetlinks-web` 组件、hooks、utils，并按目录/状态/类型约束落地。
 - 使用 `$jetlinks-delivery` 起草中文 commit、生成 shell 提交命令、整理测试证据和 PR 描述。
 
 ## Best Practices
