@@ -16,6 +16,7 @@
 - 是否存在 `@CommandService`
 - 是否存在 command support / proxy / provider
 - 是否存在固定 service id、support id、command id
+- 是否已存在 `QueryCommand`、`SaveCommand` 或本地自定义 command DTO / command handler
 
 如果当前脚手架没有这套机制，不要凭空引入。
 
@@ -45,6 +46,8 @@
 
 3. 参数和返回值使用真实命令对象
    - 先查看现有命令类、命令处理器、DTO。
+   - 优先使用显式命令对象配合 `commandSupport.execute(...)`，例如 `QueryCommand.of(...)` 或本地已定义 command DTO。
+   - 不要在已有显式命令对象的场景下，退化成 `executeToMono(...)` + 零散参数、匿名 `Map` 或临时 payload。
 
 4. 映射逻辑尽量靠近边界
    - 服务代理或 controller 中做少量装配，不把远程契约扩散到业务内部。
@@ -83,12 +86,14 @@
 
 - 不要直接注入另一个边界的内部实现类，只因为它“刚好能用”
 - 不要根据方法名猜 command id 或 payload 结构
+- 不要在已有 `QueryCommand` / command DTO 的前提下，改用 `executeToMono(...)` 重新拼 payload
 - 不要在响应式代码里为了省事 `block`
 - 不要在空模板仓库里无依据地一次性创建完整 RPC 体系
 
 ## 自检清单
 
 - service id / support id / command id 是否来自真实代码
+- 是否复用了现有命令对象与 `commandSupport.execute(...)` 模式
 - 调用方式是否符合当前模块编程模型
 - provider 是否只暴露必要能力
 - 是否避免了跨边界直接耦合实现类

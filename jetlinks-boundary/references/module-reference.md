@@ -100,6 +100,7 @@
 - 是否已存在 `@CommandService` 或服务代理
 - 是否已有固定 service/support id
 - 当前模块是否已有同类 consumer 示例
+- 同类 consumer 是否优先使用显式命令对象和 `commandSupport.execute(...)`
 
 如果没有现成示例但用户明确要求命令边界：
 - 先确认依赖中已经具备命令框架
@@ -122,6 +123,7 @@
 
 - 不要臆造 service id、command id、topic、事件名。
 - 不要在已有命令边界的场景下直接跨模块注入实现类。
+- 不要在已有显式命令对象时，退化成 `executeToMono(...)` + 匿名 payload 的写法。
 - 不要为了一个保存后副作用，把控制器或服务写成巨型流程编排器。
 
 在低上下文模板仓库中同样禁止：
