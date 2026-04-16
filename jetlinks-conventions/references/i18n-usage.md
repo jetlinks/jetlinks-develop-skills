@@ -90,23 +90,31 @@ String message = LocaleUtils.resolveMessage(
 );
 ```
 
-错误消息：
+用户可见异常：
 
-```java
-String errorMessage = LocaleUtils.resolveMessage(
-    "error.entity.not_found",
-    "对象 {0} 不存在",
-    entityId
-);
-```
+- 异常类型和构造器名称以目标仓库现状为准，但参数形态优先表达为 `i18nCode`（或本地等价字段）+ 默认文案 + 参数。
+- 默认文案用于资源缺失时兜底，不要只传硬编码 message。
+- 先找相邻异常、错误返回包装器、错误码枚举的本地写法，再跟随。
 
-异常如何抛出以目标模块现状为准，不要为了统一而强行切换异常模型。
+避免写法：
+
+- `throw new BusinessException("对象不存在")`
+- `throw new IllegalArgumentException("名称不能为空")`
+
+只有当目标模块的异常体系确实只能接收 `message` 时，才退回到：
+
+1. 先用 `LocaleUtils.resolveMessage(...)` 或本地等价方式解析；
+2. 再把解析后的结果传入旧异常模型。
+
+这属于兼容旧模型，不是首选。
 
 ## 响应式代码
 
 响应式代码优先使用项目现有模式。
 
-常见写法：
+对 `Mono.error(...)` 里的用户可见异常，同样优先传递带 `i18nCode` 的异常实例；不要先把 message 写死成字符串。
+
+兼容旧异常模型时，常见写法：
 
 ```java
 return LocaleUtils.resolveMessageReactive("error.entity.not_found", entityId)
@@ -143,6 +151,7 @@ org.jetlinks.example.device.DeviceState.OFFLINE=离线
 - 只国际化用户可见内容。
 - 保持中英文 key 集合一致。
 - 保持同一术语在不同模块中的翻译一致。
+- 用户可见异常优先保留 `i18nCode` + 默认文案 + 参数。
 - 参考相邻模块的 key 风格、目录结构和资源编码。
 - 在提交前检查是否漏掉了英文或中文对应项。
 

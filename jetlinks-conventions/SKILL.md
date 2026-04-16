@@ -14,7 +14,7 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 3. Confirm the current module's programming style, package roots, naming patterns, and smallest-change expectation.
 4. Use [`references/annotations-and-imports-reference.md`](references/annotations-and-imports-reference.md) when imports or annotations are unclear.
 5. Use [`references/i18n.md`](references/i18n.md) to decide whether the module should receive i18n changes at all.
-6. Use [`references/i18n-usage.md`](references/i18n-usage.md) when the task needs concrete i18n implementation details such as resource layout, `LocaleUtils`, reactive usage, `I18nEnumDict`, or resource synchronization.
+6. Use [`references/i18n-usage.md`](references/i18n-usage.md) when the task needs concrete i18n implementation details such as resource layout, `LocaleUtils`, exception `i18nCode` usage, reactive usage, `I18nEnumDict`, or resource synchronization.
 7. Implement the smallest consistent change that matches the existing codebase and explicitly state the i18n decision when it matters.
 
 ## Required Constraints
@@ -24,6 +24,7 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 - Prefer local examples over generic memory.
 - Clearly separate workspace facts from fallback defaults when the repository is low-context.
 - Do not introduce i18n into a module unless the module already follows an i18n convention or the user explicitly asks for it.
+- For user-visible exceptions, prefer the local exception pattern that carries `i18nCode` or message key plus args; do not hardcode Chinese or English text in exception constructors.
 
 ## Response Shape
 

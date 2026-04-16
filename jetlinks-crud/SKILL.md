@@ -19,6 +19,7 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 - Do not generate generic CRUD boilerplate that duplicates existing base classes.
 - Do not add custom endpoints when the existing query abstraction already covers the use case.
 - Prefer moving heavy side effects out of the main CRUD flow.
+- For validation, not-found, and conflict errors visible to users, prefer the module's i18n-aware exception pattern over hardcoded exception messages.
 
 ## Response Shape
 
