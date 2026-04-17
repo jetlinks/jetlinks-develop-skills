@@ -41,6 +41,18 @@
 - `RegistryComponent`：关注 `code` 和插槽位置
 - `RemoteComponent`：关注 `remoteName`、`componentName`、`componentProps`
 
+## 组件引入策略
+
+- 对页面内非首屏关键、按需展示或体积较大的本地组件，优先使用异步组件引入，减少首屏包体积。
+- 不要默认使用 `import TestComponent from './xxxx/index.vue'` 这种同步引入方式；优先改为 `defineAsyncComponent`。
+- 推荐写法：
+
+```ts
+import { defineAsyncComponent } from 'vue';
+
+const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
+```
+
 ## Hook 选型
 
 | Hook | 用途 | 关键点 |
