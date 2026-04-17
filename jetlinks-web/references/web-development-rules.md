@@ -5,6 +5,7 @@
 ## 任务分类
 
 - 页面实现或改造：列表页、详情页、弹窗页、配置页
+- 仪表盘组件：`visDashboard` 运行组件、配置面板、设计器接线
 - 能力复用：组件、hooks、utils、包级能力选择
 - 目录落点：代码放 `jetlinks-web-core` 还是 `modules/*-ui`
 - 状态治理：本地状态、路由状态、store、服务端状态边界
@@ -22,6 +23,7 @@
 ## 按场景加载文档
 
 - 能力复用与组件/Hook/utils 选型：[`capability-reuse-rules.md`](capability-reuse-rules.md)
+- `visDashboard` 仪表盘组件开发：[`dashboard-component-rules.md`](dashboard-component-rules.md)
 - 模块与文件落点：[`directory-structure-rules.md`](directory-structure-rules.md)
 - 状态边界与 store 使用：[`state-management-rules.md`](state-management-rules.md)
 - 质量与类型约束：[`quality-and-type-rules.md`](quality-and-type-rules.md)

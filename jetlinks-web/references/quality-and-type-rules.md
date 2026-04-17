@@ -39,12 +39,37 @@
 - 禁止在高频事件中直接发起无控制请求，避免重复调用、接口抖动与页面卡顿。
 - 若业务必须实时请求，需说明原因并补充并发控制策略（如取消前序请求、忽略过期响应）。
 
+## Vue Props 语法限制
+
+- 在 `Vue 3` 的 `script setup lang="ts"` 组件中，`props` 统一使用运行时对象语法声明，不使用泛型写法 `defineProps<T>()`。
+- 需要类型约束时，使用 `PropType` 绑定具体字段类型，并在 `required`、`default` 等运行时配置中显式声明。
+- 错误写法：`defineProps<GaugeWidgetProps>`
+- 正确写法示例：
+
+```ts
+const props = defineProps({
+  info: {
+    type: Object as PropType<GaugeInfo>,
+    required: true
+  },
+  style: {
+    type: [Object, String] as PropType<GaugeWidgetProps['style']>,
+    default: () => ({})
+  },
+  isEdit: {
+    type: Boolean,
+    default: false
+  }
+})
+```
+
 ## 禁止模式
 
 - 提交调试日志、注释掉的废弃代码、临时代码块。
 - 在组件中硬编码后端路径、权限规则或环境配置。
 - 使用 `as any` 或大范围 `any` 直接绕过类型错误。
 - 同一业务模型在多处重复且冲突定义。
+- 使用泛型 `defineProps<T>()` 声明组件 props。
 
 ## 交付前检查建议
 
