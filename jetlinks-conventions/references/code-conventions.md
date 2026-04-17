@@ -45,6 +45,13 @@
 - 不臆造 command id、topic、事件名、support id。
 - 没有明确业务需求时，不新增细粒度动作权限。
 
+### 缓存与超时
+
+- 如果需求包含超时缓存、写入后过期、读取后过期或基于时间窗口的本地缓存，优先复用现有缓存抽象，不要手写 `Map + Mono.cache + 定时清理` 一类临时方案。
+- 需要统一缓存抽象或响应式访问时，必须优先使用 `org.hswebframework.web.cache.ReactiveCache<E>`。
+- 需要本地 TTL / size 控制等 Caffeine 能力时，必须使用 `com.github.benmanes.caffeine.cache.Caffeine<K, V>` 构建缓存。
+- 只有在相邻模块已经存在更明确的缓存封装时，才沿用本地封装；不要新造第三套超时缓存实现。
+
 ### i18n
 
 - 只有当前模块已存在 i18n 目录或明显使用 i18n 约定时，才补国际化资源。

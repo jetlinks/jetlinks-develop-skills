@@ -50,6 +50,7 @@
 - 先找当前仓库有没有同类边界的非阻塞抽象
 - 如果没有，只在必要边界隔离阻塞调用
 - 只有当前模块已有明确惯例时，才沿用现有 scheduler 模式
+- 如果响应式链路里需要超时缓存，优先使用 `org.hswebframework.web.cache.ReactiveCache<E>`；需要本地 TTL / size 控制时，用 `com.github.benmanes.caffeine.cache.Caffeine<K, V>` 构建底层缓存，不要额外拼装临时缓存方案。
 
 ### 事件与订阅
 
