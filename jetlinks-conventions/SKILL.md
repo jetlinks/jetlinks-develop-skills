@@ -24,6 +24,9 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 - Prefer local examples over generic memory.
 - Clearly separate workspace facts from fallback defaults when the repository is low-context.
 - Do not introduce i18n into a module unless the module already follows an i18n convention or the user explicitly asks for it.
+- When Apache Commons utilities are already available or aligned with adjacent code, prefer them for null or empty checks and common object or collection operations instead of handwritten repetitive branches.
+- Keep convention-driven changes scoped to the required consistency fix; do not expand into unrelated cleanup.
+- When convention-related code changes are made, report the validation performed or the exact pending commands and unresolved convention risks.
 - For user-visible exceptions, prefer the local exception pattern that carries `i18nCode` or message key plus args; do not hardcode Chinese or English text in exception constructors.
 
 ## Response Shape
@@ -31,3 +34,4 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 1. Conventions to follow
 2. Adjacent files or patterns checked
 3. I18n decision or unresolved import/i18n risks
+4. Verification evidence or exact pending commands

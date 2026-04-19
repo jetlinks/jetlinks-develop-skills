@@ -19,6 +19,7 @@ Read [`references/event-driven-rules.md`](references/event-driven-rules.md) firs
 - Do not turn synchronous query requirements into fake subscription flows.
 - Do not publish external side effects before the chosen transaction boundary is safe.
 - Keep handlers idempotent and avoid circular triggers.
+- When event or subscription code changes are made, run relevant validation when possible; otherwise state the exact pending commands and event-chain risks.
 
 ## Response Shape
 
@@ -26,3 +27,4 @@ Read [`references/event-driven-rules.md`](references/event-driven-rules.md) firs
 2. Trigger timing or subscription source
 3. Handler pattern to follow
 4. Event or message risks to verify
+5. Verification evidence or exact pending commands
