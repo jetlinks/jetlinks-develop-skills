@@ -20,6 +20,7 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 - Do not directly inject another boundary's internal implementation class.
 - When local command classes already exist, prefer explicit command objects with `commandSupport.execute(...)` over shortcut calls such as `executeToMono(...)`.
 - In reactive modules, keep the cross-boundary call non-blocking.
+- When boundary code changes are made, run relevant validation when possible; otherwise state the exact pending commands and cross-boundary risks.
 
 ## Response Shape
 
@@ -27,3 +28,4 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 2. Existing mechanisms found in the workspace
 3. Recommended interaction pattern
 4. Rejected patterns and reasons
+5. Verification evidence or exact pending commands

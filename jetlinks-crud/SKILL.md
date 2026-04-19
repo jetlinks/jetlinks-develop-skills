@@ -19,6 +19,8 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 - Do not generate generic CRUD boilerplate that duplicates existing base classes.
 - Do not add custom endpoints when the existing query abstraction already covers the use case.
 - Prefer moving heavy side effects out of the main CRUD flow.
+- When Apache Commons utilities are already available in the target module or adjacent CRUD code, prefer them for common null or empty checks instead of handwritten repetitive validation branches.
+- When CRUD code changes are made, run relevant validation when possible; otherwise state the exact pending commands and remaining CRUD risks.
 - For validation, not-found, and conflict errors visible to users, prefer the module's i18n-aware exception pattern over hardcoded exception messages.
 
 ## Response Shape
@@ -26,4 +28,5 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 1. CRUD scope
 2. Existing abstractions to reuse
 3. Whether advanced CRUD rules are needed
-4. Verification points
+4. Verification evidence or exact pending commands
+5. Remaining CRUD risks

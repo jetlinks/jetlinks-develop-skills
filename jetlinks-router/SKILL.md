@@ -14,7 +14,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 3. Combine multiple focused skills when the task crosses boundaries.
 4. Read adjacent production code before changing anything.
 5. Implement complete changes, not pseudo-code.
-6. Verify the final solution against the focused skills you used.
+6. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
 7. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
 8. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
 
@@ -37,6 +37,8 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Do not ignore symlinked modules or linked external subprojects when discovering the workspace.
 - Prefer local examples over generic memory.
 - When local examples are missing, clearly separate defaults from verified workspace facts.
+- When Apache Commons utilities are already present or adjacent code already uses them, prefer them for common null or empty checks instead of handwritten repetitive branches.
+- Keep changes scoped to the requested capability; avoid unrelated refactors or speculative cleanup.
 - Prefer existing framework abstractions and focused skills over adding new ad hoc guidance here.
 
 ## Response Shape
@@ -52,6 +54,6 @@ When implementing:
 
 1. Quietly classify and inspect
 2. Load the needed focused skill or skills
-3. Edit the code
-4. Run the needed tests and collect evidence when relevant
+3. Edit the code with the smallest consistent change
+4. Run the needed validation when possible, otherwise state the exact pending commands and residual risks
 5. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository

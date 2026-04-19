@@ -45,6 +45,13 @@
 - 不臆造 command id、topic、事件名、support id。
 - 没有明确业务需求时，不新增细粒度动作权限。
 
+### 常用工具类
+
+- 对字符串、集合、Map、数组和对象的判空、blank 判断、默认值处理等常用操作，在当前模块已引入 Apache Commons 或相邻实现已使用时，优先复用相关工具类。
+- 常见优先选择包括 `StringUtils`、`ObjectUtils`、`ArrayUtils`、`CollectionUtils`、`MapUtils`。
+- 避免手写 `str != null && !str.isEmpty()`、`collection == null || collection.isEmpty()`、`map != null && !map.isEmpty()` 这类重复样板判断。
+- 如果当前仓库已有更统一的本地工具类，或目标模块并未引入相关依赖，则保持本地风格，不为了单个判空场景额外引入一套工具依赖。
+
 ### 缓存与超时
 
 - 如果需求包含超时缓存、写入后过期、读取后过期或基于时间窗口的本地缓存，优先复用现有缓存抽象，不要手写 `Map + Mono.cache + 定时清理` 一类临时方案。

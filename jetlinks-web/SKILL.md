@@ -24,10 +24,11 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Do not load every reference by default; choose only the files needed by the current scenario.
 - Treat components/hooks/utils listed in references as candidates, not guaranteed facts; verify against current workspace exports before implementation.
 - Prefer existing page composition patterns such as `ProSearch`, `j-pro-table`, `CardBox`, and `EditDialog` for standard management pages.
+- If frontend changes cannot be fully verified in-session, state the exact pending quality or type-check commands and remaining UI risks.
 
 ## Response Shape
 
 1. Frontend task type and target module
 2. Reused components/hooks/utils/capabilities and key contracts
 3. Main code changes and compatibility risks
-4. Verification points (UI interaction, state flow, route or permission behavior, and type checks)
+4. Verification evidence or pending commands (UI interaction, state flow, route or permission behavior, and type checks)

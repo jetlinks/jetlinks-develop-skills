@@ -24,6 +24,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 - Do not fold product-specific device modeling rules into the generic protocol layer unless the repository already uses that boundary.
 - Do not change binary field order, endian rules, or sequence correlation without checking compatibility and updating examples or tests.
 - Do not implement only one direction of a protocol change. Verify both upstream decode and downstream encode when the transport supports both.
+- If protocol changes cannot be verified in-session, state the exact pending test or debug commands and residual interoperability risks.
 - Combine this skill with `$jetlinks-reactive` or `$jetlinks-delivery` when the task also changes reactive flows or requires commit or PR preparation.
 
 ## Response Shape
