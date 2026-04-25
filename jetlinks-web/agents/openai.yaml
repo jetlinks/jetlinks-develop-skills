@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Web"
   short_description: "JetLinks 前端页面开发、能力复用与质量约束"
-  default_prompt: "使用 $jetlinks-web 在当前前端任务中优先复用 @jetlinks-web-core/@jetlinks-web 的组件、hooks、utils，并按目录结构、状态管理、类型安全与质量约束完成实现；先分析真实业务目标、目标用户和关键任务路径，不要默认套老式后台 CRUD；如需交互或视觉优化，先提取当前前端框架与相邻页面的样式锚点，再结合 $frontend-design 在现有风格内细化交互；若关键页面结构仍不确定，先向用户确认，必要时先给线框图或效果图再落代码。"
+  default_prompt: "使用 $jetlinks-web 处理前端任务：1)先确认目标用户、第一任务、成功标准、单对象/多对象、关键指标数据源；缺 1 项且影响结构就先问用户，缺 2 项及以上必须先澄清。2)业务优先、参考为辅，只参考相邻页面、同域实现或相似业务，不照搬异业交互。3)只有明确是标准管理页时才优先用 `ProSearch`、`j-pro-table`、`EditDialog`；否则先按业务选择工作台、详情页、分步流、概览页等分型。4)视觉与组件语言默认采用 Ant Design / Ant Design Vue，并仅在现有风格内结合 $frontend-design 做细化。5)没有真实数据源不做统计卡/图表，线框与设计说明不进入最终用户界面。"

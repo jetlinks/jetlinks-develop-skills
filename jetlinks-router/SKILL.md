@@ -27,7 +27,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Standard or advanced CRUD work: [`../jetlinks-crud/SKILL.md`](../jetlinks-crud/SKILL.md)
 - Direct dependency, command service, or proxy boundaries: [`../jetlinks-boundary/SKILL.md`](../jetlinks-boundary/SKILL.md)
 - Domain events, lifecycle events, and real-time subscriptions: [`../jetlinks-events/SKILL.md`](../jetlinks-events/SKILL.md)
-- Frontend page implementation, capability reuse, and quality constraints in JetLinks Web: [`../jetlinks-web/SKILL.md`](../jetlinks-web/SKILL.md). First analyze the real business workflow instead of defaulting to backend CRUD. When the task includes UI or interaction polishing, combine `$frontend-design` only after extracting local style anchors, keep the current framework style over ad hoc redesign, and ask the user or provide a wireframe first when the page structure is still ambiguous.
+- Frontend page implementation, capability reuse, and quality constraints in JetLinks Web: [`../jetlinks-web/SKILL.md`](../jetlinks-web/SKILL.md). First analyze the real business workflow instead of defaulting to backend CRUD. Treat references as supporting material from adjacent pages or similar business scenarios, keep Ant Design as the baseline style, avoid meaningless decorative data, and make sure prototype annotations stay out of the final user-facing UI.
 - Knowledge capture and reusable summary output: [`../jetlinks-capture/SKILL.md`](../jetlinks-capture/SKILL.md)
 - Branch strategy, commit titles, tests, and PR text: [`../jetlinks-delivery/SKILL.md`](../jetlinks-delivery/SKILL.md)
 
