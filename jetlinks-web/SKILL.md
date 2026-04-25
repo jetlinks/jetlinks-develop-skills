@@ -12,7 +12,7 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 1. Read [`references/web-development-rules.md`](references/web-development-rules.md) and classify the task as page implementation, capability reuse, state/quality concerns, in-framework interaction polishing, or business-driven experience design.
 2. Inspect adjacent production code and verify workspace facts (actual exports, package availability, adjacent examples, and module structure), then extract current framework style anchors such as 组件组合、间距节奏、表单/表格模式、色彩状态、弹窗/抽屉行为和动效强度。
 3. Analyze the real business goal before sketching UI: target users, high-frequency tasks, key decisions, status transitions, exception paths, and whether the page is actually CRUD-heavy or should be workbench / detail / dashboard / process-oriented.
-4. If core business intent, user role, or key interaction is ambiguous and the ambiguity affects page structure or interaction model, ask the user concise clarification questions before coding instead of defaulting to a generic backend CRUD layout.
+4. Before coding, check five decision facts: target user, first task after entering the page, success criterion, whether the user operates one object or many, and the source of any key metric/chart. If any one is critical and unknown, ask the user first; if two or more are unknown, or page type is still undecided across multiple patterns, you must stop and clarify before implementation.
 5. Select only the minimal additional references from [`references/index.md`](references/index.md) based on task scope, and treat references as supporting material only after the business model is clear.
 6. When page type is unclear, load [`references/page-pattern-decision-rules.md`](references/page-pattern-decision-rules.md) first; when deciding whether a block should exist, load [`references/block-admission-rules.md`](references/block-admission-rules.md); when borrowing from examples, load [`references/business-ui-example-rules.md`](references/business-ui-example-rules.md).
 7. Prefer adjacent pages, same-domain modules, or similar business scenarios as references; extract interaction patterns, information architecture, and feedback rhythm, but do not copy flows, metrics, or page shells from unrelated business domains.
@@ -29,7 +29,7 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Do not hardcode route auth buttons, menu metadata, API base behavior, or token handling when existing abstractions already cover them.
 - Do not load every reference by default; choose only the files needed by the current scenario.
 - Treat components/hooks/utils listed in references as candidates, not guaranteed facts; verify against current workspace exports before implementation.
-- Prefer existing page composition patterns such as `ProSearch`, `j-pro-table`, `CardBox`, and `EditDialog` for standard management pages.
+- Only after the page is explicitly classified as a standard management page may you prioritize patterns such as `ProSearch`, `j-pro-table`, `CardBox`, and `EditDialog`.
 - Business goals come first and references come second; do not let a borrowed layout overrule the actual business task, user role, or decision path.
 - Do not force every frontend requirement into a search-form + table + modal CRUD shell; first decide whether the business is better expressed as workspace, drill-down detail, timeline, dashboard, wizard, kanban, topology, or mixed interaction.
 - Use Ant Design / Ant Design Vue and current workspace wrappers as the default visual and interaction language unless the user explicitly requires otherwise.
@@ -38,6 +38,8 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Unless the user explicitly asks for a redesign, do not introduce a new brand palette, font system, page shell, or decorative style that conflicts with the current frontend framework.
 - Prefer polishing existing interaction patterns such as search areas, operation bars, form grouping, cards, tabs, drawers, and loading/empty/error states instead of rebuilding the page into a self-styled showcase.
 - Do not add decorative KPI cards, fake statistics, placeholder trend charts, or any data block that has no clear business meaning, action value, or source path just to make the page look full.
+- If the source path, refresh trigger, or business use of a metric/chart is unclear, do not render it.
+- Wireframes, effect sketches, and design reasoning are alignment artifacts for developers and stakeholders; the final implemented UI must face end users and must not expose prototype labels, interaction explanations, design principles, or development notes on the page.
 - If critical interaction decisions are under-specified, ask the user instead of guessing; if alignment is easier visually, show a wireframe or effect sketch first.
 - If frontend changes cannot be fully verified in-session, state the exact pending quality or type-check commands and remaining UI risks.
 

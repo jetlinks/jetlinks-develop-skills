@@ -20,11 +20,13 @@
 
 以下名称是候选能力，使用前必须核验导出与契约。
 
+先完成页面分型，再选组件组合。只有页面已明确判断为标准管理页时，才优先采用搜索区 + 表格 + 弹窗/抽屉这一套管理页组合；如果核心任务是监控、分析、处置、流程推进或详情理解，应先选更贴近业务的页面结构，再回头挑组件。
+
 | 场景 | 推荐组合 | 说明 |
 | --- | --- | --- |
-| 标准管理列表页 | `FullPage` + `ProSearch` + `j-pro-table` | 默认优先组合 |
+| 标准管理列表页 | `FullPage` + `ProSearch` + `j-pro-table` | 仅在已判断为标准管理页后优先 |
 | 卡片列表页 | `j-pro-table(card)` + `CardBox` + `BatchDropdown` | 卡片化资源管理 |
-| 新增/编辑弹窗 | `EditDialog` | 配置驱动表单优先 |
+| 管理页内新增/编辑 | `EditDialog` | 仅用于管理页或明确的子流程编辑 |
 | 行内编辑 | `InputEditable` / `Editable` / `FormItemEditable` | 减少重复弹窗 |
 | 条件构建 | `TermsCascader` / `TermsCascaderGroup` | 复杂条件统一处理 |
 | 上传导入 | `ProUpload` / `ImageUpload` / `BatchImport` | 上传与模板导入 |
@@ -102,6 +104,8 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 - 不要绕过 `handleMenus`/`handleAuthMenu` 在页面硬编码权限映射。
 - 不要在多处手工拼接查询参数，优先复用编码工具。
 - 不要用组件内零散 watcher + 回调替代已有 hook 组合能力。
+- 不要因为组件现成就反向决定页面结构；业务分型优先于组件组合。
+- 不要在未确认真实数据源、刷新方式和业务用途前引入统计卡、趋势图或 `JEcharts` 相关区块。
 
 ## 自检清单
 
