@@ -66,7 +66,7 @@ jetlinks-develop-skills/
 
 ### `jetlinks-web`
 
-用于 JetLinks 前端页面开发、组件/hook/utils 能力复用、目录落点判断、状态管理与类型质量约束。
+用于 JetLinks 前端页面开发、组件/hook/utils 能力复用、目录落点判断、状态管理与类型质量约束；需要交互打磨时，可结合 `$frontend-design`，但仍以当前前端框架风格为准。
 
 ### `jetlinks-capture`
 
@@ -88,7 +88,7 @@ jetlinks-develop-skills/
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`
 - 只想处理跨边界调用：`$jetlinks-boundary`
 - 只想处理事件或订阅：`$jetlinks-events`
-- 只想处理前端页面改造、能力复用或前端质量约束：`$jetlinks-web`
+- 只想处理前端页面改造、能力复用、前端质量约束或在现有设计体系内优化交互：`$jetlinks-web`
 - 只想判断是否值得沉淀知识：`$jetlinks-capture`
 - 只想整理提交、测试和 PR：`$jetlinks-delivery`
 
@@ -164,7 +164,7 @@ Focused skill 示例：
 - 使用 `$jetlinks-reactive` 优化当前 `Mono` / `Flux` 链路并避免阻塞。
 - 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
 - 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
-- 使用 `$jetlinks-web` 在前端改造中优先复用 `@jetlinks-web-core/@jetlinks-web` 组件、hooks、utils，并按目录/状态/类型约束落地。
+- 使用 `$jetlinks-web` 在前端改造中优先复用 `@jetlinks-web-core/@jetlinks-web` 组件、hooks、utils，并按目录/状态/类型约束落地；先分析真实业务目标，不要默认套后台 CRUD；如需交互或视觉优化，再结合 `$frontend-design`，但必须遵循当前框架与相邻页面的既有风格；若结构不确定，先问用户或先给线框图/效果图。
 - 使用 `$jetlinks-delivery` 起草中文 commit、生成 shell 提交命令、整理测试证据和 PR 描述。
 
 ## Best Practices
