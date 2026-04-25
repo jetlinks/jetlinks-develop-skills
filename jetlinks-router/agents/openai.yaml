@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Router"
   short_description: "JetLinks 二开总路由与多技能入口"
-  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务，切换到合适的 focused skill 并按本地风格落地；如果产出稳定经验，收尾时再路由到 $jetlinks-capture 给出沉淀建议。"
+  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务，切换到合适的 focused skill 并按本地风格落地；前端任务先分析真实业务目标、目标用户和关键流程，不要默认套后台 CRUD；如需交互或视觉优化，先切到 $jetlinks-web 提炼当前框架样式锚点，再按需结合 $frontend-design 在现有风格内增强；若页面结构仍不确定，先向用户确认，必要时先给线框图或效果图，再进入实现；如果产出稳定经验，收尾时再路由到 $jetlinks-capture 给出沉淀建议。"
