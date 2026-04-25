@@ -13,12 +13,14 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 2. Inspect adjacent production code and verify workspace facts (actual exports, package availability, adjacent examples, and module structure), then extract current framework style anchors such as 组件组合、间距节奏、表单/表格模式、色彩状态、弹窗/抽屉行为和动效强度。
 3. Analyze the real business goal before sketching UI: target users, high-frequency tasks, key decisions, status transitions, exception paths, and whether the page is actually CRUD-heavy or should be workbench / detail / dashboard / process-oriented.
 4. If core business intent, user role, or key interaction is ambiguous and the ambiguity affects page structure or interaction model, ask the user concise clarification questions before coding instead of defaulting to a generic backend CRUD layout.
-5. Select only the minimal additional references from [`references/index.md`](references/index.md) based on task scope.
-6. When the task includes UI or interaction optimization, combine with `$frontend-design` only after locking these local style anchors; use it to refine hierarchy, feedback, and micro-interactions inside the current framework style instead of inventing a new visual language.
-7. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
-8. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions.
-9. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
-10. Pair with `$jetlinks-conventions` when naming/import/i18n consistency is needed, and with `$jetlinks-delivery` when commit or PR output is requested.
+5. Select only the minimal additional references from [`references/index.md`](references/index.md) based on task scope, and treat references as supporting material only after the business model is clear.
+6. When page type is unclear, load [`references/page-pattern-decision-rules.md`](references/page-pattern-decision-rules.md) first; when deciding whether a block should exist, load [`references/block-admission-rules.md`](references/block-admission-rules.md); when borrowing from examples, load [`references/business-ui-example-rules.md`](references/business-ui-example-rules.md).
+7. Prefer adjacent pages, same-domain modules, or similar business scenarios as references; extract interaction patterns, information architecture, and feedback rhythm, but do not copy flows, metrics, or page shells from unrelated business domains.
+8. When the task includes UI or interaction optimization, combine with `$frontend-design` only after locking these local style anchors plus the Ant Design / Ant Design Vue baseline; use it to refine hierarchy, feedback, and micro-interactions inside the current framework style instead of inventing a new visual language.
+9. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
+10. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions.
+11. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
+12. Pair with `$jetlinks-conventions` when naming/import/i18n consistency is needed, and with `$jetlinks-delivery` when commit or PR output is requested.
 
 ## Required Constraints
 
@@ -28,10 +30,14 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Do not load every reference by default; choose only the files needed by the current scenario.
 - Treat components/hooks/utils listed in references as candidates, not guaranteed facts; verify against current workspace exports before implementation.
 - Prefer existing page composition patterns such as `ProSearch`, `j-pro-table`, `CardBox`, and `EditDialog` for standard management pages.
+- Business goals come first and references come second; do not let a borrowed layout overrule the actual business task, user role, or decision path.
 - Do not force every frontend requirement into a search-form + table + modal CRUD shell; first decide whether the business is better expressed as workspace, drill-down detail, timeline, dashboard, wizard, kanban, topology, or mixed interaction.
-- When pairing with `$frontend-design`, current workspace design tokens, component library, typography, spacing scale, icon style, and motion rhythm override the skill’s default “bold aesthetic” guidance.
+- Use Ant Design / Ant Design Vue and current workspace wrappers as the default visual and interaction language unless the user explicitly requires otherwise.
+- References should come from adjacent pages, same-domain modules, or similar business scenarios; borrow only what still matches the current business semantics, and do not transplant interaction flows from completely different domains.
+- When pairing with `$frontend-design`, current workspace design tokens, Ant Design component language, typography, spacing scale, icon style, and motion rhythm override the skill’s default “bold aesthetic” guidance.
 - Unless the user explicitly asks for a redesign, do not introduce a new brand palette, font system, page shell, or decorative style that conflicts with the current frontend framework.
 - Prefer polishing existing interaction patterns such as search areas, operation bars, form grouping, cards, tabs, drawers, and loading/empty/error states instead of rebuilding the page into a self-styled showcase.
+- Do not add decorative KPI cards, fake statistics, placeholder trend charts, or any data block that has no clear business meaning, action value, or source path just to make the page look full.
 - If critical interaction decisions are under-specified, ask the user instead of guessing; if alignment is easier visually, show a wireframe or effect sketch first.
 - If frontend changes cannot be fully verified in-session, state the exact pending quality or type-check commands and remaining UI risks.
 
@@ -39,8 +45,9 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 
 1. Frontend task type and target module
 2. Business goal, target users, and why this is or is not a standard CRUD page
-3. Current framework style anchors plus reused components/hooks/utils/capabilities and key contracts
-4. If `$frontend-design` was used, which interaction or visual refinements stayed aligned with local style
-5. Whether a wireframe / effect sketch was provided or why it was unnecessary
-6. Main code changes and compatibility risks
-7. Verification evidence or pending commands (UI interaction, state flow, route or permission behavior, and type checks)
+3. Which references were used, why they are business-relevant, and what was deliberately not borrowed
+4. Current framework style anchors plus reused components/hooks/utils/capabilities and key contracts
+5. If `$frontend-design` was used, which interaction or visual refinements stayed aligned with local style and Ant Design language
+6. Whether a wireframe / effect sketch was provided or why it was unnecessary
+7. Main code changes and compatibility risks
+8. Verification evidence or pending commands (UI interaction, state flow, route or permission behavior, and type checks)
