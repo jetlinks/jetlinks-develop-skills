@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Router"
   short_description: "JetLinks 二开总路由与多技能入口"
-  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务并切到最合适的 focused skill；遇到前端任务时，先按 $jetlinks-web 做 5 项检查：目标用户、第一任务、成功标准、单对象/多对象、关键指标数据源。缺 1 项且影响结构先问用户，缺 2 项及以上必须先澄清。前端默认业务优先、参考为辅，视觉基线为 Ant Design / Ant Design Vue；只有明确是标准管理页时才优先采用 `ProSearch`、`j-pro-table`、`EditDialog`。无真实数据源不做统计卡/图表，线框与设计说明不进入最终用户界面。"
+  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务并切到最合适的 focused skill；遇到前端任务时，先按 $jetlinks-web 做 5 项检查：目标用户、第一任务、成功标准、单对象/多对象、关键指标数据源。缺 1 项且影响结构先问用户，缺 2 项及以上必须先澄清。前端默认业务优先、参考为辅，视觉基线为 Ant Design / Ant Design Vue；只有明确是标准管理页时才优先采用 `ProSearch`、`j-pro-table`、`EditDialog`。用户可见标题、字段展示名、列头、按钮和提示文案统一走 i18n，可用中文作默认值；无真实数据源不做统计卡/图表，线框与设计说明不进入最终用户界面。"

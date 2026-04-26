@@ -19,8 +19,9 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 8. When the task includes UI or interaction optimization, combine with `$frontend-design` only after locking these local style anchors plus the Ant Design / Ant Design Vue baseline; use it to refine hierarchy, feedback, and micro-interactions inside the current framework style instead of inventing a new visual language.
 9. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
 10. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions.
-11. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
-12. Pair with `$jetlinks-conventions` when naming/import/i18n consistency is needed, and with `$jetlinks-delivery` when commit or PR output is requested.
+11. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
+12. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
+13. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
 
 ## Required Constraints
 
@@ -39,6 +40,7 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Prefer polishing existing interaction patterns such as search areas, operation bars, form grouping, cards, tabs, drawers, and loading/empty/error states instead of rebuilding the page into a self-styled showcase.
 - Do not add decorative KPI cards, fake statistics, placeholder trend charts, or any data block that has no clear business meaning, action value, or source path just to make the page look full.
 - If the source path, refresh trigger, or business use of a metric/chart is unclear, do not render it.
+- Do not hardcode user-visible field display names, column titles, form labels, button text, tab names, placeholders, status copy, or validation messages directly in page code; use the current workspace i18n mechanism consistently, and use Chinese as the default or fallback text only when the local abstraction supports it.
 - Wireframes, effect sketches, and design reasoning are alignment artifacts for developers and stakeholders; the final implemented UI must face end users and must not expose prototype labels, interaction explanations, design principles, or development notes on the page.
 - If critical interaction decisions are under-specified, ask the user instead of guessing; if alignment is easier visually, show a wireframe or effect sketch first.
 - If frontend changes cannot be fully verified in-session, state the exact pending quality or type-check commands and remaining UI risks.
