@@ -18,11 +18,12 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 7. When the task includes expression-style search, tokenized condition editing, dynamic route query encoding, remote option panels, or quick filter sidebars, load [`references/condition-filter-rules.md`](references/condition-filter-rules.md).
 8. Prefer adjacent pages, same-domain modules, or similar business scenarios as references; extract interaction patterns, information architecture, and feedback rhythm, but do not copy flows, metrics, or page shells from unrelated business domains.
 9. When the task includes UI or interaction optimization, combine with `$frontend-design` only after locking these local style anchors plus the Ant Design / Ant Design Vue baseline; use it to refine hierarchy, feedback, and micro-interactions inside the current framework style instead of inventing a new visual language.
-10. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
-11. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions.
-12. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
-13. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
-14. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
+10. When the user explicitly asks to follow an existing page style, or the page could reasonably be implemented in several different shells, pair with `../jetlinks-web-style/SKILL.md` first and let the user choose from a small set of concrete style options before coding.
+11. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
+12. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions.
+13. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
+14. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
+15. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
 
 ## Required Constraints
 
