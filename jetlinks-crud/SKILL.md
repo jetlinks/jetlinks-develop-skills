@@ -12,7 +12,8 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 1. Confirm the target module's execution model and CRUD base abstractions.
 2. Follow the smallest existing Entity, Service, and Controller pattern that matches the task.
 3. If the task includes complex query, batch processing, or CRUD side effects, read [`references/advanced-crud-rules.md`](references/advanced-crud-rules.md).
-4. Pair with `$jetlinks-conventions` or `$jetlinks-reactive` when imports, i18n, or reactive style need extra care.
+4. If the task includes custom `termType`, QueryParam condition mapping, related-table filters, or `SubTableTermFragmentBuilder`-style exists queries, also read [`references/dynamic-term-rules.md`](references/dynamic-term-rules.md).
+5. Pair with `$jetlinks-conventions` or `$jetlinks-reactive` when imports, i18n, or reactive style need extra care.
 
 ## Required Constraints
 

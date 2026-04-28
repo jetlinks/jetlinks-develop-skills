@@ -11,6 +11,7 @@
 - [page-pattern-decision-rules.md](page-pattern-decision-rules.md): 根据业务目标选择 CRUD、工作台、详情页、分步流等页面分型
 - [block-admission-rules.md](block-admission-rules.md): 判断统计卡、图表、快捷入口、概览区等区块是否值得存在
 - [business-ui-example-rules.md](business-ui-example-rules.md): 如何借鉴相似业务案例，以及哪些“看起来高级”的设计不应照搬
+- [condition-filter-rules.md](condition-filter-rules.md): 表达式搜索、Token 化条件输入、远程选项面板、条件路由与快捷筛选联动规则
 - [state-management-rules.md](state-management-rules.md): 状态边界与 store 使用规则
 - [quality-and-type-rules.md](quality-and-type-rules.md): 质量约束与 TypeScript 约束
 - [example-locations.md](example-locations.md): 示例定位与检索命令
@@ -21,9 +22,10 @@
 2. 页面结构不知道该做成什么：`page-pattern-decision-rules.md`
 3. 不确定某个区块、统计卡或图表该不该存在：`block-admission-rules.md`
 4. 需要借鉴案例但怕抄错场景：`business-ui-example-rules.md`
-5. 先判断复用能力再写代码：`capability-reuse-rules.md`
-6. 做 `visDashboard` 仪表盘组件：`dashboard-component-rules.md`
-7. 不确定代码放哪里：`directory-structure-rules.md`
-8. 状态边界不清晰：`state-management-rules.md`
-9. 交付前质量或类型风险检查：`quality-and-type-rules.md`
-10. 需要找真实实现样例：`example-locations.md`
+5. 需要表达式搜索、通用筛选或远程选项筛选：`condition-filter-rules.md`
+6. 先判断复用能力再写代码：`capability-reuse-rules.md`
+7. 做 `visDashboard` 仪表盘组件：`dashboard-component-rules.md`
+8. 不确定代码放哪里：`directory-structure-rules.md`
+9. 状态边界不清晰：`state-management-rules.md`
+10. 交付前质量或类型风险检查：`quality-and-type-rules.md`
+11. 需要找真实实现样例：`example-locations.md`
