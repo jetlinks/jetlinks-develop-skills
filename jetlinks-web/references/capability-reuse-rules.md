@@ -20,11 +20,12 @@
 
 以下名称是候选能力，使用前必须核验导出与契约。
 
-先完成页面分型，再选组件组合。只有页面已明确判断为标准管理页时，才优先采用搜索区 + 表格 + 弹窗/抽屉这一套管理页组合；如果核心任务是监控、分析、处置、流程推进或详情理解，应先选更贴近业务的页面结构，再回头挑组件。
+先完成页面分型，再让用户确认页面壳层或风格，再选组件组合。只有页面已明确判断为标准管理页时，才进入“搜索层 + 列表层 + 编辑层”的管理页组合判断；如果核心任务是监控、分析、处置、流程推进或详情理解，应先选更贴近业务的页面结构，再回头挑组件。对管理页中的通用条件搜索，如果 workspace 已提供 `ConditionFilter` 及其编码/回显工具，默认先用它承接搜索层。
 
 | 场景 | 推荐组合 | 说明 |
 | --- | --- | --- |
-| 标准管理列表页 | `FullPage` + `ProSearch` + `j-pro-table` | 仅在已判断为标准管理页后优先 |
+| 标准管理列表页（通用条件搜索） | `FullPage` + `ConditionFilter` + `j-pro-table` | 标准管理页默认优先组合 |
+| 标准管理列表页（旧页兼容 / 轻量固定筛选） | `FullPage` + `ProSearch` + `j-pro-table` | 仅在相邻页面稳定沿用或筛选很轻时使用 |
 | 卡片列表页 | `j-pro-table(card)` + `CardBox` + `BatchDropdown` | 卡片化资源管理 |
 | 管理页内新增/编辑 | `EditDialog` | 仅用于管理页或明确的子流程编辑 |
 | 行内编辑 | `InputEditable` / `Editable` / `FormItemEditable` | 减少重复弹窗 |
@@ -36,6 +37,7 @@
 
 ## 高频组件关键契约
 
+- `ConditionFilter`：关注字段定义、条件模型、`encodeConditionFilterQuery` / `decodeConditionFilterQuery`、远程选项回显
 - `ProSearch`：关注 `columns`、`target`、`@search`
 - `j-pro-table`：关注 `columns`、`request`、`params`
 - `EditDialog`：关注 `schema`、`request`、`@save`、`@close`
@@ -78,6 +80,7 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 ### 查询编码与条件处理
 
 - `paramsEncodeQuery`：编码 `terms[]/sorts[]`
+- `encodeConditionFilterQuery` / `decodeConditionFilterQuery`：统一条件筛选路由编码与回显
 - `encodeQuery`：兼容旧查询结构
 - `handleParamsToString`：固定分组条件字符串化
 - `modifySearchColumnValue`：查询列值处理
@@ -93,9 +96,9 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 ## 推荐工作流
 
-1. 先做包级能力评估，再进入具体组件/Hook/utils 选型。
+1. 先做页面分型与风格确认，再做包级能力评估，最后进入具体组件/Hook/utils 选型。
 2. 优先组合现有能力，避免页面内重复封装。
-3. 先打通查询、列表、编辑、回传等主流程，再补细节交互。
+3. 管理页若存在通用搜索，先判断 `ConditionFilter` 是否应承担搜索层，再衔接列表、编辑、回传等主流程。
 4. 无法复用时给出原因：能力缺口、兼容约束或性能约束。
 
 ## 约束
@@ -105,6 +108,8 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 - 不要在多处手工拼接查询参数，优先复用编码工具。
 - 不要用组件内零散 watcher + 回调替代已有 hook 组合能力。
 - 不要因为组件现成就反向决定页面结构；业务分型优先于组件组合。
+- 不要在页面壳层/风格还未让用户确认前，就直接进入传统 CRUD 组件组合。
+- 不要在 workspace 已提供 `ConditionFilter` 工具链时，仍把 `ProSearch` 当成通用搜索默认值。
 - 不要在未确认真实数据源、刷新方式和业务用途前引入统计卡、趋势图或 `JEcharts` 相关区块。
 
 ## 自检清单
