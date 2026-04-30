@@ -29,7 +29,7 @@
 | 卡片列表页 | `j-pro-table(card)` + `CardBox` + `BatchDropdown` | 卡片化资源管理 |
 | 管理页内新增/编辑 | `EditDialog` | 仅用于管理页或明确的子流程编辑 |
 | 行内编辑 | `InputEditable` / `Editable` / `FormItemEditable` | 减少重复弹窗 |
-| 条件构建 | `TermsCascader` / `TermsCascaderGroup` | 复杂条件统一处理 |
+| 条件构建 | `ConditionFilter` / `TermsCascader` / `TermsCascaderGroup` | 优先字段驱动的通用条件、时间/范围、嵌套映射与选项值编辑 |
 | 上传导入 | `ProUpload` / `ImageUpload` / `BatchImport` | 上传与模板导入 |
 | 地图与轨迹 | `AMapComponent` / `SelectAMap` / `PathSimplifier` | 地图能力封装 |
 | 图表与时间 | `JEcharts` / `JDashboardTimeSelect` | 仪表盘与趋势分析 |
@@ -98,7 +98,7 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 1. 先做页面分型与风格确认，再做包级能力评估，最后进入具体组件/Hook/utils 选型。
 2. 优先组合现有能力，避免页面内重复封装。
-3. 管理页若存在通用搜索，先判断 `ConditionFilter` 是否应承担搜索层，再衔接列表、编辑、回传等主流程。
+3. 管理页若存在通用搜索，先判断 `ConditionFilter` 是否应承担搜索层；再按字段分型判断日期/时间、范围、布尔、选项、嵌套路径、无值条件等是否都能通过通用字段定义、标准条件和值编辑器表达，再衔接列表、编辑、回传等主流程。
 4. 无法复用时给出原因：能力缺口、兼容约束或性能约束。
 
 ## 约束
@@ -110,6 +110,8 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 - 不要因为组件现成就反向决定页面结构；业务分型优先于组件组合。
 - 不要在页面壳层/风格还未让用户确认前，就直接进入传统 CRUD 组件组合。
 - 不要在 workspace 已提供 `ConditionFilter` 工具链时，仍把 `ProSearch` 当成通用搜索默认值。
+- 不要因为某个字段是“项目/用户/区域/字典”就直接新增字段专属搜索组件；先复用 `ConditionFilter` 的通用选项值编辑路径。
+- 不要因为某个字段是时间范围、数值区间、嵌套路径或空值判断，就直接新增页面私有筛选组件；先复用标准条件、字段映射和通用值编辑器。
 - 不要在未确认真实数据源、刷新方式和业务用途前引入统计卡、趋势图或 `JEcharts` 相关区块。
 
 ## 自检清单
