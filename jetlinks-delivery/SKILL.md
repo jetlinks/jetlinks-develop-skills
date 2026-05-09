@@ -15,13 +15,16 @@ Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first.
 4. Read [`references/shell-commit-examples.md`](references/shell-commit-examples.md) when the user wants a ready-to-run command for PowerShell, bash, zsh, or cmd.
 5. Align the commit message with the repository's existing `type(scope): summary` style and clearly separate verified facts from recommended wording.
 6. Run the relevant unit tests or integration tests and collect numeric evidence.
-7. Prepare the PR description with purpose, core changes, test data, coverage data, and residual risks.
+7. Check whether the change also requires synchronizing existing documentation such as README, module docs, API docs, AGENTS, or other owning docs; prefer updating the existing source document instead of creating a new task log.
+8. Prepare the PR description with purpose, core changes, test data, coverage data, documentation sync status, and residual risks.
 
 ## Required Constraints
 
 - Do not push directly to protected mainline branches unless the user explicitly overrides that rule.
 - Do not say work is ready for merge without test evidence or a clearly stated blocker.
+- Do not say delivery is complete when code or behavior changed but required source docs are clearly stale; either update them or state the exact gap and risk.
 - Do not use vague PR text such as “tested” or “optimized” without data.
+- Do not default to creating a new per-task document or archive log; follow repo-local documentation rules and prefer updating existing docs.
 - Do not emit multi-line `git commit` commands that rely on literal `\n` becoming real newlines.
 
 ## Response Shape
@@ -38,4 +41,5 @@ For full delivery requests:
 2. Proposed commit message or review result
 3. Shell-safe commit command
 4. Tests and coverage evidence
-5. PR summary or remaining blockers
+5. Documentation sync status
+6. PR summary or remaining blockers
