@@ -9,6 +9,7 @@
 - [dashboard-component-rules.md](dashboard-component-rules.md): `visDashboard` 仪表盘组件目录、注册、分层与接线规则
 - [directory-structure-rules.md](directory-structure-rules.md): 目录层级与模块落点规则
 - [state-management-rules.md](state-management-rules.md): 状态边界与 store 使用规则
+- [style-rules.md](style-rules.md): `comm.less` 变量、工具类与组件样式约束
 - [quality-and-type-rules.md](quality-and-type-rules.md): 质量约束与 TypeScript 约束
 - [example-locations.md](example-locations.md): 示例定位与检索命令
 
@@ -19,5 +20,6 @@
 3. 做 `visDashboard` 仪表盘组件：`dashboard-component-rules.md`
 4. 不确定代码放哪里：`directory-structure-rules.md`
 5. 状态边界不清晰：`state-management-rules.md`
-6. 交付前质量或类型风险检查：`quality-and-type-rules.md`
-7. 需要找真实实现样例：`example-locations.md`
+6. 涉及颜色、圆角、阴影、字号或局部 Less：`style-rules.md`
+7. 交付前质量或类型风险检查：`quality-and-type-rules.md`
+8. 需要找真实实现样例：`example-locations.md`
