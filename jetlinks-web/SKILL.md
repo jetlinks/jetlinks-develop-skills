@@ -20,10 +20,26 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 9. When the task includes UI or interaction optimization, combine with `$frontend-design` only after locking these local style anchors plus the Ant Design / Ant Design Vue baseline; use it to refine hierarchy, feedback, and micro-interactions inside the current framework style instead of inventing a new visual language.
 10. When the user explicitly asks to follow an existing page style, or the page could reasonably be implemented in several different shells, pair with `../jetlinks-web-style/SKILL.md` first as the default route, give the user a small set of business-matching style/shell options, and wait for the choice before coding; then choose the search shell separately instead of falling back to `ProSearch` just because a page style has been selected.
 11. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
-12. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions.
-13. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
-14. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
-15. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
+12. Before coding frontend files, run the reuse and decomposition gate:
+    - list the Vue/JSX/TSX files expected to be created or edited;
+    - define each file's responsibility boundary;
+    - search existing shared exports and adjacent implementations for reusable components, hooks, utils, services, and API wrappers;
+    - decide whether UI, state orchestration, request logic, or data transforms should live in a component, hook, service/api, or util.
+13. Check existing capabilities before creating new abstractions, in this order:
+    - same feature directory near the target page;
+    - same `modules/<module>-ui/**` module;
+    - sibling modules in the same business domain or with the same interaction/data pattern;
+    - shared packages and source exports such as `@jetlinks-web-core/*`, `@jetlinks-web/*`, and `jetlinks-web-core/src/*/index.ts`;
+    - public module exports, registries, runtime extension points, or documented cross-module APIs.
+      Reuse, configure, or adapt existing capabilities when stable. Do not deep-import private code from another business module unless it is already an accepted local pattern.
+14. If any created or edited Vue/JSX/TSX file may exceed 300 lines, if a UI/logic structure appears twice or more, or if request/business orchestration would enter a UI component, split before implementation. Do not postpone
+    decomposition as cleanup.
+15. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions, extraction boundaries, and current workspace exports.
+16. After coding, check created or modified Vue/JSX/TSX file line counts. Any file over 300 lines is a blocking issue unless this is a narrow bug fix on an already-large file and the exception is explicitly reported.
+17. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead
+    of scattering hardcoded strings.
+18. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
+19. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
 
 ## Required Constraints
 
@@ -49,6 +65,18 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Wireframes, effect sketches, and design reasoning are alignment artifacts for developers and stakeholders; the final implemented UI must face end users and must not expose prototype labels, interaction explanations, design principles, or development notes on the page.
 - If critical interaction decisions are under-specified, ask the user instead of guessing; if alignment is easier visually, show a wireframe or effect sketch first.
 - If frontend changes cannot be fully verified in-session, state the exact pending quality or type-check commands and remaining UI risks.
+- Before creating a new frontend component, hook, service, or util, search existing workspace capabilities first: `@jetlinks-web-core/components`, `@jetlinks-web/components`, `@jetlinks-web-core/hooks`, `@jetlinks-web/hooks`,
+      `@jetlinks-web-core/utils`, `@jetlinks-web/utils`, and adjacent module `components/**`, `hooks/**`, `utils/**`, `api/**`, `services/**`.
+- Reuse existing components/hooks/utils/services when they cover the need. If an existing capability covers most of the requirement through props, slots, config, or field schema, extend by configuration instead of creating a
+  parallel implementation.
+- Vue/JSX/TSX files over 300 lines are a blocking quality issue. Split into child components, hooks, services, or utils within the same task; do not treat decomposition as optional follow-up cleanup.
+- Editing an existing file already over 300 lines is allowed only for narrow bug fixes. Feature work must first identify an extraction boundary and avoid making the large file larger.
+- Extract by responsibility: repeated markup becomes a child component; state orchestration, watchers, and computed business state become hooks; API calls and request parameter assembly go to `api/*.ts` or service; reusable
+  data transforms go to utils.
+- Do not extract meaningless wrapper components just to reduce line count. A component must own a coherent UI responsibility. If props exceed 3, evaluate whether to pass a typed state object, use slots, move orchestration to a
+  hook, or split responsibilities.
+- UI components must stay side-effect-free: no direct API calls, no global state writes, no environment coupling, and no business orchestration hidden in render components.
+- For frontend final output, report which reuse scopes were checked: same feature, same module, sibling/domain module, shared package, and public exports. If a new abstraction was created, state why none of those scopes provided a suitable capability.
 
 ## Response Shape
 
@@ -59,4 +87,4 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 5. If `$frontend-design` was used, which interaction or visual refinements stayed aligned with local style and Ant Design language
 6. Whether a wireframe / effect sketch was provided or why it was unnecessary
 7. Main code changes and compatibility risks
-8. Verification evidence or pending commands (UI interaction, state flow, route or permission behavior, and type checks)
+8. Verification evidence or pending commands, including UI interaction, state flow, route or permission behavior, type checks, created/modified Vue/JSX/TSX file line-count status, reuse scopes checked (same feature, same module, sibling/domain module, shared package, public exports), reused capabilities, and reasons for any new components/hooks/utils/services/API wrappers.
