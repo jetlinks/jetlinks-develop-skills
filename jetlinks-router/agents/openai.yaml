@@ -1,4 +1,5 @@
 interface:
   display_name: "JetLinks Router"
   short_description: "JetLinks 二开总路由与多技能入口"
-  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务并切到最合适的 focused skill；遇到前端任务时，先按 $jetlinks-web 做 5 项检查：目标用户、第一任务、成功标准、单对象/多对象、关键指标数据源。缺 1 项且影响结构先问用户，缺 2 项及以上必须先澄清。前端默认业务优先、参考为辅，视觉基线为 Ant Design / Ant Design Vue；若页面壳层或风格有多个合理方案，先让用户选风格/页面壳，不默认传统 CRUD。若页面存在通用条件搜索且 workspace 已提供 `ConditionFilter` 及编码回显工具，默认优先用 `ConditionFilter`，仅在相邻页面明确沿用或筛选很轻时才回退 `ProSearch`。标准管理页再组合 `j-pro-table`、`EditDialog`。用户可见标题、字段展示名、列头、按钮和提示文案统一走 i18n，可用中文作默认值；无真实数据源不做统计卡/图表，线框与设计说明不进入最终用户界面。"
+  default_prompt: >-
+    使用 $jetlinks-router 分类当前 JetLinks 任务并切到最合适的 focused skill。遇到前端页面、组件、交互、样式、筛选、详情或弹窗任务时，路由到 $jetlinks-web；如果页面结构存在多种合理业务方案，再组合 $jetlinks-web-style 先让用户选择。前端实现以当前 workspace 的 jetlinks-web-core 组件、hooks、utils 和相邻页面用法为准，不把 jetlinks-project-ui-cli 当默认依赖；不要在 router 中复制详细前端规则，具体业务分析、方案选择、ConditionFilter 优先级、i18n、无意义数据规避和组件复用约束都以 $jetlinks-web / $jetlinks-web-style 为准。
