@@ -15,16 +15,30 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 4. Before coding, check five decision facts: target user, first task after entering the page, success criterion, whether the user operates one object or many, and the source of any key metric/chart. If any one is critical and unknown, ask the user first; if two or more are unknown, or page type is still undecided across multiple patterns, you must stop and clarify before implementation.
 5. Select only the minimal additional references from [`references/index.md`](references/index.md) based on task scope, and treat references as supporting material only after the business model is clear.
 6. Unless the task hits the `jetlinks-web-style` local-tweak whitelist (single form field / single filter chip / single dialog content / styling-copy-props-only), you must load `../jetlinks-web-style/SKILL.md` and the single-source-of-truth catalog [`../jetlinks-web-style/references/style-catalog.md`](../jetlinks-web-style/references/style-catalog.md), present 2-4 business-matching templates from its 13-template directory (standard table / asset card register / filter workbench / multi-object comparison / disposition workbench / object detail workspace / master-detail workspace / runtime-edit toggle / configuration wizard / resource picker / monitoring perception / analysis drill-down / timeline log stream), and wait for the user's choice before coding. The thin index at [`references/interaction-solution-catalog.md`](references/interaction-solution-catalog.md) only points to the catalog and must not be used as the source of template definitions.
-7. After the solution is selected, load [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md) and map every card, list, detail section, icon, dynamic edit, filter, drawer, tag, status, and resource-picker scenario to existing `jetlinks-web-core` components before creating local UI.
+7. After the template is selected, load [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md) and map every card, list, detail section, icon, dynamic edit, filter, drawer, tag, status, and resource-picker scenario to existing `jetlinks-web-core` components before creating local UI.
 8. When page type is still unclear, load [`references/page-pattern-decision-rules.md`](references/page-pattern-decision-rules.md) first; when deciding whether a block should exist, load [`references/block-admission-rules.md`](references/block-admission-rules.md); when borrowing from examples, load [`references/business-ui-example-rules.md`](references/business-ui-example-rules.md).
 9. When the page includes reusable search or filtering, first decide whether the current workspace `ConditionFilter` plus its route encode/decode toolchain should own the search layer; for generic condition search, tokenized editing, dynamic route query encoding, remote option panels, or quick filter sidebars, load [`references/condition-filter-rules.md`](references/condition-filter-rules.md) and treat `ConditionFilter` as the first candidate. Before creating any field-specific search UI, first classify the field into generic editor categories such as text, number, date/time, range, boolean, option/reference, nested path, or valueless condition, and decide whether the value editor can be expressed through field-driven generic editors plus field-level transform hooks.
 10. Prefer adjacent pages, same-domain modules, or similar business scenarios as references; extract interaction patterns, information architecture, component combinations, and feedback rhythm, but do not copy flows, metrics, page shells, local components, or API contracts from unrelated business domains.
 11. When the task includes UI or interaction optimization, combine with `$frontend-design` only after locking these local style anchors plus the Ant Design / Ant Design Vue baseline; use it to refine hierarchy, feedback, and micro-interactions inside the current framework style instead of inventing a new visual language.
 12. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
-13. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions.
-14. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
-15. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
-16. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
+13. Before coding frontend files, run the reuse and decomposition gate:
+    - list the Vue/JSX/TSX files expected to be created or edited;
+    - define each file's responsibility boundary;
+    - search existing shared exports and adjacent implementations for reusable components, hooks, utils, services, and API wrappers;
+    - decide whether UI, state orchestration, request logic, or data transforms should live in a component, hook, service/api, or util.
+14. Check existing capabilities before creating new abstractions, in this order:
+    - same feature directory near the target page;
+    - same `modules/<module>-ui/**` module;
+    - sibling modules in the same business domain or with the same interaction/data pattern;
+    - shared packages and source exports such as `@jetlinks-web-core/*`, `@jetlinks-web/*`, and `jetlinks-web-core/src/*/index.ts`;
+    - public module exports, registries, runtime extension points, or documented cross-module APIs.
+      Reuse, configure, or adapt existing capabilities when stable. Do not deep-import private code from another business module unless it is already an accepted local pattern.
+15. If any created or edited Vue/JSX/TSX file may exceed 300 lines, if a UI/logic structure appears twice or more, or if request/business orchestration would enter a UI component, split before implementation. Do not postpone decomposition as cleanup.
+16. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions, extraction boundaries, and current workspace exports.
+17. After coding, check created or modified Vue/JSX/TSX file line counts. Any file over 300 lines is a blocking issue unless this is a narrow bug fix on an already-large file and the exception is explicitly reported.
+18. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
+19. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
+20. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
 
 ## Required Constraints
 
@@ -60,16 +74,28 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Wireframes, effect sketches, and design reasoning are alignment artifacts for developers and stakeholders; the final implemented UI must face end users and must not expose prototype labels, interaction explanations, design principles, or development notes on the page.
 - If critical interaction decisions are under-specified, ask the user instead of guessing; if alignment is easier visually, show a wireframe or effect sketch first.
 - If frontend changes cannot be fully verified in-session, state the exact pending quality or type-check commands and remaining UI risks.
+- Before creating a new frontend component, hook, service, or util, search existing workspace capabilities first: `@jetlinks-web-core/components`, `@jetlinks-web/components`, `@jetlinks-web-core/hooks`, `@jetlinks-web/hooks`,
+      `@jetlinks-web-core/utils`, `@jetlinks-web/utils`, and adjacent module `components/**`, `hooks/**`, `utils/**`, `api/**`, `services/**`.
+- Reuse existing components/hooks/utils/services when they cover the need. If an existing capability covers most of the requirement through props, slots, config, or field schema, extend by configuration instead of creating a
+  parallel implementation.
+- Vue/JSX/TSX files over 300 lines are a blocking quality issue. Split into child components, hooks, services, or utils within the same task; do not treat decomposition as optional follow-up cleanup.
+- Editing an existing file already over 300 lines is allowed only for narrow bug fixes. Feature work must first identify an extraction boundary and avoid making the large file larger.
+- Extract by responsibility: repeated markup becomes a child component; state orchestration, watchers, and computed business state become hooks; API calls and request parameter assembly go to `api/*.ts` or service; reusable
+  data transforms go to utils.
+- Do not extract meaningless wrapper components just to reduce line count. A component must own a coherent UI responsibility. If props exceed 3, evaluate whether to pass a typed state object, use slots, move orchestration to a
+  hook, or split responsibilities.
+- UI components must stay side-effect-free: no direct API calls, no global state writes, no environment coupling, and no business orchestration hidden in render components.
+- For frontend final output, report which reuse scopes were checked: same feature, same module, sibling/domain module, shared package, and public exports. If a new abstraction was created, state why none of those scopes provided a suitable capability.
 
 ## Response Shape
 
 1. Frontend task type and target module
 2. Business goal, target users, and why this is or is not a standard CRUD page
-3. Selected interaction solution, whether the user chose it, and which alternatives were rejected
+3. Selected interaction template, whether the user chose it, and which alternatives were rejected
 4. Which references were used, why they are business-relevant, and what was deliberately not borrowed
 5. Current framework style anchors plus reused `jetlinks-web-core` components/hooks/utils/capabilities and key contracts
 6. Any existing component not reused, with checked export/example and reason
 7. If `$frontend-design` was used, which interaction or visual refinements stayed aligned with local style and Ant Design language
 8. Whether a wireframe / effect sketch was provided or why it was unnecessary
 9. Main code changes and compatibility risks
-10. Verification evidence or pending commands (UI interaction, state flow, route or permission behavior, and type checks)
+10. Verification evidence or pending commands, including UI interaction, state flow, route or permission behavior, type checks, created/modified Vue/JSX/TSX file line-count status, reuse scopes checked (same feature, same module, sibling/domain module, shared package, public exports), reused capabilities, and reasons for any new components/hooks/utils/services/API wrappers.

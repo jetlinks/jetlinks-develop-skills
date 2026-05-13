@@ -17,6 +17,24 @@
 3. 通用函数优先：`@jetlinks-web-core/utils`，再看 `@jetlinks-web/utils`
 4. 常量与底层能力按需使用：`@jetlinks-web/constants`、`@jetlinks-web/core`
 
+## 复用搜索优先级
+
+新增 component / hook / service / API wrapper / util 前，按以下顺序搜索：
+
+1. 当前功能目录：目标页面附近的 `components/**`、`hooks/**`、`utils/**`、`api/**`、`services/**`、`types/**`、schema/config。
+2. 当前模块：`modules/<module>-ui/**` 下相似页面、组件、hook、工具函数、store、API/service。
+3. 同业务域或兄弟子模块：对象模型、流程、字典、权限、搜索、表格操作、表单弹窗、数据转换相同或高度相似的 `modules/*-ui/**` 实现。
+4. 共享层：`@jetlinks-web-core/*`、`@jetlinks-web/*` 及其源码导出入口。
+5. 跨模块公开出口：模块 `index.ts`、`register.ts`、注册中心、运行时扩展位、文档化 API。
+
+原则：
+
+- 同模块可直接复用符合本模块约定的内部能力。
+- 跨模块复用必须优先走公开导出、注册中心或稳定扩展点。
+- 对其他业务模块的私有实现，可以参考模式，但不要直接深层 import。
+- 若多个实现相似，优先选择同模块或同业务域中最近维护、仍在使用的实现。
+- 若现有能力只差少量适配，优先用 adapter/config/schema/slot 包装，不新建平行体系。
+
 ## 页面组件组合
 
 以下名称是候选能力，使用前必须核验导出与契约。

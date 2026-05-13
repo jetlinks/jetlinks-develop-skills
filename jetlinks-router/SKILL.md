@@ -10,13 +10,15 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 ## Workflow
 
 1. Classify the task.
-2. Switch to the most relevant focused JetLinks skill.
-3. Combine multiple focused skills when the task crosses boundaries.
-4. Read adjacent production code before changing anything.
-5. Implement complete changes, not pseudo-code.
-6. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
-7. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
-8. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
+2. Decide whether the task must enter a plan-first gate. Use it for complex, cross-module, multi-subtask, or still-changing requirements.
+3. When plan-first is required, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
+4. Switch to the most relevant focused JetLinks skill.
+5. Combine multiple focused skills when the task crosses boundaries.
+6. Read adjacent production code before changing anything.
+7. Implement complete changes, not pseudo-code.
+8. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
+9. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
+10. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
 
 ## Routing
 
@@ -38,8 +40,10 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Do not ignore symlinked modules or linked external subprojects when discovering the workspace.
 - Prefer local examples over generic memory.
 - When local examples are missing, clearly separate defaults from verified workspace facts.
+- Do not directly implement complex or unstable requirements before clarifying scope, exclusions, risks, and validation with the user.
 - When Apache Commons utilities are already present or adjacent code already uses them, prefer them for common null or empty checks instead of handwritten repetitive branches.
 - Keep changes scoped to the requested capability; avoid unrelated refactors or speculative cleanup.
+- If the tool supports a dedicated Plan mode, prefer it for plan-first tasks; otherwise still follow the same behavior manually.
 - Prefer existing framework abstractions and focused skills over adding new ad hoc guidance here.
 
 ## Response Shape
@@ -47,14 +51,17 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 When analyzing first:
 
 1. Task classification
-2. Focused JetLinks skill or skills to use
-3. Workspace facts to confirm
-4. Proposed code locations
+2. Whether plan-first confirmation is required
+3. Focused JetLinks skill or skills to use
+4. Workspace facts to confirm
+5. Proposed code locations
+6. Plan summary or direct-execution rationale
 
 When implementing:
 
 1. Quietly classify and inspect
-2. Load the needed focused skill or skills
-3. Edit the code with the smallest consistent change
-4. Run the needed validation when possible, otherwise state the exact pending commands and residual risks
-5. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository
+2. If plan-first applies, output the plan and wait for confirmation
+3. Load the needed focused skill or skills
+4. Edit the code with the smallest consistent change
+5. Run the needed validation when possible, otherwise state the exact pending commands and residual risks
+6. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository
