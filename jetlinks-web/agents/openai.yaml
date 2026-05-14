@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Web"
   short_description: "JetLinks 前端页面开发、能力复用与质量约束"
-  default_prompt: "使用 $jetlinks-web 在当前前端任务中优先复用 @jetlinks-web-core/@jetlinks-web 的组件、hooks、utils，并按目录结构、状态管理、类型安全与质量约束完成实现。"
+  default_prompt: "使用 $jetlinks-web 在当前前端任务中优先复用 @jetlinks-web-core/@jetlinks-web 与 Ant Design Vue 的组件、hooks、utils；基础交互控件优先使用 a-button/a-input/a-select/a-table 等组件，不要用原生 button/input/select/table 绕过组件库；卡片、资源块、列表项容器不要写成 button，优先使用 CardBox、j-pro-table(card)、a-card 或语义化 div/section，并按目录结构、状态管理、类型安全与质量约束完成实现。"
