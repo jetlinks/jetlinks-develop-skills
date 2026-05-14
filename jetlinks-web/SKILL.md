@@ -1,6 +1,6 @@
 ---
 name: jetlinks-web
-description: 在 JetLinks 前端工作区中实现或改造 Vue3 页面，优先复用 `@jetlinks-web-core` 与 `@jetlinks-web` 的组件、hooks、utils 和样式体系。适用于列表页/详情页/弹窗开发、样式规范、目录落点判断、状态管理、类型与质量约束、Tab 回传、平台上下文、运行时注册扩展、路由菜单装配与查询参数编码等场景。
+description: 在 JetLinks 前端工作区中实现或改造 Vue3 页面，优先复用 `@jetlinks-web-core`、`@jetlinks-web` 与 Ant Design Vue 的组件、hooks、utils 和样式体系，避免用原生交互标签替代已有组件，尤其不要把卡片容器写成 `button`。适用于列表页/详情页/弹窗开发、样式规范、目录落点判断、状态管理、类型与质量约束、Tab 回传、平台上下文、运行时注册扩展、路由菜单装配与查询参数编码等场景。
 ---
 
 # JetLinks Web
@@ -22,6 +22,8 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 - Do not invent component props, emits, hook signatures, or utils APIs that are not present in current workspace exports.
 - Do not duplicate existing `jetlinks-web-core` or `@jetlinks-web` abstractions with ad hoc local wrappers.
 - Do not hardcode route auth buttons, menu metadata, API base behavior, or token handling when existing abstractions already cover them.
+- Prefer Ant Design Vue for basic interactive controls; do not use native `button`, `input`, `select`, `textarea`, or `table` as a shortcut when `a-button`, `a-input`, `a-select`, `a-textarea`, `a-table`, or project components fit.
+- Do not use a native `button` as a card or resource-list item container; cards should use `CardBox`, `j-pro-table(card)`, `a-card`, adjacent card components, or semantic `div`/`section` containers.
 - Do not load every reference by default; choose only the files needed by the current scenario.
 - Treat components/hooks/utils listed in references as candidates, not guaranteed facts; verify against current workspace exports before implementation.
 - Prefer existing page composition patterns such as `ProSearch`, `j-pro-table`, `CardBox`, and `EditDialog` for standard management pages.

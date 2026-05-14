@@ -15,6 +15,23 @@
 2. 逻辑复用优先：`@jetlinks-web-core/hooks`，再看 `@jetlinks-web/hooks`
 3. 通用函数优先：`@jetlinks-web-core/utils`，再看 `@jetlinks-web/utils`
 4. 常量与底层能力按需使用：`@jetlinks-web/constants`、`@jetlinks-web/core`
+5. 基础交互控件优先评估 Ant Design Vue，再考虑原生标签。
+
+## Ant Design Vue 与原生标签边界
+
+- 基础交互控件优先使用 Ant Design Vue：`a-button`、`a-input`、`a-input-number`、`a-select`、`a-radio`、`a-checkbox`、`a-switch`、`a-date-picker`、`a-time-picker`、`a-upload`。
+- 反馈与容器类交互优先使用 Ant Design Vue：`a-modal`、`a-drawer`、`a-popconfirm`、`a-tooltip`、`a-alert`、`a-empty`、`a-spin`、`a-pagination`。
+- 数据展示优先评估项目级 `j-pro-table`；确需基础表格时使用 `a-table`，不要手写 `<table>`、分页、loading 和 empty 状态。
+- 表单优先使用 `a-form` / `a-form-item` 或项目级 `EditDialog` schema，不在页面里堆叠原生 `<label>`、`<input>` 与手写校验。
+- 原生标签不是禁用项；`div`、`section`、`span` 等可用于结构和布局，但不应用原生交互控件绕过组件库能力。
+
+## 卡片列表根节点规则
+
+- 卡片列表优先复用 `j-pro-table(card)`、`CardBox` 或相邻页面已有卡片布局模式。
+- 卡片、资源块、列表项容器不要使用原生 `button` 作为根节点；卡片根节点优先使用 `CardBox`、`a-card`、模块内卡片组件或语义化 `div`/`section`。
+- 整卡点击场景应在卡片容器上声明点击行为与状态样式；必要时补充 `role="button"`、`tabindex="0"` 和键盘事件，不要为了点击能力把整张卡片写成 `button`。
+- 卡片内部的具体操作按钮使用 `a-button` 或项目操作组件，避免原生 `button` 造成主题、尺寸、权限、loading、禁用态和 hover/focus 风格不一致。
+- 只有单一动作、无复杂内容承载的元素才适合按钮语义；复杂卡片内容、状态、描述和操作区混合时必须保持卡片容器语义。
 
 ## 页面组件组合
 
