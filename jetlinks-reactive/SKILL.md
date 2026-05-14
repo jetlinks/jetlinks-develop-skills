@@ -19,6 +19,9 @@ Read [`references/reactive-practice.md`](references/reactive-practice.md) first.
 - Do not call `block()` inside reactive business flows unless the current module already does so for the same boundary and there is no safer local alternative.
 - Do not introduce nested `subscribe()` for core business control flow.
 - Do not wrap blocking code in reactive types and claim the flow is non-blocking.
+- Do not use `CompletableFuture.get(...)`, `Thread.sleep`, or busy-wait loops to coordinate with a reactive result; use `flatMap` / `zip` / `then` / `concatMap` / `Sinks` / events / commands instead.
+- Do not bypass reactive context with global mutable `static` state or `ThreadLocal` to fake non-blocking propagation.
+- When the reactive API or library does not satisfy the requirement (signature mismatch, missing extension point, serialization error inside the chain), follow [`../jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../jetlinks-conventions/references/root-cause-and-no-hack-rules.md): solve at the root via official extension points / adjacent abstractions / dependency choice, or inform the user with concrete trade-offs; do not use reflection / visibility hacks / copied source / silent `catch` to make the chain compile.
 - When reactive code changes are made, run relevant validation when possible; otherwise state the exact pending commands and residual blocking risks.
 
 ## Response Shape
