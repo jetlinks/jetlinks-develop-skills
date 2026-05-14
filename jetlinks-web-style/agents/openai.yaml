@@ -2,16 +2,16 @@ interface:
   display_name: "JetLinks Web Style"
   short_description: "JetLinks 前端交互方案选择目录（13 个方案 + 反传统后台感硬约束）"
   default_prompt: >-
-    使用 $jetlinks-web-style 为当前页面选定交互方案，事实源是 references/style-catalog.md，本 prompt 只做"选方案 + 重申硬约束"两件事，实现回到 $jetlinks-web。
+    使用 $jetlinks-web-style 为当前页面选定交互方案。事实源分片：`style-catalog.md`（索引 + 加载策略）、`style-catalog-routing.md`（业务任务路由 + 方案统一字段）、`style-catalog-core.md`（硬约束全文）、`style-catalog-templates.md`（13 个方案详述，**仅读 2-4 个候选的 `###` 小节**，禁止整篇进上下文）。本 prompt 只做"选方案 + 重申硬约束"两件事，实现回到 $jetlinks-web。
 
     一、选方案（默认强制）：
     1)除非任务命中"局部调整白名单"（仅改一个表单字段 / 仅改一个筛选条件 / 仅改一个弹窗内容 / 仅样式与文案与组件 props 微调），任何新增页面、重构页面壳层、调整信息架构或主筛选 / 主列表 / 主详情承载方式都必须先让用户在 13 个方案（标准管理表格页 / 资产卡片台账页 / 筛选工作台页 / 多对象对比页 / 处置工作台 / 对象详情工作区 / 主从详情工作区 / 配置态-运行态切换页 / 配置向导 / 资源选择器 / 监控感知页 / 分析钻取页 / 时间线日志流页）中选择。
     2)如果用户已明确"参考现在这个页面 / 沿用资产页 / 就按当前模板"，直接映射到最接近的方案继续。
-    3)否则按"业务任务 → 方案路由"识别第一任务，给 2-4 个候选；每个候选必须给出：业务任务匹配理由、首屏 ASCII 线框骨架、信息密度目标、编辑触发梯度（inline / sectional / drawer / modal / page）、核心组件（来自 workspace 的 jetlinks-web-core）、状态 / 标签锚点、主要动作位置、不借鉴清单。
+    3)否则读 `style-catalog-routing.md` 的"业务任务 → 方案路由"识别第一任务，给 2-4 个候选；每个候选的正文只从 `style-catalog-templates.md` 提取对应 `###` 节，不要加载文件其余部分。
     4)给默认项 + 单句业务理由，等用户选择，不问"想要什么风格"这种开放问题。
     5)用户选定后输出 solution profile：solutionName / primaryFilterSurface / contentSurface / detailCarrier / editMode / coreComponents / actionPlacement / densityTarget / sidebarMode。
 
-    二、重申硬约束（按 style-catalog "反传统后台感硬约束" 的目录顺序，逐条点名，不要漏）：
+    二、重申硬约束（细则在 `style-catalog-core.md`，此处按顺序点名，不要漏）：
     - 编辑触发梯度优先 inline > sectional > drawer > modal > page
     - 首屏不允许默认"4 KPI 卡 + 顶部搜索 + 大表格"套壳；一屏一主视觉锚点（主 CTA / 关键数据带 / 真实产品状态区三选一不叠加，工作流页主要内容首屏可见）
     - 状态先于字段；禁止 border-left: 3px solid 或 inset box-shadow 这类单侧彩色线条作为主要状态信号

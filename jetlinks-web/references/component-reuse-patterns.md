@@ -1,6 +1,6 @@
 # JetLinks Web Component Reuse Patterns
 
-本文件用于把常见前端场景映射到 `jetlinks-web-core` 通用组件，约束同类页面保持一致实现。交互模版的单一事实源是 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)；本文件只给出组件级的复用矩阵、编辑触发梯度与反传统后台感约束，模版级（业务任务、首屏 ASCII、密度、状态锚点）走 catalog。
+本文件用于把常见前端场景映射到 `jetlinks-web-core` 通用组件，约束同类页面保持一致实现。交互模版的单一事实源按分片加载：[`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)（按需只读候选 `###`）+ [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)（硬约束）；本文件只给出组件级复用矩阵、编辑触发梯度表与短约束，详情页 / 侧栏 / 10 条硬规则等**见 core，下文不重复**。
 
 ## 反传统后台感硬约束
 
@@ -29,169 +29,16 @@
 - 文案面向终端用户：禁出现"待接接口 / 这里以后接数据 / 模块说明 / 交互方式 / 设计意图"等开发态文字；统一走当前 i18n
 - 弹窗不是唯一编辑路径：详情页必须先评估能否走 inline / sectional 编辑，再决定是否需要弹窗
 
-## 详情页头部摘要区
+## 详情页 / 编辑统一样式 / 整页版式 / 侧栏（不重复展开）
 
-所有"对象详情类"页面（对象详情工作区 / 主从详情工作区 / 配置态-运行态切换页 等单对象页面）必须按下面规范实现头部摘要区，跨页面保持一致：
+以下为 `jetlinks-web-style` 中与组件选型强相关、且正文很长的规范，**请直接阅读** [`../../jetlinks-web-style/references/style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)（单文件 ≈22KB，远小于旧版整本 catalog）：
 
-### 必须包含的要素（按顺序）
+- **§7** 详情页头部摘要区（名称 / 说明 inline、标签就地、状态快捷动作、反模式）
+- **§8** 编辑交互样式统一（字段 → 控件唯一映射、节奏、反模式）
+- **详情页 10 条硬规则** + AI 味 7 条不要 + **反向引用**做主区段
+- **侧栏与导航交互**（active 分两档、折叠 8 条、顶级路由不渲染 PageHead、FAB / z-index）
 
-1. **对象身份**：图标 + 名称（**inline 可改**）
-2. **状态**：状态徽标 / chip（`j-badge-status` / `MetaChip`），状态切换通过快捷动作按钮，不放进编辑表单
-3. **标签**：胶囊集合（`ChipGroup` / `AppTag`），**就近 + / × 增删**，不进编辑表单改
-4. **说明 / 描述**：副标题位（**inline 可改**），长文本截断 + tooltip / 展开
-5. **归属**：项目 / 租户 / 责任人 / 区域 / 产品（图标 + 文字，必要时跳转）
-6. **元信息**：创建时间 / 更新时间 / 版本号（弱化展示）
-7. **快捷动作**：1-3 个核心动作 + "更多"
-
-### 字段编辑方式映射
-
-| 字段 | 编辑方式 | 组件 |
-| --- | --- | --- |
-| 名称 | hover 显编辑入口 → inline 编辑 | `InputEditable` / `Editable` |
-| 说明 / 描述 / 备注 | hover 显编辑入口 → inline 编辑 | `InputEditable` / `Editable` / `FormItemEditable` |
-| 标签 | 就近 + / × 增删 | `ChipGroup` / `AppTag` |
-| 状态 | 快捷动作切换（带必要二次确认） | `j-badge-status` + 动作按钮 |
-| 归属 | 通常只读；可改时用 inline 选择器 | `FormItemEditable` + 选择器 |
-| 元信息 | 只读 | 文本 |
-
-### 跨页面一致性
-
-- 不同详情页（设备 / 产品 / 模型 / 通知配置 / AI 应用 / 规则 等）的头部摘要区结构、字段顺序、动作位置必须复用同一套组件与节奏
-- 摘要区在 Tabs 切换时始终保持可见，不重复出现
-- hover 编辑入口、Enter 保存、Esc 取消、失焦保存、就近校验、带对象名的成功反馈，按工作区统一约定一次性确立
-
-### 反模式（明确禁止）
-
-- ❌ 头部摘要区右上角放一个"编辑"按钮，点击弹出包含名称 / 说明 / 标签等基本信息的编辑表单
-- ❌ 头部只展示纯文本"名称：xxx"，没有 hover 可见的编辑入口
-- ❌ 标签的增删需要进入编辑表单才能完成
-- ❌ 把状态做成下拉表单字段切换，而不是用快捷动作按钮
-- ❌ 把基本信息（名称 / 说明 / 标签 / 状态）和复杂配置混在同一个编辑表单里
-- ❌ 不同详情页的头部结构、字段顺序、动作位置都自己一套
-- ❌ 头部摘要区跟随 Tab 切换消失，或每个 Tab 内重复一遍摘要
-
-## 编辑交互样式统一
-
-避免"功能 A 用 chip 改标签，功能 B 用 select 改标签"、"功能 A 失焦保存，功能 B 必须点保存按钮"这种碎片化。整站任一字段类型的编辑控件、触发方式、保存反馈必须按本节锁定，跨模块完全一致。详细规范见 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md) "反传统后台感硬约束 - 8. 编辑交互样式统一"。
-
-### 字段类型 → 编辑控件唯一映射
-
-| 字段类型 | 唯一推荐控件 | 触发方式 | 保存方式 |
-| --- | --- | --- | --- |
-| 名称 / 标题 | `InputEditable` / `Editable` | hover 显铅笔 → 点击 inline | Enter 保存 + 失焦保存 + Esc 取消 |
-| 说明 / 描述 / 备注 / 注释 | `InputEditable` / `Editable` / `FormItemEditable` | 同上 | 同上 |
-| 标签 | `ChipGroup` / `AppTag` | 就近 + / × | 即时提交 |
-| 状态 | `j-badge-status` / `MetaChip` + 快捷动作按钮 | 快捷动作 + 必要二次确认 | 立即生效 |
-| 布尔开关 | `a-switch` 或工作区 Switch 包装 | 直接切换 + 必要二次确认 | 立即生效 |
-| 单选 / 多选 / 枚举 | `a-select` / `a-radio` / `a-checkbox` 或 `FormItemEditable` 内嵌 | inline 选择器 | 选择即提交 |
-| 时间 / 日期 / 范围 | `a-date-picker` / `a-range-picker` | inline 选择 | 选择即提交 |
-| 数字 | `a-input-number`（带单位用 `Input` + `addonAfter`） | inline 编辑 | Enter / 失焦保存 |
-| 富文本 / Markdown / JSON / 代码 | 工作区统一编辑器 | `SectionCard` 编辑态或抽屉 | `StickyActionBar` |
-| 资源关联 | 工作区统一资源选择器 | inline / 弹层选资源 | 选择即提交 |
-| 跨字段强校验 / 阶段化 / 破坏性 | `EditDialog` / `JlDrawerShell` / 配置向导 | 显式动作 | 表单 OK 提交 |
-
-### 通用动作节奏
-
-- hover 字段显编辑入口（铅笔 / 浅色背景 / 下划线，整站统一一种） → 点击进 inline
-- Enter 保存 / Esc 取消 / Tab 切下一字段
-- 默认失焦保存；只有"破坏性 / 不可恢复"字段允许失焦不保存，并显式给保存 / 取消按钮
-- 校验失败就近气泡 + 回退到上一个有效值，不跳弹窗
-- 保存中行内 loading；成功 toast 文案带对象名（例：`已更新设备 A 的名称`）；失败保留输入 + 错误气泡
-- 二次确认仅用于"启用 / 停用 / 删除 / 重置 / 解绑 / 切换运行模式"等破坏性动作；轻量字段不叠加 Popconfirm
-
-### 跨模块一致性
-
-- 设备 / 产品 / 模型 / 通知 / 规则 / AI 应用 / 项目 / 组织等模块下的同名字段，控件、触发、反馈完全一致
-- 编辑入口的视觉表达整站一种，不允许铅笔位置 / 颜色 / hover 反馈各模块不同
-- 同类破坏性动作的确认文案、按钮顺序、危险色用法整站一致
-- 业务有差异（例如"名称"必须唯一）时仅扩展校验，不更换控件
-
-### 反模式
-
-- ❌ 在 `jetlinks-web-core` 已经有对应组件时，业务模块自造可编辑文本 / chip / 行内表单 / 校验气泡
-- ❌ 名称在 A 页 inline、B 页要点"编辑"按钮弹表单
-- ❌ A 页 Enter 保存、B 页只能点按钮
-- ❌ A 页失焦保存、B 页失焦丢弃
-- ❌ 标签在 A 模块就近 + / ×，在 B 模块必须打开"编辑标签"弹窗
-- ❌ 同一字段在不同模块用不同控件（例：状态有的地方用 `Switch`、有的地方用 `Select`、有的地方用按钮）
-- ❌ 成功反馈一个 toast、一个页面 alert、一个无反馈
-- ❌ inline 场景叠加"编辑 / 保存 / 取消"三按钮 + 独立表单壳
-- ❌ 用 `a-input` 直接覆盖文本展示（无 hover 入口、无保存反馈）
-
-## 详情页 10 条硬规则
-
-所有对象详情类页面落地时按这 10 条走，与详情页头部摘要区规范配合：摘要区聚焦头部基本信息怎么放、怎么编辑；本节聚焦整页的分区、字段、密度、空数据处理。详细见 catalog "反传统后台感硬约束 - 详情页 10 条硬规则"。
-
-| # | 规则 |
-| --- | --- |
-| 1 | 段是单层 `SectionCard`；段内字段无 box，**禁止 sub-card 嵌套**（≥ 2 层 border 矩形） |
-| 2 | 段头 = icon + H2，icon 统一主色 / accent，不每段一种装饰色 |
-| 3 | 不要把"非指标"（分类 / 字符串 / 为 0 / 相对时间）硬做成 KPI 卡板 |
-| 4 | **没数据不渲染**：以"待配置"开头的占位 → 不渲染；段内字段全过滤 → 整段 `v-if` 隐藏 |
-| 5 | 段语义对齐：字段不为"填满 grid"硬塞到不属于的段 |
-| 6 | Hero 卡 = 品类 icon block + 标题行（**最多 3 元素**：name + 状态徽标 + 1 个类型 chip）+ 描述 + inline `·` meta 行 |
-| 7 | 高密度优先：段间 14px、段内 padding ≤ 22px、行高 1.6-1.65；整页纵向高度不能比改造前更长 |
-| 8 | 段内允许层次：段头 → 引言 → 主体（KV / 列表 / 单行）→ 底部软 CTA |
-| 9 | 单字段占位 → 段底软 CTA（"+ 补充 X →"），**不静默吃掉** |
-| 10 | 大屏短小段两两并排，长段独占；中屏自动 collapse 单栏 |
-
-### 详情页 AI 味自检（7 条不要，PR 前对照）
-
-- ❌ sub-card 嵌套（≥ 2 层 border 矩形）
-- ❌ 每段头一种装饰色 icon
-- ❌ 把"非指标"做成 KPI 板
-- ❌ 让占位文案占满版面
-- ❌ 彩色装饰条 / blob / 大引号 / 单侧彩色线条
-- ❌ hero 标题行塞 ≥ 4 个 pill
-- ❌ 让内容贴左对齐而右半灰底空白
-
-### 关联实体段（反向引用模式）
-
-资产类详情页（设备 / 产品 / 模型 / Skill / 大屏模板 / 规则等）展示反向引用（"被哪些智能体 / 项目 / 规则使用"）时**不放右栏 sticky**，做成主区独立段：
-
-- 段头 = icon + H2 + 数量徽章
-- 引言 = 一句话说明"这些实体怎么用本资产"
-- 主体 = `ResponsiveGrid` + 整块可点链接卡片
-- **没有反向引用时整段 `v-if` 不渲染**
-- 用 composable / service 实时反查，不依赖静态字段
-
-## 侧栏与导航交互
-
-### 侧栏 active 态分两档
-
-- **A 档 · 浅嵌套侧栏**（6-8 个一级链接、无 / 浅子菜单）：去染色 + 文字加粗
-  - 文字 ink-1 + `font-weight: 500`；icon ink-1；background `transparent`
-- **B 档 · 深嵌套侧栏**（7+ 模块 × 多子菜单 + 长时间停留同一上下文反复跳转）：Linear 风
-  - 文字 ink-1 + 500；icon accent；background 弱底；左侧 `::before` 2px accent 短条 + `border-radius: 0 2px 2px 0`
-
-> 分档理由：浅嵌套去染色信号足够；深嵌套需要更明确"我在哪"信号。B 档不是传统 Material 风彩色选中块——bg 是弱底灰，accent 仅在 2px 短条 + icon 上，整体仍克制。
-
-### 侧栏折叠分组（8 条精美规则）
-
-父子分组应统一走共享组件（如平台抽出的 `JlSidebarGroup`），不要每处自实现：
-
-| # | 规则 |
-| --- | --- |
-| 1 | caret 用 `chevron-down`，12px，最弱色阶；折叠 `rotate(-90deg)`，过渡 `0.15s ease` |
-| 2 | 父项 28px 行高 / `padding 0 8px` / 小圆角，与普通导航链接一致 |
-| 3 | 父项**自身没有 active 状态**；子项任一 active 时父项加粗，caret 不变色 |
-| 4 | 子项区用 **CSS Grid `0fr ↔ 1fr` + `min-height: 0; overflow: hidden`** 做任意高度动画，不要 `max-height: 1000px` hack |
-| 5 | 整行可点 toggle，不只是 caret 区 |
-| 6 | 持久化：`persist-key` → localStorage；不传则刷新回 `defaultOpen` |
-| 7 | a11y：父项 `aria-expanded` + `aria-controls`；子项区 `role="group"` |
-| 8 | 子项 `padding-left` 与父项 icon 视觉对齐 |
-
-**折叠态**：侧栏从展开宽度收起到 icon-only 时**不要嵌**折叠分组组件，用 `v-if / v-else` 切换"分组 vs 平铺"。
-
-### 顶级路由不渲染 PageHead
-
-站点顶级 tab 的 root route（首页 / 应用中心 / 开发中心 / 文档中心首页）**不渲染 PageHead**——标题已在顶栏 nav active 态表达；面包屑只有自指自身无导航价值；强渲染会和 Hero / 主区视觉重复挤压内容空间。非顶级路由（详情页 / 子路由）继续按声明式 API 渲染 PageHead。
-
-### Z-index 与浮动元素
-
-- 全局浮动元素必须用 token 化的 z-index，**禁裸 `z-index: 9999` / `z-index: 1000`**
-- 推荐层级（升序）：业务模态 1000 → 自建抽屉 1100 → toast 1200 → dev tools 浮层 9999
-- 右下角 FAB：默认 `right: 20px; bottom: 20px`，44×44 圆形；**单页一个 FAB**；多元素按"同位向左 56px / 向上 56px"协议堆叠
+本文件向下只保留**场景 → 组件矩阵**与短规则，避免与 core 双重占用上下文。
 
 ## 场景组件矩阵
 

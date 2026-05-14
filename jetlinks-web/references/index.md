@@ -6,7 +6,7 @@
 
 - [web-development-rules.md](web-development-rules.md): 核心入口、任务分类、标准工作流与核心约束
 - [component-source-rules.md](component-source-rules.md): `jetlinks-web-core` 组件事实源、外部参考边界与新版样例提取规则
-- [interaction-solution-catalog.md](interaction-solution-catalog.md): 交互模版**薄索引**，唯一事实源是 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（13 个模版 + 反传统后台感硬约束 + 业务任务路由表）
+- [interaction-solution-catalog.md](interaction-solution-catalog.md): 交互模版薄索引；事实源按分片加载：[`style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）、`style-catalog-routing.md`、`style-catalog-core.md`、按需 `style-catalog-templates.md` 的单节
 - [component-reuse-patterns.md](component-reuse-patterns.md): 卡片、列表、详情、图标、动态编辑、抽屉、标签等场景的组件复用矩阵
 - [capability-reuse-rules.md](capability-reuse-rules.md): 组件/hooks/utils 与包级能力复用规则
 - [dashboard-component-rules.md](dashboard-component-rules.md): `visDashboard` 仪表盘组件目录、注册、分层与接线规则
@@ -23,7 +23,7 @@
 
 1. 先明确任务类型和执行路径：`web-development-rules.md`
 2. 先确认组件事实源和外部参考边界：`component-source-rules.md`
-3. 页面结构或交互路径有多种可能：以 `../../jetlinks-web-style/references/style-catalog.md` 为唯一事实源（本仓库 `interaction-solution-catalog.md` 只是薄索引）
+3. 页面结构或交互路径有多种可能：按 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md) 的推荐路径加载分片（路由 + core + 仅候选模版节），勿整篇 `style-catalog-templates.md`
 4. 需要统一卡片、列表、详情、图标、动态编辑等组件：`component-reuse-patterns.md`
 5. 页面结构仍不知道该做成什么：`page-pattern-decision-rules.md`
 6. 不确定某个区块、统计卡或图表该不该存在：`block-admission-rules.md`
