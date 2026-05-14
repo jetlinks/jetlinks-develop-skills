@@ -33,17 +33,38 @@
 - 卡片内部的具体操作按钮使用 `a-button` 或项目操作组件，避免原生 `button` 造成主题、尺寸、权限、loading、禁用态和 hover/focus 风格不一致。
 - 只有单一动作、无复杂内容承载的元素才适合按钮语义；复杂卡片内容、状态、描述和操作区混合时必须保持卡片容器语义。
 
+## 复用搜索优先级
+
+新增 component / hook / service / API wrapper / util 前，按以下顺序搜索：
+
+1. 当前功能目录：目标页面附近的 `components/**`、`hooks/**`、`utils/**`、`api/**`、`services/**`、`types/**`、schema/config。
+2. 当前模块：`modules/<module>-ui/**` 下相似页面、组件、hook、工具函数、store、API/service。
+3. 同业务域或兄弟子模块：对象模型、流程、字典、权限、搜索、表格操作、表单弹窗、数据转换相同或高度相似的 `modules/*-ui/**` 实现。
+4. 共享层：`@jetlinks-web-core/*`、`@jetlinks-web/*` 及其源码导出入口。
+5. 跨模块公开出口：模块 `index.ts`、`register.ts`、注册中心、运行时扩展位、文档化 API。
+
+原则：
+
+- 同模块可直接复用符合本模块约定的内部能力。
+- 跨模块复用必须优先走公开导出、注册中心或稳定扩展点。
+- 对其他业务模块的私有实现，可以参考模式，但不要直接深层 import。
+- 若多个实现相似，优先选择同模块或同业务域中最近维护、仍在使用的实现。
+- 若现有能力只差少量适配，优先用 adapter/config/schema/slot 包装，不新建平行体系。
+
 ## 页面组件组合
 
 以下名称是候选能力，使用前必须核验导出与契约。
 
+先完成页面分型，再让用户确认页面壳层或风格，再选组件组合。只有页面已明确判断为标准管理页时，才进入“搜索层 + 列表层 + 编辑层”的管理页组合判断；如果核心任务是监控、分析、处置、流程推进或详情理解，应先选更贴近业务的页面结构，再回头挑组件。对管理页中的通用条件搜索，如果 workspace 已提供 `ConditionFilter` 及其编码/回显工具，默认先用它承接搜索层。
+
 | 场景 | 推荐组合 | 说明 |
 | --- | --- | --- |
-| 标准管理列表页 | `FullPage` + `ProSearch` + `j-pro-table` | 默认优先组合 |
+| 标准管理列表页（通用条件搜索） | `FullPage` + `ConditionFilter` + `j-pro-table` | 标准管理页默认优先组合 |
+| 标准管理列表页（旧页兼容 / 轻量固定筛选） | `FullPage` + `ProSearch` + `j-pro-table` | 仅在相邻页面稳定沿用或筛选很轻时使用 |
 | 卡片列表页 | `j-pro-table(card)` + `CardBox` + `BatchDropdown` | 卡片化资源管理 |
-| 新增/编辑弹窗 | `EditDialog` | 配置驱动表单优先 |
+| 管理页内新增/编辑 | `EditDialog` | 仅用于管理页或明确的子流程编辑 |
 | 行内编辑 | `InputEditable` / `Editable` / `FormItemEditable` | 减少重复弹窗 |
-| 条件构建 | `TermsCascader` / `TermsCascaderGroup` | 复杂条件统一处理 |
+| 条件构建 | `ConditionFilter` / `TermsCascader` / `TermsCascaderGroup` | 优先字段驱动的通用条件、时间/范围、嵌套映射与选项值编辑 |
 | 上传导入 | `ProUpload` / `ImageUpload` / `BatchImport` | 上传与模板导入 |
 | 地图与轨迹 | `AMapComponent` / `SelectAMap` / `PathSimplifier` | 地图能力封装 |
 | 图表与时间 | `JEcharts` / `JDashboardTimeSelect` | 仪表盘与趋势分析 |
@@ -51,6 +72,7 @@
 
 ## 高频组件关键契约
 
+- `ConditionFilter`：关注字段定义、条件模型、`encodeConditionFilterQuery` / `decodeConditionFilterQuery`、远程选项回显
 - `ProSearch`：关注 `columns`、`target`、`@search`
 - `j-pro-table`：关注 `columns`、`request`、`params`
 - `EditDialog`：关注 `schema`、`request`、`@save`、`@close`
@@ -93,6 +115,7 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 ### 查询编码与条件处理
 
 - `paramsEncodeQuery`：编码 `terms[]/sorts[]`
+- `encodeConditionFilterQuery` / `decodeConditionFilterQuery`：统一条件筛选路由编码与回显
 - `encodeQuery`：兼容旧查询结构
 - `handleParamsToString`：固定分组条件字符串化
 - `modifySearchColumnValue`：查询列值处理
@@ -108,9 +131,9 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 ## 推荐工作流
 
-1. 先做包级能力评估，再进入具体组件/Hook/utils 选型。
+1. 先做页面分型与风格确认，再做包级能力评估，最后进入具体组件/Hook/utils 选型。
 2. 优先组合现有能力，避免页面内重复封装。
-3. 先打通查询、列表、编辑、回传等主流程，再补细节交互。
+3. 管理页若存在通用搜索，先判断 `ConditionFilter` 是否应承担搜索层；再按字段分型判断日期/时间、范围、布尔、选项、嵌套路径、无值条件等是否都能通过通用字段定义、标准条件和值编辑器表达，再衔接列表、编辑、回传等主流程。
 4. 无法复用时给出原因：能力缺口、兼容约束或性能约束。
 
 ## 组件抽取决策流
@@ -162,6 +185,12 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 - 不要绕过 `handleMenus`/`handleAuthMenu` 在页面硬编码权限映射。
 - 不要在多处手工拼接查询参数，优先复用编码工具。
 - 不要用组件内零散 watcher + 回调替代已有 hook 组合能力。
+- 不要因为组件现成就反向决定页面结构；业务分型优先于组件组合。
+- 不要在页面壳层/风格还未让用户确认前，就直接进入传统 CRUD 组件组合。
+- 不要在 workspace 已提供 `ConditionFilter` 工具链时，仍把 `ProSearch` 当成通用搜索默认值。
+- 不要因为某个字段是“项目/用户/区域/字典”就直接新增字段专属搜索组件；先复用 `ConditionFilter` 的通用选项值编辑路径。
+- 不要因为某个字段是时间范围、数值区间、嵌套路径或空值判断，就直接新增页面私有筛选组件；先复用标准条件、字段映射和通用值编辑器。
+- 不要在未确认真实数据源、刷新方式和业务用途前引入统计卡、趋势图或 `JEcharts` 相关区块。
 
 ## 自检清单
 

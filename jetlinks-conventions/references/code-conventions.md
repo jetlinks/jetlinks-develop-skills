@@ -45,10 +45,25 @@
 - 不臆造 command id、topic、事件名、support id。
 - 没有明确业务需求时，不新增细粒度动作权限。
 
+### 常用工具类
+
+- 对字符串、集合、Map、数组和对象的判空、blank 判断、默认值处理等常用操作，在当前模块已引入 Apache Commons 或相邻实现已使用时，优先复用相关工具类。
+- 常见优先选择包括 `StringUtils`、`ObjectUtils`、`ArrayUtils`、`CollectionUtils`、`MapUtils`。
+- 避免手写 `str != null && !str.isEmpty()`、`collection == null || collection.isEmpty()`、`map != null && !map.isEmpty()` 这类重复样板判断。
+- 如果当前仓库已有更统一的本地工具类，或目标模块并未引入相关依赖，则保持本地风格，不为了单个判空场景额外引入一套工具依赖。
+
+### 缓存与超时
+
+- 如果需求包含超时缓存、写入后过期、读取后过期或基于时间窗口的本地缓存，优先复用现有缓存抽象，不要手写 `Map + Mono.cache + 定时清理` 一类临时方案。
+- 需要统一缓存抽象或响应式访问时，必须优先使用 `org.hswebframework.web.cache.ReactiveCache<E>`。
+- 需要本地 TTL / size 控制等 Caffeine 能力时，必须使用 `com.github.benmanes.caffeine.cache.Caffeine<K, V>` 构建缓存。
+- 只有在相邻模块已经存在更明确的缓存封装时，才沿用本地封装；不要新造第三套超时缓存实现。
+
 ### i18n
 
 - 只有当前模块已存在 i18n 目录或明显使用 i18n 约定时，才补国际化资源。
 - 对权限、动作、字段、枚举、错误消息的 i18n 跟随相邻模块做法。
+- 用户可见异常优先复用当前模块支持的 `i18nCode` / message key 写法，不要在异常构造里直接写死中文或英文 message。
 - 不为内部日志和调试信息补 i18n。
 
 ## 自检清单

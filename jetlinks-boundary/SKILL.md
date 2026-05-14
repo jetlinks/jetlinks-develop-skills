@@ -10,15 +10,17 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 ## Workflow
 
 1. Identify the capability boundary that the task needs to cross.
-2. Confirm whether the current workspace already has command services, proxies, or support IDs.
+2. Confirm whether the current workspace already has command services, proxies, support IDs, or concrete command classes.
 3. Read [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md) before implementing providers or consumers.
-4. Keep the chosen pattern aligned with the module's execution model and existing naming scheme.
+4. Keep the chosen pattern aligned with the module's execution model, existing naming scheme, and local command invocation style.
 
 ## Required Constraints
 
 - Do not invent command IDs, service IDs, support IDs, or proxy contracts.
 - Do not directly inject another boundary's internal implementation class.
+- When local command classes already exist, prefer explicit command objects with `commandSupport.execute(...)` over shortcut calls such as `executeToMono(...)`.
 - In reactive modules, keep the cross-boundary call non-blocking.
+- When boundary code changes are made, run relevant validation when possible; otherwise state the exact pending commands and cross-boundary risks.
 
 ## Response Shape
 
@@ -26,3 +28,4 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 2. Existing mechanisms found in the workspace
 3. Recommended interaction pattern
 4. Rejected patterns and reasons
+5. Verification evidence or exact pending commands

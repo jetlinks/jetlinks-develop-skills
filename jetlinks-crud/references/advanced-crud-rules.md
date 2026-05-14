@@ -68,6 +68,7 @@
 
 ## 何时联动到其他规则
 
+- 自定义 `termType`、动态条件、关联表 exists 查询：继续读取 `dynamic-term-rules.md`
 - 跨模块能力调用：继续读取 `cross-service-call-rules.md`
 - 生命周期副作用：继续读取 `event-driven-rules.md`
 - 实时消息流处理：继续读取 `realtime-subscription-rules.md`

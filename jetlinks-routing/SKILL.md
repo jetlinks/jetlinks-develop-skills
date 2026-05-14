@@ -19,6 +19,8 @@ Read [`references/module-list.md`](references/module-list.md) first.
 - Do not hardcode module inventories into the skill output.
 - Do not ignore symlinked modules or external subprojects linked into the workspace.
 - Do not create a new module just because the static list is unclear.
+- Keep module placement or creation changes scoped to the requested capability; do not reshuffle unrelated modules or aggregators.
+- If module or structure changes are made, report the validation performed or the exact pending commands and placement risks.
 
 ## Response Shape
 
@@ -26,3 +28,4 @@ Read [`references/module-list.md`](references/module-list.md) first.
 2. Candidate modules
 3. Recommended code location
 4. Whether a new module is required
+5. Validation notes or pending commands

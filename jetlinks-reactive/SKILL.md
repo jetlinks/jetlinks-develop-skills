@@ -19,9 +19,11 @@ Read [`references/reactive-practice.md`](references/reactive-practice.md) first.
 - Do not call `block()` inside reactive business flows unless the current module already does so for the same boundary and there is no safer local alternative.
 - Do not introduce nested `subscribe()` for core business control flow.
 - Do not wrap blocking code in reactive types and claim the flow is non-blocking.
+- When reactive code changes are made, run relevant validation when possible; otherwise state the exact pending commands and residual blocking risks.
 
 ## Response Shape
 
 1. Current module execution model
 2. Reactive risks or blocking risks
 3. Recommended chain or batching pattern
+4. Verification evidence or exact pending commands
