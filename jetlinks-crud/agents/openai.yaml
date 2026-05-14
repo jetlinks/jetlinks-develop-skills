@@ -1,4 +1,5 @@
 interface:
   display_name: "JetLinks CRUD"
   short_description: "JetLinks CRUD 与复杂查询实现"
-  default_prompt: "Use $jetlinks-crud to add or change JetLinks entities, services, controllers, queries, and batch CRUD logic in the local module style."
+  default_prompt: >-
+    使用 $jetlinks-crud 在本模块现有风格内新增或修改 JetLinks 实体 / 服务 / 控制器 / 查询 / 批量更新与 CRUD 相关副作用。1)必读：references/common-crud-rules.md（实体 / 服务 / 控制器 / 标准 CRUD / 基础权限 / 文案）、references/advanced-crud-rules.md（批量更新、事务、聚合查询、复杂分页与排序）、references/dynamic-term-rules.md（动态查询条件 / QueryParam / Term 体系）。2)先判断模块编程模型：看控制器返回类型、服务基类、仓储接口；模块已经明显统一了风格就跟随，全新模块且无可参考实现再问用户，用户不确定就建议跟随当前脚手架主流模式，不要机械问"响应式还是阻塞"。3)最小实现：Service 只保留确实需要的扩展逻辑，基类已有的标准 CRUD 不要重复包；Controller 只暴露用户要求的接口，框架通过基类 / 接口暴露的通用 CRUD 不再造轮子；查询优先复用 _query / QueryParam / Term 体系，不再造私有筛选 API。4)字段 / 校验 / 文案：实体字段沿用本模块命名与注解风格；校验注解走 javax.validation 或本模块已有约束；用户可见的错误 message / 字典 / 权限动作文案走 i18n。5)CRUD 副作用：发布消息 / 远程调用 / 缓存同步 / 广播通知优先放在事件层或提交后阶段，不全塞进主链路；响应式模块按批处理思路实现，禁止在 flatMap 内逐条做 DB 或远程调用。6)动态条件：复用 ConditionFilter / Term / loadOptions / loadSelectedOptions / rename / routeAlias 等扩展点，不为单字段过滤手写 SQL 拼接。7)协同：编程模型、Mono / Flux、阻塞回退切 $jetlinks-reactive；事件 / 订阅副作用切 $jetlinks-events；跨模块访问切 $jetlinks-boundary；模块归属歧义切 $jetlinks-routing；命名 / 注解 / i18n / 根因切 $jetlinks-conventions；交付切 $jetlinks-delivery。

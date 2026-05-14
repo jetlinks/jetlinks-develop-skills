@@ -1,6 +1,6 @@
 # JetLinks Web Component Reuse Patterns
 
-本文件用于把常见前端场景映射到 `jetlinks-web-core` 通用组件，约束同类页面保持一致实现。交互模版的单一事实源是 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)；本文件只给出组件级的复用矩阵、编辑触发梯度与反传统后台感约束，模版级（业务任务、首屏 ASCII、密度、状态锚点）走 catalog。
+本文件用于把常见前端场景映射到 `jetlinks-web-core` 通用组件，约束同类页面保持一致实现。交互模版的单一事实源按分片加载：[`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)（按需只读候选 `###`）+ [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)（§1–§6）+ 按需 [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)；本文件只给出组件级复用矩阵、编辑触发梯度表与短约束，详情头 / 10 条 / 侧栏等**见 detail-shell，下文不重复**。
 
 ## 反传统后台感硬约束
 
@@ -21,100 +21,24 @@
 ### 其他硬约束
 
 - 首屏不可叠加：禁选"4 KPI 卡 + 顶部搜索栏 + 大表格"的经营分析三段套壳；任何统计卡 / 趋势图 / 排行榜没有真实数据源、刷新机制、动作承接时必须删除或降级
+- **一屏一主视觉锚点**：主 CTA / 关键数据带 / 真实产品状态区三选一，不叠加；工作流页主要内容（表格 / 列表 / 详情）必须首屏可见，不允许解释型 hero / 装饰卡 / 教程文案把它推下去
 - 状态先于字段：列表 / 卡片 / 摘要区的第一信息层必须是状态、标签、归属、主动作（用 `j-badge-status` / `MetaChip` / `AppTag`）
+- **状态强调收口**：状态优先用 `.pill` / 小 dot / 完整描边 / 弱状态底；**禁止** `border-left: 3px solid` 或 `box-shadow: inset 4px 0 0` 这类单侧彩色线条作为主要状态信号；业务列表已有 status pill 时，行本身只用 hover / selected 弱底，不再叠彩色左条
 - 信息密度目标：卡片墙每行 3-4 张、单卡核心字段 ≤ 5 + 状态徽标；摘要列表单行 ≤ 7 个关键信息块；表格列数 6-10、操作列 1-2 个常用 + "更多"
 - 动作就近：常用动作随对象就近呈现，不堆 toolbar
 - 文案面向终端用户：禁出现"待接接口 / 这里以后接数据 / 模块说明 / 交互方式 / 设计意图"等开发态文字；统一走当前 i18n
 - 弹窗不是唯一编辑路径：详情页必须先评估能否走 inline / sectional 编辑，再决定是否需要弹窗
 
-## 详情页头部摘要区
+## 详情页 / 编辑统一样式 / 整页版式 / 侧栏（不重复展开）
 
-所有"对象详情类"页面（对象详情工作区 / 主从详情工作区 / 配置态-运行态切换页 等单对象页面）必须按下面规范实现头部摘要区，跨页面保持一致：
+以下为 `jetlinks-web-style` 中与组件选型强相关、且正文很长的规范：**通用 §1–§6**见 [`../../jetlinks-web-style/references/style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)；**详情头 / §8 编辑统一 / 详情 10 条 / 侧栏 / FAB**见 [`../../jetlinks-web-style/references/style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)（单文件 ~16KB）。**入口表**见 [`../../jetlinks-web-style/references/style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)。
 
-### 必须包含的要素（按顺序）
+- **§7** 详情页头部摘要区（名称 / 说明 inline、标签就地、状态快捷动作、反模式）
+- **§8** 编辑交互样式统一（字段 → 控件唯一映射、节奏、反模式）
+- **详情页 10 条硬规则** + AI 味 7 条不要 + **反向引用**做主区段
+- **侧栏与导航交互**（active 分两档、折叠 8 条、顶级路由不渲染 PageHead、FAB / z-index）
 
-1. **对象身份**：图标 + 名称（**inline 可改**）
-2. **状态**：状态徽标 / chip（`j-badge-status` / `MetaChip`），状态切换通过快捷动作按钮，不放进编辑表单
-3. **标签**：胶囊集合（`ChipGroup` / `AppTag`），**就近 + / × 增删**，不进编辑表单改
-4. **说明 / 描述**：副标题位（**inline 可改**），长文本截断 + tooltip / 展开
-5. **归属**：项目 / 租户 / 责任人 / 区域 / 产品（图标 + 文字，必要时跳转）
-6. **元信息**：创建时间 / 更新时间 / 版本号（弱化展示）
-7. **快捷动作**：1-3 个核心动作 + "更多"
-
-### 字段编辑方式映射
-
-| 字段 | 编辑方式 | 组件 |
-| --- | --- | --- |
-| 名称 | hover 显编辑入口 → inline 编辑 | `InputEditable` / `Editable` |
-| 说明 / 描述 / 备注 | hover 显编辑入口 → inline 编辑 | `InputEditable` / `Editable` / `FormItemEditable` |
-| 标签 | 就近 + / × 增删 | `ChipGroup` / `AppTag` |
-| 状态 | 快捷动作切换（带必要二次确认） | `j-badge-status` + 动作按钮 |
-| 归属 | 通常只读；可改时用 inline 选择器 | `FormItemEditable` + 选择器 |
-| 元信息 | 只读 | 文本 |
-
-### 跨页面一致性
-
-- 不同详情页（设备 / 产品 / 模型 / 通知配置 / AI 应用 / 规则 等）的头部摘要区结构、字段顺序、动作位置必须复用同一套组件与节奏
-- 摘要区在 Tabs 切换时始终保持可见，不重复出现
-- hover 编辑入口、Enter 保存、Esc 取消、失焦保存、就近校验、带对象名的成功反馈，按工作区统一约定一次性确立
-
-### 反模式（明确禁止）
-
-- ❌ 头部摘要区右上角放一个"编辑"按钮，点击弹出包含名称 / 说明 / 标签等基本信息的编辑表单
-- ❌ 头部只展示纯文本"名称：xxx"，没有 hover 可见的编辑入口
-- ❌ 标签的增删需要进入编辑表单才能完成
-- ❌ 把状态做成下拉表单字段切换，而不是用快捷动作按钮
-- ❌ 把基本信息（名称 / 说明 / 标签 / 状态）和复杂配置混在同一个编辑表单里
-- ❌ 不同详情页的头部结构、字段顺序、动作位置都自己一套
-- ❌ 头部摘要区跟随 Tab 切换消失，或每个 Tab 内重复一遍摘要
-
-## 编辑交互样式统一
-
-避免"功能 A 用 chip 改标签，功能 B 用 select 改标签"、"功能 A 失焦保存，功能 B 必须点保存按钮"这种碎片化。整站任一字段类型的编辑控件、触发方式、保存反馈必须按本节锁定，跨模块完全一致。详细规范见 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md) "反传统后台感硬约束 - 8. 编辑交互样式统一"。
-
-### 字段类型 → 编辑控件唯一映射
-
-| 字段类型 | 唯一推荐控件 | 触发方式 | 保存方式 |
-| --- | --- | --- | --- |
-| 名称 / 标题 | `InputEditable` / `Editable` | hover 显铅笔 → 点击 inline | Enter 保存 + 失焦保存 + Esc 取消 |
-| 说明 / 描述 / 备注 / 注释 | `InputEditable` / `Editable` / `FormItemEditable` | 同上 | 同上 |
-| 标签 | `ChipGroup` / `AppTag` | 就近 + / × | 即时提交 |
-| 状态 | `j-badge-status` / `MetaChip` + 快捷动作按钮 | 快捷动作 + 必要二次确认 | 立即生效 |
-| 布尔开关 | `a-switch` 或工作区 Switch 包装 | 直接切换 + 必要二次确认 | 立即生效 |
-| 单选 / 多选 / 枚举 | `a-select` / `a-radio` / `a-checkbox` 或 `FormItemEditable` 内嵌 | inline 选择器 | 选择即提交 |
-| 时间 / 日期 / 范围 | `a-date-picker` / `a-range-picker` | inline 选择 | 选择即提交 |
-| 数字 | `a-input-number`（带单位用 `Input` + `addonAfter`） | inline 编辑 | Enter / 失焦保存 |
-| 富文本 / Markdown / JSON / 代码 | 工作区统一编辑器 | `SectionCard` 编辑态或抽屉 | `StickyActionBar` |
-| 资源关联 | 工作区统一资源选择器 | inline / 弹层选资源 | 选择即提交 |
-| 跨字段强校验 / 阶段化 / 破坏性 | `EditDialog` / `JlDrawerShell` / 配置向导 | 显式动作 | 表单 OK 提交 |
-
-### 通用动作节奏
-
-- hover 字段显编辑入口（铅笔 / 浅色背景 / 下划线，整站统一一种） → 点击进 inline
-- Enter 保存 / Esc 取消 / Tab 切下一字段
-- 默认失焦保存；只有"破坏性 / 不可恢复"字段允许失焦不保存，并显式给保存 / 取消按钮
-- 校验失败就近气泡 + 回退到上一个有效值，不跳弹窗
-- 保存中行内 loading；成功 toast 文案带对象名（例：`已更新设备 A 的名称`）；失败保留输入 + 错误气泡
-- 二次确认仅用于"启用 / 停用 / 删除 / 重置 / 解绑 / 切换运行模式"等破坏性动作；轻量字段不叠加 Popconfirm
-
-### 跨模块一致性
-
-- 设备 / 产品 / 模型 / 通知 / 规则 / AI 应用 / 项目 / 组织等模块下的同名字段，控件、触发、反馈完全一致
-- 编辑入口的视觉表达整站一种，不允许铅笔位置 / 颜色 / hover 反馈各模块不同
-- 同类破坏性动作的确认文案、按钮顺序、危险色用法整站一致
-- 业务有差异（例如"名称"必须唯一）时仅扩展校验，不更换控件
-
-### 反模式
-
-- ❌ 在 `jetlinks-web-core` 已经有对应组件时，业务模块自造可编辑文本 / chip / 行内表单 / 校验气泡
-- ❌ 名称在 A 页 inline、B 页要点"编辑"按钮弹表单
-- ❌ A 页 Enter 保存、B 页只能点按钮
-- ❌ A 页失焦保存、B 页失焦丢弃
-- ❌ 标签在 A 模块就近 + / ×，在 B 模块必须打开"编辑标签"弹窗
-- ❌ 同一字段在不同模块用不同控件（例：状态有的地方用 `Switch`、有的地方用 `Select`、有的地方用按钮）
-- ❌ 成功反馈一个 toast、一个页面 alert、一个无反馈
-- ❌ inline 场景叠加"编辑 / 保存 / 取消"三按钮 + 独立表单壳
-- ❌ 用 `a-input` 直接覆盖文本展示（无 hover 入口、无保存反馈）
+本文件向下只保留**场景 → 组件矩阵**与短规则，避免与 core 双重占用上下文。
 
 ## 场景组件矩阵
 

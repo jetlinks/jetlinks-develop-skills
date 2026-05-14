@@ -2,6 +2,8 @@
 
 本文件是 JetLinks 系脚手架的总路由，用来帮助智能体先判断任务类型，再切换到最合适的 focused skill，最后按当前工作区的真实实现落地。
 
+**上下文**：本文件较长；日常可先读 `../agents/openai.yaml` 的默认提示词，再按需打开本文件的对应章节。前端交互细则在 `jetlinks-web-style` 分片（`style-catalog-core-base.md` / `style-catalog-core-detail-shell.md` / `style-catalog-templates.md` 等），不要在 router 内复制前端规则正文。
+
 它不提供仓库快照，不硬编码模块清单、包名、版本号或固定目录结构。所有这类信息都必须从当前工作区现有代码、`pom.xml`、资源目录和相邻模块中发现。
 
 ## 全局原则
@@ -59,11 +61,7 @@
    - 优先沿用当前模块已有的 `i18nCode` / message key 异常模型，不在异常构造里写死 message。
    - 只有本地异常体系确实只支持 `message` 时，才在边界层回退到本地化后的文本。
 
-12. 根因优先，禁用奇技淫巧
-   - 当工具、SDK、框架或现有 API 不直接满足需求（无法访问方法、序列化报错、响应式/阻塞不匹配、类型/泛型不兼容、第三方行为不符合预期、异常体系缺口、编译告警、测试不稳等），必须按"官方扩展点 → 相邻模块封装 → 依赖版本/选择 → 告知用户与替代方案"的顺序处理。
-   - 禁止用反射 + `setAccessible`、`Unsafe`、改可见性、复制粘贴第三方源码、字节码注入、monkey patch、把代码挪进库的包路径、`catch(Exception e){}` 静默吞、`e.printStackTrace()` 当处理、`@SuppressWarnings` 大范围压制告警、注释掉失败测试等手法绕过问题。
-   - 如果上述高风险手法是唯一可行方案，必须先告知用户限制、风险与建议，取得确认后再使用，并在代码注释或交付说明里留痕。
-   - 详细场景见 [`../../jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../../jetlinks-conventions/references/root-cause-and-no-hack-rules.md)。
+12. 根因优先，禁用奇技淫巧：统一以 [`jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../../jetlinks-conventions/references/root-cause-and-no-hack-rules.md) 为准；router 不重复列举禁止清单。
 
 ## 标准工作流
 
