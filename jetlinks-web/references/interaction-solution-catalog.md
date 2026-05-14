@@ -8,7 +8,9 @@
 | --- | --- |
 | [`style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md) | 先看索引与推荐加载路径 |
 | [`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md) | 业务任务 → 方案路由、方案统一字段、档案输出（**小文件，可整篇**） |
-| [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md) | 反传统硬约束 §1–§8、详情页 10 条、侧栏 / PageHead / FAB（**常载，约 22KB**） |
+| [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md) | 硬约束**入口表**（指向 base / detail-shell） |
+| [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md) | §1–§6（**~7KB**，通用硬约束） |
+| [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md) | §7+（**~16KB**，详情 / 侧栏 / FAB） |
 | [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md) | 13 个方案 ASCII 与组件清单（**只读 2–4 个候选的 `###` 小节，禁止整篇**） |
 
 ## 13 个方案名（详述在 templates 分片）

@@ -4,7 +4,7 @@
 
 `jetlinks-web` 前端任务的默认行为是：**先让用户在交互方案目录中选定方案，再进入实现**。任何"新增页面 / 重构页面壳层 / 调整信息架构 / 调整主筛选或主列表 / 改变首屏第一任务"都必须命中本规则。
 
-交互方案的**索引与分片加载**见 [`style-catalog.md`](style-catalog.md)：选型时优先读 `style-catalog-routing.md` + `style-catalog-core.md`；**不要**把 `style-catalog-templates.md`（13 个方案全文）整篇加载进上下文，只读与用户候选对应的 `###` 小节。
+交互方案的**索引与分片加载**见 [`style-catalog.md`](style-catalog.md)：选型时优先读 `style-catalog-routing.md` + **`style-catalog-core-base.md`**；若涉及对象详情 / 主从 / 配置态-运行态 / 侧栏壳，再读 **`style-catalog-core-detail-shell.md`**；**不要**把 `style-catalog-templates.md`（13 个方案全文）整篇加载进上下文，只读与用户候选对应的 `###` 小节。
 
 除非命中下面的"局部调整白名单"，否则不允许跳过方案选择直接进入编码。
 
@@ -108,14 +108,16 @@
 
 ### 6. 选择后必须遵守反传统后台感硬约束
 
-细则以 [`style-catalog-core.md`](style-catalog-core.md) 全文为准；至少核对：
+细则以 [`style-catalog-core-base.md`](style-catalog-core-base.md) 全文为准；涉及对象详情 / 主从 / 配置态-运行态 / 侧栏时再读 [`style-catalog-core-detail-shell.md`](style-catalog-core-detail-shell.md)。至少核对：
 
 - 编辑触发梯度 `inline > sectional > drawer > modal > page` 必须按业务最小代价优先评估
 - 首屏不允许默认叠加"4 KPI 卡 + 顶部搜索 + 大表格"；一屏一主视觉锚点
 - 列表 / 卡片第一信息层必须是状态、标签、归属、主动作；状态强调收口（禁单侧彩色线条为主要信号）
 - 信息密度按 catalog 给出的目标执行
 - 文案面向终端用户，不残留开发态文字
-- 弹窗不是唯一编辑路径；单对象详情须遵守 core 中 §7 摘要区与 §8 编辑样式统一
+- 弹窗不是唯一编辑路径；单对象详情须遵守 detail-shell 中 §7 摘要区与 §8 编辑样式统一
+
+**入口表**见 [`style-catalog-core.md`](style-catalog-core.md)。
 
 ## 现有映射规则
 

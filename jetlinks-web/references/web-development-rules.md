@@ -26,7 +26,7 @@
 8. 只加载最小必要参考文档，不一次性读取全部 references。
 9. 先定参考优先级：相邻页面 > 同业务域实现 > 相似业务案例 > Ant Design 官方交互模式；参考始终是辅助，不替代业务分析。
 10. 若以下五项中任一关键事实未知：目标用户、进入页面后的第一任务、成功标准、操作对象是一条还是一批、关键指标/图表的数据来源，则先向用户提问；若其中两项及以上未知，或页面结构在多种分型间仍摇摆，必须先澄清再实现。
-11. 模版选择默认强制：除非任务命中 `../../jetlinks-web-style/references/style-selection-rules.md` 中定义的"局部调整白名单"（仅改一个表单字段 / 仅改一个筛选条件 / 仅改一个弹窗内容 / 仅样式与文案与组件 props 微调），任何新增页面、重构页面壳层、调整信息架构或调整主筛选 / 主列表 / 主详情承载方式都必须先在 `jetlinks-web-style` 的交互方案分片中给用户 2-4 个具体业务选项再实现：读 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md) + 仅 [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md) 中与候选对应的 `###` 小节（禁止整篇 templates）、以及 [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)（硬约束），不允许默认回退到传统 CRUD 页面。若页面骨架或信息架构风险较高，先给出线框图或效果草图再实现。
+11. 模版选择默认强制：除非任务命中 `../../jetlinks-web-style/references/style-selection-rules.md` 中定义的"局部调整白名单"（仅改一个表单字段 / 仅改一个筛选条件 / 仅改一个弹窗内容 / 仅样式与文案与组件 props 微调），任何新增页面、重构页面壳层、调整信息架构或调整主筛选 / 主列表 / 主详情承载方式都必须先在 `jetlinks-web-style` 的交互方案分片中给用户 2-4 个具体业务选项再实现：读 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md) + 仅 [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md) 中与候选对应的 `###` 小节（禁止整篇 templates）、以及 [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)（§1–§6）+ 按需 [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)（详情 / 侧栏相关）、入口见 [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)，不允许默认回退到传统 CRUD 页面。若页面骨架或信息架构风险较高，先给出线框图或效果草图再实现。
 12. 先确认当前模块前端 i18n 的真实接入方式：页面标题、字段展示名、表格列名、按钮文案、状态文案、空态提示、校验消息和枚举文本从哪里取值，默认值如何表达；优先沿用相邻实现，不在页面代码中散落硬编码文案。
 13. 如页面存在通用搜索或筛选层，先确认当前 workspace 是否已提供 `ConditionFilter` 及其编码、回显工具；若已提供，默认优先用它承接搜索层，不因已选页面风格或管理页壳层而直接回退 `ProSearch`。
 14. 方案选定后，按卡片、列表、筛选、详情、轻量编辑、完整编辑、图标、抽屉、底部操作、资源选择等场景映射 `jetlinks-web-core` 组件，再决定是否需要新增局部实现。
@@ -45,11 +45,11 @@
 
 ## 先选方案，再选组件
 
-- **索引**：[`style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)；**路由与统一字段**：[`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md)；**硬约束全文**：[`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)；**13 个模版详述**（仅读候选对应 `###`）：[`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)。
+- **core 入口**：[`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)；**§1–§6**：[`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)；**§7+ / 侧栏 / FAB**：[`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)；**索引**：[`style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)；**路由与统一字段**：[`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md)；**13 个模版详述**（仅读候选对应 `###`）：[`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)。
 - 除非命中"局部调整白名单"，否则模版选择是默认强制环节；不允许跳过用户选择直接落地传统 CRUD 套壳。
 - 给用户的 2-4 个候选模版必须遵守 routing 中的统一字段：业务任务、首屏 ASCII 线框骨架、信息密度目标、编辑触发梯度、核心组件（来自 `jetlinks-web-core`）、状态 / 标签锚点、主要动作位置、不借鉴清单。
 - 候选必须基于 routing 中"业务任务 → 模版路由"挑选；不要只换名字、不换结构地给出两个雷同选项。
-- 用户选定模版后，保持模版稳定，再按组件复用矩阵选择 `jetlinks-web-core` 组件，并在实现时同步遵守 `style-catalog-core.md` 中的反传统后台感硬约束（编辑触发梯度 `inline > sectional > drawer > modal > page`、首屏不可叠加 + **一屏一主视觉锚点**、状态先于字段 + **禁单侧彩色线条作为主要状态信号**、信息密度目标、文案面向终端用户、弹窗不是唯一编辑路径、详情页头部摘要区、编辑交互样式统一、详情页 10 条硬规则、AI 味 7 条不要、反向引用做主区段不放右栏 sticky、侧栏 active 态分档、侧栏折叠 8 条精美规则、顶级路由不渲染 PageHead、浮动元素 z-index token 化 + 单页一个 FAB）。
+- 用户选定模版后，保持模版稳定，再按组件复用矩阵选择 `jetlinks-web-core` 组件，并在实现时同步遵守 `style-catalog-core-base.md` 与（若适用）`style-catalog-core-detail-shell.md` 中的反传统后台感硬约束（编辑触发梯度 `inline > sectional > drawer > modal > page`、首屏不可叠加 + **一屏一主视觉锚点**、状态先于字段 + **禁单侧彩色线条作为主要状态信号**、信息密度目标、文案面向终端用户、弹窗不是唯一编辑路径、详情页头部摘要区、编辑交互样式统一、详情页 10 条硬规则、AI 味 7 条不要、反向引用做主区段不放右栏 sticky、侧栏 active 态分档、侧栏折叠 8 条精美规则、顶级路由不渲染 PageHead、浮动元素 z-index token 化 + 单页一个 FAB）。
 - 不要随机挑一个其他业务功能来直接搬，也不要把不同业务中的指标、流程和操作布局移植到当前页面。
 
 ## 通用组件优先复用
@@ -57,7 +57,7 @@
 - 卡片、列表、详情、图标、动态编辑、筛选、抽屉、标签、状态和资源选择等常见场景，应先映射到 `jetlinks-web-core` 已有组件。
 - 名称、标签、说明、备注、描述等轻量字段优先单项编辑；不要为了编辑一个字段打开完整表单。
 - 详情页应支持对象摘要、分区详情、局部编辑和关联记录；不要固定为“表格列表 + 弹窗编辑”。
-- 详情页头部摘要区与编辑样式统一以 [`../../jetlinks-web-style/references/style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md) §7、§8 为准（见该文件表格与反模式）。
+- 详情页头部摘要区与编辑样式统一以 [`../../jetlinks-web-style/references/style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md) §7、§8 为准（见该文件表格与反模式）。
 - 整站编辑控件映射可与 [`component-reuse-patterns.md`](component-reuse-patterns.md) 场景矩阵对照；勿在页面自造 catalog 已规定的控件组合。
 - 功能介绍只服务最终用户理解能力、开通条件、配置影响和下一步操作，不展示开发说明、交互原理或原型标注。
 - 写任何用户可见文案前，先识别功能的最终用户角色（运营 / 运维 / 平台管理员 / 租户管理员 / 设备管理员 / 业务管理员 / 终端使用者 / 开发集成方等具体角色）、用户目标动作、用户能看懂的术语和下一步；四件事任何一件答不上来先问，不要硬写。
@@ -120,7 +120,7 @@
 
 - 能力复用与组件/Hook/utils 选型：[`capability-reuse-rules.md`](capability-reuse-rules.md)
 - 组件事实源和外部参考边界：[`component-source-rules.md`](component-source-rules.md)
-- 交互模版分片（**不要整篇加载** `style-catalog-templates.md`）：[`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md) · [`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md) · [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md) · [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)；本仓库 [`interaction-solution-catalog.md`](interaction-solution-catalog.md) 为上述分片的薄索引
+- 交互模版分片（**不要整篇加载** `style-catalog-templates.md`）：[`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md) · [`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md) · [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)（入口）· [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md) · [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md) · [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)；本仓库 [`interaction-solution-catalog.md`](interaction-solution-catalog.md) 为上述分片的薄索引
 - 卡片、列表、详情、图标、动态编辑等复用矩阵：[`component-reuse-patterns.md`](component-reuse-patterns.md)
 - `visDashboard` 仪表盘组件开发：[`dashboard-component-rules.md`](dashboard-component-rules.md)
 - 模块与文件落点：[`directory-structure-rules.md`](directory-structure-rules.md)

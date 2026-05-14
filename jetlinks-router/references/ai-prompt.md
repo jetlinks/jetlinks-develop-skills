@@ -2,7 +2,7 @@
 
 本文件是 JetLinks 系脚手架的总路由，用来帮助智能体先判断任务类型，再切换到最合适的 focused skill，最后按当前工作区的真实实现落地。
 
-**上下文**：本文件较长；日常可先读 `../agents/openai.yaml` 的默认提示词，再按需打开本文件的对应章节。前端交互细则在 `jetlinks-web-style` 分片（`style-catalog-core.md` / `style-catalog-templates.md` 等），不要在 router 内复制前端规则正文。
+**上下文**：本文件较长；日常可先读 `../agents/openai.yaml` 的默认提示词，再按需打开本文件的对应章节。前端交互细则在 `jetlinks-web-style` 分片（`style-catalog-core-base.md` / `style-catalog-core-detail-shell.md` / `style-catalog-templates.md` 等），不要在 router 内复制前端规则正文。
 
 它不提供仓库快照，不硬编码模块清单、包名、版本号或固定目录结构。所有这类信息都必须从当前工作区现有代码、`pom.xml`、资源目录和相邻模块中发现。
 

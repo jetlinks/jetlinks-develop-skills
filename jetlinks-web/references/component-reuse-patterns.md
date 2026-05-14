@@ -1,6 +1,6 @@
 # JetLinks Web Component Reuse Patterns
 
-本文件用于把常见前端场景映射到 `jetlinks-web-core` 通用组件，约束同类页面保持一致实现。交互模版的单一事实源按分片加载：[`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)（按需只读候选 `###`）+ [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)（硬约束）；本文件只给出组件级复用矩阵、编辑触发梯度表与短约束，详情页 / 侧栏 / 10 条硬规则等**见 core，下文不重复**。
+本文件用于把常见前端场景映射到 `jetlinks-web-core` 通用组件，约束同类页面保持一致实现。交互模版的单一事实源按分片加载：[`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)（按需只读候选 `###`）+ [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)（§1–§6）+ 按需 [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)；本文件只给出组件级复用矩阵、编辑触发梯度表与短约束，详情头 / 10 条 / 侧栏等**见 detail-shell，下文不重复**。
 
 ## 反传统后台感硬约束
 
@@ -31,7 +31,7 @@
 
 ## 详情页 / 编辑统一样式 / 整页版式 / 侧栏（不重复展开）
 
-以下为 `jetlinks-web-style` 中与组件选型强相关、且正文很长的规范，**请直接阅读** [`../../jetlinks-web-style/references/style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)（单文件 ≈22KB，远小于旧版整本 catalog）：
+以下为 `jetlinks-web-style` 中与组件选型强相关、且正文很长的规范：**通用 §1–§6**见 [`../../jetlinks-web-style/references/style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)；**详情头 / §8 编辑统一 / 详情 10 条 / 侧栏 / FAB**见 [`../../jetlinks-web-style/references/style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)（单文件 ~16KB）。**入口表**见 [`../../jetlinks-web-style/references/style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)。
 
 - **§7** 详情页头部摘要区（名称 / 说明 inline、标签就地、状态快捷动作、反模式）
 - **§8** 编辑交互样式统一（字段 → 控件唯一映射、节奏、反模式）
