@@ -1,4 +1,5 @@
 interface:
   display_name: "JetLinks Conventions"
-  short_description: "JetLinks 通用规范、导入与国际化实现"
-  default_prompt: "Use $jetlinks-conventions to inspect local coding conventions, imports, naming, and i18n rules before implementing this JetLinks change."
+  short_description: "JetLinks 通用规范、导入、国际化与根因处理约束"
+  default_prompt: >-
+    使用 $jetlinks-conventions 在实现 JetLinks 改动前先确认本地编码规范、注解与导入、命名约定与 i18n 决策。遇到工具、SDK、框架或现有 API 不直接满足需求（无法访问方法、序列化报错、响应式/阻塞不匹配、类型不兼容、第三方行为偏差、异常体系缺口、编译告警、测试不稳等）时，按"官方扩展点 → 相邻模块封装 → 依赖版本/选择 → 告知用户与替代方案"的顺序解决根因；禁止用反射 + setAccessible、Unsafe、改可见性、复制粘贴第三方源码、字节码注入、monkey patch、把代码挪进库的包路径、catch(Exception e){} 静默吞、e.printStackTrace() 当处理、@SuppressWarnings 大范围压制告警、注释掉失败测试、改测试期望迁就错误实现等手法绕过问题。任何高风险手法（反射 / Unsafe / 改可见性 / 复制源码 / monkey patch / 在 i18n 模块硬编码 message / 响应式模块阻塞调用 / 新增不稳定依赖）必须先告知用户限制与风险并取得确认，再在代码或交付说明中留痕。详细场景见 references/root-cause-and-no-hack-rules.md。

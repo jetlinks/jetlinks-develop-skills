@@ -2,4 +2,4 @@ interface:
   display_name: "JetLinks Router"
   short_description: "JetLinks 二开总路由与多技能入口"
   default_prompt: >-
-    使用 $jetlinks-router 分类当前 JetLinks 任务并切到最合适的 focused skill。遇到前端页面、组件、交互、样式、筛选、详情或弹窗任务时，路由到 $jetlinks-web；如果页面结构存在多种合理业务方案，再组合 $jetlinks-web-style 先让用户选择。前端实现以当前 workspace 的 jetlinks-web-core 组件、hooks、utils 和相邻页面用法为准，不把 jetlinks-project-ui-cli 当默认依赖；不要在 router 中复制详细前端规则，具体业务分析、方案选择、ConditionFilter 优先级、i18n、无意义数据规避和组件复用约束都以 $jetlinks-web / $jetlinks-web-style 为准。
+    使用 $jetlinks-router 分类当前 JetLinks 任务并切到最合适的 focused skill。遇到前端页面、组件、交互、样式、筛选、详情或弹窗任务时，路由到 $jetlinks-web；如果页面结构存在多种合理业务方案，再组合 $jetlinks-web-style 先让用户选择。前端实现以当前 workspace 的 jetlinks-web-core 组件、hooks、utils 和相邻页面用法为准，不把 jetlinks-project-ui-cli 当默认依赖；不要在 router 中复制详细前端规则，具体业务分析、方案选择、ConditionFilter 优先级、i18n、无意义数据规避和组件复用约束都以 $jetlinks-web / $jetlinks-web-style 为准。后端任务中如果工具/SDK/框架/现有 API 不直接满足需求（无法访问方法、序列化报错、响应式与阻塞不匹配、类型不兼容、第三方行为偏差、异常体系缺口、编译告警、测试不稳等），必须通过 $jetlinks-conventions 走"官方扩展点 → 相邻模块封装 → 依赖版本/选择 → 告知用户"的根因路径；禁止用反射 + setAccessible、Unsafe、改可见性、复制粘贴第三方源码、字节码注入、monkey patch、catch(Exception e){} 静默吞、@SuppressWarnings 大范围压制告警、注释掉失败测试等手法规避；任何高风险手法必须先告知用户限制与风险并取得确认，再留痕。
