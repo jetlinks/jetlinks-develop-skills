@@ -11,7 +11,7 @@
 | [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md) | 硬约束**入口表**（指向 base / detail-shell） |
 | [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md) | §1–§6（**~7KB**，通用硬约束） |
 | [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md) | §7+（**~16KB**，详情 / 侧栏 / FAB） |
-| [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md) | 13 个方案 ASCII 与组件清单（**只读 2–4 个候选的 `###` 小节，禁止整篇**） |
+| [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md) | 13 个方案 ASCII 与组件清单（**只读推荐方案与替代方案的 `###` 小节，禁止整篇**） |
 
 ## 13 个方案名（详述在 templates 分片）
 
@@ -20,5 +20,5 @@
 ## 使用约定
 
 - 不要在本文件维护模版字段、骨架、组件清单或反例；更新请改 `style-catalog-*.md` 中对应分片。
-- 需要「先让用户选交互方案」时，加载 `../../jetlinks-web-style/SKILL.md`，并按 `style-catalog-routing.md` 路由表挑 2-4 个候选，`style-catalog-templates.md` 只取对应节。
+- 需要建立交互方案档案时，加载 `../../jetlinks-web-style/SKILL.md`，并按 `style-catalog-routing.md` 路由表挑 1 个推荐方案和最多 3 个替代，`style-catalog-templates.md` 只取对应节；事实清楚时可默认采用推荐方案，结构不确定时再让用户选。
 - 不要把本文件当作组件存在性证据；组件以当前 workspace 的 `jetlinks-web-core` 为准。

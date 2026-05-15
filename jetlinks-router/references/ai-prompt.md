@@ -29,7 +29,7 @@
 5. 以当前模块风格为准
     - 响应式或阻塞式、`javax` 或 `jakarta`、控制器基类、服务基类、i18n 路径，都以目标模块现状为准。
     - 仅在新建模块且没有可参考实现时，才基于通用规则做最小决策。
-    - 前端任务也以当前 workspace 为准：先路由到 `$jetlinks-web`，需要用户选择页面交互方案时再组合 `$jetlinks-web-style`。
+    - 前端任务也以当前 workspace 为准：先路由到 `$jetlinks-web`；除局部调整白名单外，同时组合 `$jetlinks-web-style` 建立页面交互方案档案。
     - 前端通用组件、hooks、utils 以当前 workspace 的 `jetlinks-web-core` 和相邻页面真实用法为准；详细前端约束不在 router 中重复维护。
 
 6. 生成最小可用实现
@@ -219,7 +219,7 @@
 
 切换：
 - [`$jetlinks-web`](../../jetlinks-web/SKILL.md)
-- 当页面结构存在多种合理业务方案时，再组合 [`$jetlinks-web-style`](../../jetlinks-web-style/SKILL.md)
+- 除局部调整白名单外，组合 [`$jetlinks-web-style`](../../jetlinks-web-style/SKILL.md) 先建立方案档案；结构不确定时再让用户选择
 - 如任务明确包含页面美化、交互优化、信息层级梳理或状态反馈打磨，在抽取本地样式锚点后再结合 `$frontend-design`
 
 适用：
@@ -286,6 +286,7 @@
 
 - 前端页面改造并保持能力复用
     - `$jetlinks-web`
+    - 除局部调整白名单外，同时加 `$jetlinks-web-style` 先建立方案档案
     - 如命名/导入/i18n 有约束，再加 `$jetlinks-conventions`
 
 - 前端页面交互优化并保持当前框架风格
@@ -296,11 +297,11 @@
 - 前端页面业务流复杂且结构未定
     - `$jetlinks-web`
     - `$jetlinks-web-style`
-    - 先让用户在少量业务交互方案中选择；必要时先输出线框图或效果草图，再进入实现
+    - 先建立业务交互方案档案；事实清楚时默认采用推荐方案，结构不确定时让用户在少量方案中选择；必要时先输出线框图或效果草图，再进入实现
 
 - 前端页面需要参考相似业务并统一 Ant Design 风格
     - `$jetlinks-web`
-    - 多方案时加 `$jetlinks-web-style`
+    - 除局部调整白名单外加 `$jetlinks-web-style`
     - `$frontend-design`
     - 参考案例只辅助业务方案和交互节奏，组件仍以当前 workspace 的 `jetlinks-web-core` 为准
 
