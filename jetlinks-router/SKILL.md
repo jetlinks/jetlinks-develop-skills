@@ -41,6 +41,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Prefer local examples over generic memory.
 - When local examples are missing, clearly separate defaults from verified workspace facts.
 - Do not directly implement complex or unstable requirements before clarifying scope, exclusions, risks, and validation with the user.
+- When the framework, SDK, third-party library, or existing API does not directly satisfy the requirement (inaccessible method, serialization error, reactive/blocking mismatch, type/generic clash, exception model gap, third-party behavior mismatch), route through `$jetlinks-conventions` and resolve the root cause via official extension points, adjacent module abstractions, dependency choice, or by informing the user with concrete trade-offs; never ship reflection / `Unsafe` / visibility bypass / copied source / monkey patches / bytecode injection / silent exception swallowing as a hidden workaround. See [`../jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../jetlinks-conventions/references/root-cause-and-no-hack-rules.md).
 - When Apache Commons utilities are already present or adjacent code already uses them, prefer them for common null or empty checks instead of handwritten repetitive branches.
 - Keep changes scoped to the requested capability; avoid unrelated refactors or speculative cleanup.
 - If the tool supports a dedicated Plan mode, prefer it for plan-first tasks; otherwise still follow the same behavior manually.
