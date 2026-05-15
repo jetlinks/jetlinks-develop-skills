@@ -26,7 +26,7 @@
 8. 只加载最小必要参考文档，不一次性读取全部 references。
 9. 先定参考优先级：相邻页面 > 同业务域实现 > 相似业务案例 > Ant Design 官方交互模式；参考始终是辅助，不替代业务分析。
 10. 若以下五项中任一关键事实未知：目标用户、进入页面后的第一任务、成功标准、操作对象是一条还是一批、关键指标/图表的数据来源，则先向用户提问；若其中两项及以上未知，或页面结构在多种分型间仍摇摆，必须先澄清再实现。
-11. 模版选择默认强制：除非任务命中 `../../jetlinks-web-style/references/style-selection-rules.md` 中定义的"局部调整白名单"（仅改一个表单字段 / 仅改一个筛选条件 / 仅改一个弹窗内容 / 仅样式与文案与组件 props 微调），任何新增页面、重构页面壳层、调整信息架构或调整主筛选 / 主列表 / 主详情承载方式都必须先在 `jetlinks-web-style` 的交互方案分片中给用户 2-4 个具体业务选项再实现：读 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md) + 仅 [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md) 中与候选对应的 `###` 小节（禁止整篇 templates）、以及 [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)（§1–§6）+ 按需 [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)（详情 / 侧栏相关）、入口见 [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)，不允许默认回退到传统 CRUD 页面。若页面骨架或信息架构风险较高，先给出线框图或效果草图再实现。
+11. 交互方案档案默认强制：除非任务命中 `../../jetlinks-web-style/references/style-selection-rules.md` 中定义的"局部调整白名单"（仅改一个表单字段 / 仅改一个筛选条件 / 仅改一个弹窗内容 / 仅样式与文案与组件 props 微调），任何新增页面、重构页面壳层、调整信息架构或调整主筛选 / 主列表 / 主详情承载方式都必须先联合 `jetlinks-web-style` 建立方案档案再实现：读 [`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md) + 仅 [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md) 中推荐方案和替代方案对应的 `###` 小节（禁止整篇 templates）、以及 [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)（§1–§6）+ 按需 [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)（详情 / 侧栏相关）、入口见 [`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)，不允许默认回退到传统 CRUD 页面。若已知事实清楚且只有一个可信推荐方案，可以记录"默认采用推荐方案"并继续；若页面骨架或信息架构风险较高，或 2 个以上方案同样合理，先给出线框图 / 方案选项并等待确认再实现。
 12. 先确认当前模块前端 i18n 的真实接入方式：页面标题、字段展示名、表格列名、按钮文案、状态文案、空态提示、校验消息和枚举文本从哪里取值，默认值如何表达；优先沿用相邻实现，不在页面代码中散落硬编码文案。
 13. 如页面存在通用搜索或筛选层，先确认当前 workspace 是否已提供 `ConditionFilter` 及其编码、回显工具；若已提供，默认优先用它承接搜索层，不因已选页面风格或管理页壳层而直接回退 `ProSearch`。
 14. 方案选定后，按卡片、列表、筛选、详情、轻量编辑、完整编辑、图标、抽屉、底部操作、资源选择等场景映射 `jetlinks-web-core` 组件，再决定是否需要新增局部实现。
@@ -43,13 +43,13 @@
 - 新版样例页面只用于提取方案、布局、组件组合和交互节奏，不复制业务字段、接口、指标、局部组件实现或样例数据。
 - `jetlinks-project-ui-cli` 仅在用户明确要求参考时作为外部参考，不进入默认依赖链，也不能作为当前项目组件存在性的证据。
 
-## 先选方案，再选组件
+## 先建方案档案，再选组件
 
 - **core 入口**：[`style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)；**§1–§6**：[`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)；**§7+ / 侧栏 / FAB**：[`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)；**索引**：[`style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)；**路由与统一字段**：[`style-catalog-routing.md`](../../jetlinks-web-style/references/style-catalog-routing.md)；**13 个模版详述**（仅读候选对应 `###`）：[`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)。
-- 除非命中"局部调整白名单"，否则模版选择是默认强制环节；不允许跳过用户选择直接落地传统 CRUD 套壳。
-- 给用户的 2-4 个候选模版必须遵守 routing 中的统一字段：业务任务、首屏 ASCII 线框骨架、信息密度目标、编辑触发梯度、核心组件（来自 `jetlinks-web-core`）、状态 / 标签锚点、主要动作位置、不借鉴清单。
-- 候选必须基于 routing 中"业务任务 → 模版路由"挑选；不要只换名字、不换结构地给出两个雷同选项。
-- 用户选定模版后，保持模版稳定，再按组件复用矩阵选择 `jetlinks-web-core` 组件，并在实现时同步遵守 `style-catalog-core-base.md` 与（若适用）`style-catalog-core-detail-shell.md` 中的反传统后台感硬约束（编辑触发梯度 `inline > sectional > drawer > modal > page`、首屏不可叠加 + **一屏一主视觉锚点**、状态先于字段 + **禁单侧彩色线条作为主要状态信号**、信息密度目标、文案面向终端用户、弹窗不是唯一编辑路径、详情页头部摘要区、编辑交互样式统一、详情页 10 条硬规则、AI 味 7 条不要、反向引用做主区段不放右栏 sticky、侧栏 active 态分档、侧栏折叠 8 条精美规则、顶级路由不渲染 PageHead、浮动元素 z-index token 化 + 单页一个 FAB）。
+- 除非命中"局部调整白名单"，否则方案档案是默认强制环节；不允许跳过 `jetlinks-web-style` 直接落地传统 CRUD 套壳。
+- 推荐方案和替代方案必须遵守 routing 中的统一字段：业务任务、首屏 ASCII 线框骨架、信息密度目标、编辑触发梯度、核心组件族（来自 `jetlinks-web-core`，落地前仍要核验）、状态 / 标签锚点、主要动作位置、不借鉴清单。
+- 候选必须基于 routing 中"业务任务 → 模版路由"挑选；事实清楚且只有一个可信推荐时记录"默认采用推荐方案"并继续，关键事实缺失或两个以上方案同样合理时再让用户选择。
+- 方案档案锁定后，保持模版稳定，再按组件复用矩阵选择 `jetlinks-web-core` 组件，并在实现时同步遵守 `style-catalog-core-base.md` 与（若适用）`style-catalog-core-detail-shell.md` 中的反传统后台感硬约束（编辑触发梯度 `inline > sectional > drawer > modal > page`、首屏不可叠加 + **一屏一主视觉锚点**、状态先于字段 + **禁单侧彩色线条作为主要状态信号**、信息密度目标、文案面向终端用户、弹窗不是唯一编辑路径、详情页头部摘要区、编辑交互样式统一、详情页 10 条硬规则、AI 味 7 条不要、反向引用做主区段不放右栏 sticky、侧栏 active 态分档、侧栏折叠 8 条精美规则、顶级路由不渲染 PageHead、浮动元素 z-index token 化 + 单页一个 FAB）。
 - 不要随机挑一个其他业务功能来直接搬，也不要把不同业务中的指标、流程和操作布局移植到当前页面。
 
 ## 通用组件优先复用
@@ -104,7 +104,7 @@
 - 仅当任务包含页面美化、交互优化、层级梳理、状态页完善或体验打磨时，再考虑结合 `$frontend-design`。
 - 结合前必须先从当前工作区提炼具体样式锚点：Ant Design / Ant Design Vue 组件语言、排版密度、间距尺度、色彩和状态色、圆角/阴影、按钮和表单反馈、表格操作区、弹窗/抽屉/Tabs 行为、图标和动效语气。
 - 把 `$frontend-design` 当成“现有 Ant Design 体系内的交互与视觉润色助手”，而不是重新定义品牌、字体、配色和页面骨架的重设计引擎。
-- 当页面壳层或交互方案仍未定时，先让用户在少量贴合业务的方案中选择，再进入具体实现；不要直接把“管理页”当作默认壳。
+- 当页面壳层或交互方案仍未定时，先建立方案档案；事实清楚时默认采用推荐方案，结构仍有分歧时让用户在少量贴合业务的方案中选择，不要直接把“管理页”当作默认壳。
 - 页面交互方案选择只决定业务结构、信息层级和操作路径，不直接决定搜索组件；搜索层仍应单独判断是否优先使用 `ConditionFilter`。
 - 页面交互方案选择不替代组件核验；选定方案后仍必须回到当前 workspace 的 `jetlinks-web-core` 组件、hooks 和 utils。
 - 先确认页面是否真的适合 CRUD 范式；只有当页面已被明确判断为标准管理页时，才进入管理页组合判断。
@@ -144,7 +144,7 @@
 - 不要把 `$frontend-design` 产出的创意风格直接覆盖到 JetLinks 页面；现有框架风格、组件库和交互语法始终优先。
 - 不要因为实现方便就把业务页面压缩成老套的“筛选 + 表格 + 弹窗”后台 CRUD 套壳，除非当前业务和相邻实现都明确证明这就是最合适的结构。
 - 不要默认表格 + 全量编辑表单；对象详情应优先考虑摘要、分区、局部编辑和关联记录。
-- 不要在页面壳层或风格仍未收敛时，跳过用户选择直接默认传统 CRUD 管理页。
+- 不要在页面壳层或风格仍未收敛时，跳过 `jetlinks-web-style` 方案档案直接默认传统 CRUD 管理页。
 - 不要在 workspace 已提供 `ConditionFilter` 及配套编码/回显工具时，仍默认回退到 `ProSearch` 作为通用搜索壳，除非相邻页面已稳定沿用旧实现或当前筛选确实只是轻量固定表单。
 - 不要把完全不同业务场景中的交互路径、快捷操作、状态组织或统计模块直接搬过来。
 - 不要添加无来源、无决策价值、无后续动作承接的数据展示，只为了填满页面。
@@ -161,7 +161,7 @@
 - 是否先完成了业务目标、目标用户和关键任务路径分析，而不是直接套用后台管理页模板。
 - 是否坚持了“业务优先、参考为辅”，并只借鉴了相似业务中真正适配的部分。
 - 是否优先复用了现有组件、hooks、utils 或 store 契约。
-- 是否先让用户选择了业务交互方案，并保持方案稳定。
+- 是否已通过 `jetlinks-web-style` 建立业务交互方案档案、明确确认模式，并保持方案稳定。
 - 是否将卡片、列表、详情、图标、动态编辑、筛选、抽屉、标签和资源选择映射到了 `jetlinks-web-core` 组件。
 - 如果没有复用 `jetlinks-web-core` 组件，是否给出了可验证的导出、样例和能力缺口证据。
 - 是否保持了模块边界、目录风格和页面交互一致性。

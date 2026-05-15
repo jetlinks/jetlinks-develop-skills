@@ -6,7 +6,7 @@ interface:
 
     一、工作流：
     1)业务分析：业务目标、目标用户、进入后的第一任务、成功标准、单对象 / 多对象、关键指标数据源；缺 1 项且影响结构就先问，缺 2 项及以上或页面分型摇摆时必须先澄清。
-    2)交互模版选择：除非命中"局部调整白名单"（仅改一个表单字段 / 筛选条件 / 弹窗内容 / 样式与文案与组件 props 微调），必须结合 $jetlinks-web-style 给用户 2-4 个候选（从 `style-catalog-templates.md` 只读对应 `###` 节正文，勿全文），每个候选含业务任务匹配理由 / 首屏 ASCII / 信息密度 / 编辑梯度 / 核心组件 / 状态锚点 / 主要动作 / 不借鉴清单；用户选定后再编码。interaction-solution-catalog.md 只是薄索引；路由表与统一字段见 `style-catalog-routing.md`，§1–§6 硬约束见 `style-catalog-core-base.md`，详情/侧栏见 `style-catalog-core-detail-shell.md`。
+    2)交互方案档案：除非命中"局部调整白名单"（仅改一个表单字段 / 筛选条件 / 弹窗内容 / 样式与文案与组件 props 微调），必须结合 $jetlinks-web-style 形成方案档案（推荐方案 + 最多 3 个替代；从 `style-catalog-templates.md` 只读对应 `###` 节正文，勿全文），每个候选含业务任务匹配理由 / 首屏 ASCII / 信息密度 / 编辑梯度 / 核心组件族 / 状态锚点 / 主要动作 / 不借鉴清单；事实清楚且只有一个可信推荐时记录"默认采用推荐方案"并继续实现，关键事实缺失或 2 个以上方案同样合理时先让用户选择。interaction-solution-catalog.md 只是薄索引；路由表与统一字段见 `style-catalog-routing.md`，§1–§6 硬约束见 `style-catalog-core-base.md`，详情/侧栏见 `style-catalog-core-detail-shell.md`。
     3)组件来源核验：组件 / hooks / utils 最终以当前 workspace 的 jetlinks-web-core 为准——先核验 jetlinks-web-core/src/components/index.ts，再看组件实现与相邻页面用法；jetlinks-project-ui-cli 只在用户明确要求时作为外部参考，不作为默认依赖、导入来源或组件存在性证据。
     4)实现：把卡片 / 列表 / 筛选 / 详情分区 / 轻量编辑 / 完整编辑 / 抽屉 / 底部操作 / 标签状态 / 图标 / 动态扩展 / 资源选择映射到 jetlinks-web-core 通用组件；不复用必须说明查过的导出入口、相邻页面和能力缺口。
     5)拆分：超过 300 行、重复结构 ≥ 2 次、API / 业务编排进入组件时当场拆到子组件 / hook / service / api / util；不为了降行数抽无职责包装组件；UI 组件保持无副作用。
@@ -32,6 +32,6 @@ interface:
     4)空 / 错 / 载态文案要具体到对象与下一步，校验要带限制与示例，成功反馈要带对象名与影响范围。
     5)不展示无意义统计、假图表、装饰数据。
 
-    四、交付前报告：已选定模版、相关文件行数、查过的复用范围（同 feature / 同模块 / 兄弟同域模块 / 共享包 / 公共导出）、任何新建抽象的理由。
+    四、交付前报告：已锁定方案档案、确认模式、相关文件行数、查过的复用范围（同 feature / 同模块 / 兄弟同域模块 / 共享包 / 公共导出）、任何新建抽象的理由。
 
     五、协同：方案选择切 $jetlinks-web-style；后端 API 接入参数 / 错误体 / i18n 不一致切 $jetlinks-conventions；交付 / commit / PR 切 $jetlinks-delivery；沉淀切 $jetlinks-capture。
