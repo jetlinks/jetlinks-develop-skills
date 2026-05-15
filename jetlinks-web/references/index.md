@@ -13,7 +13,6 @@
 - [business-ui-example-rules.md](business-ui-example-rules.md): 如何借鉴相似业务案例，以及哪些“看起来高级”的设计不应照搬
 - [condition-filter-rules.md](condition-filter-rules.md): 表达式搜索、Token 化条件输入、远程选项面板、条件路由与快捷筛选联动规则
 - [state-management-rules.md](state-management-rules.md): 状态边界与 store 使用规则
-- [style-rules.md](style-rules.md): `comm.less` 变量、工具类与组件样式约束
 - [quality-and-type-rules.md](quality-and-type-rules.md): 质量约束与 TypeScript 约束
 - [example-locations.md](example-locations.md): 示例定位与检索命令
 
@@ -30,4 +29,4 @@
 9. 状态边界不清晰：`state-management-rules.md`
 10. 交付前质量或类型风险检查：`quality-and-type-rules.md`
 11. 需要找真实实现样例：`example-locations.md`
-12. 涉及颜色、圆角、阴影、字号或局部 Less：`style-rules.md`
+12. 涉及颜色、圆角、阴影、字号、间距或局部样式：结合 `../../jetlinks-web-style/SKILL.md`

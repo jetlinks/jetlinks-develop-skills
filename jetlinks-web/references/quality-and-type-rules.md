@@ -68,7 +68,7 @@
 ## Interaction And Visual Consistency
 
 - 交互或视觉优化前，必须先扫描相邻页面，提炼当前工作区的 Ant Design / Ant Design Vue 组件语言、间距、状态色、圆角/阴影和动效节奏。
-- 如结合 `$frontend-design`，只允许在现有框架风格和 Ant Design 体系内增强信息层级、状态反馈和微交互，不得另起视觉体系。
+- 如结合外部设计建议，只允许在现有框架风格和 Ant Design 体系内增强信息层级、状态反馈和微交互，不得另起视觉体系。
 - 非用户明确要求时，不新增与当前工作区不一致的字体体系、品牌色、背景装饰、布局骨架或重型动效。
 - `loading`、`error`、`empty`、`disabled`、`hover`、`focus`、`selected` 等状态必须与现有页面保持一致，并优先复用组件库状态能力。
 - 参考设计只能辅助当前业务表达；不能因为某个案例“看起来高级”就搬入与当前业务无关的状态组织、统计卡或操作区。
@@ -95,8 +95,8 @@
 
 ## Vue Props 语法限制
 
-- 在 `Vue 3` 的 `script setup lang="ts"` 组件中，`props` 统一使用运行时对象语法声明，不使用泛型写法 `defineProps<T>()`。
-- 需要类型约束时，使用 `PropType` 绑定具体字段类型，并在 `required`、`default` 等运行时配置中显式声明。
+- 在 `Vue 3` 的 `script setup lang="ts"` 组件中，优先跟随当前模块相邻组件的 `props` 声明风格；若模块已有运行时对象语法约定，则不使用泛型写法 `defineProps<T>()`。
+- 需要运行时默认值、校验或与相邻代码保持一致时，使用 `PropType` 绑定具体字段类型，并在 `required`、`default` 等运行时配置中显式声明。
 - 错误写法：`defineProps<GaugeWidgetProps>`
 - 正确写法示例：
 
@@ -156,7 +156,7 @@ async function fetchVisionList(params: VisionListParams): Promise<PageResult<Vis
 - 在组件中硬编码后端路径、权限规则或环境配置。
 - 使用 `as any` 或大范围 `any` 直接绕过类型错误。
 - 同一业务模型在多处重复且冲突定义。
-- 使用泛型 `defineProps<T>()` 声明组件 props。
+- 在已有运行时对象语法约定的模块中改用泛型 `defineProps<T>()` 声明组件 props。
 - 以“美化”为名混入脱离当前框架的自创风格、全新设计语言或不兼容的交互动线。
 - 未经业务分析就把需求直接落成老套后台管理 CRUD 模板。
 - 为了页面显得“完整”而添加无业务意义的统计数字、装饰卡、假图表或无来源数据。
