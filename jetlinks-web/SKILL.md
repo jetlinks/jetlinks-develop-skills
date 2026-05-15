@@ -34,15 +34,17 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
     - public module exports, registries, runtime extension points, or documented cross-module APIs.
       Reuse, configure, or adapt existing capabilities when stable. Do not deep-import private code from another business module unless it is already an accepted local pattern.
 15. If any created or edited Vue/JSX/TSX file may exceed 300 lines, if a UI/logic structure appears twice or more, or if request/business orchestration would enter a UI component, split before implementation. Do not postpone decomposition as cleanup.
-16. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions, extraction boundaries, and current workspace exports.
+16. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions, extraction boundaries, current workspace exports, and the comment insertion points required by [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md).
 17. After coding, check created or modified Vue/JSX/TSX file line counts. Any file over 300 lines is a blocking issue unless this is a narrow bug fix on an already-large file and the exception is explicitly reported.
 18. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
-19. Run quality and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output.
+19. Run quality, comment, and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output; if no comment is added, explicitly confirm that the touched frontend files contain no complex business rule, compatibility branch, hidden state linkage, race guard, or public contract that needs one.
 20. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
 
 ## Required Constraints
 
 - Do not invent component props, emits, hook signatures, or utils APIs that are not present in current workspace exports.
+- When generating or substantially changing frontend code, actively add concise comments at key logic points such as business rules, compatibility conversion, hidden state linkage, race guards, and public composable/service/API contracts; do not wait for the user to ask again.
+- Do not use the comment rule as permission to add noisy line-by-line comments; plain assignments, event forwarding, obvious computed values, and template rendering should stay uncommented.
 - Do not duplicate existing `jetlinks-web-core` or `@jetlinks-web` abstractions with ad hoc local wrappers.
 - Treat the current workspace `jetlinks-web-core` as the only first-class source for generic frontend components; `jetlinks-project-ui-cli` is only an optional external reference when the user explicitly asks for it, never a default dependency or import source.
 - Do not repeat hand-written cards, lists, detail sections, icon selectors, drawers, tags, status chips, resource pickers, or dynamic editors inside business modules when `jetlinks-web-core` already provides a matching component or pattern.
