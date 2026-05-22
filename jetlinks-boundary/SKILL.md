@@ -10,9 +10,10 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 ## Workflow
 
 1. Identify the capability boundary that the task needs to cross.
-2. Confirm whether the current workspace already has command services, proxies, support IDs, or concrete command classes.
-3. Read [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md) before implementing providers or consumers.
-4. Keep the chosen pattern aligned with the module's execution model, existing naming scheme, and local command invocation style.
+2. If this is a new backend feature, large cross-boundary behavior change, or boundary decision that affects data ownership, permissions, transactions, or external messages, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): write the design draft and realistic test goals to the appropriate docs directory and wait for explicit user confirmation.
+3. Confirm whether the current workspace already has command services, proxies, support IDs, or concrete command classes.
+4. Read [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md) before implementing providers or consumers.
+5. Keep the chosen pattern aligned with the module's execution model, existing naming scheme, and local command invocation style.
 
 ## Required Constraints
 
@@ -20,6 +21,8 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 - Do not directly inject another boundary's internal implementation class.
 - When local command classes already exist, prefer explicit command objects with `commandSupport.execute(...)` over shortcut calls such as `executeToMono(...)`.
 - In reactive modules, keep the cross-boundary call non-blocking.
+- Do not implement a large boundary change before the design draft, rejected options, data permission implications, and realistic test goals have been documented and confirmed.
+- Do not fake boundary tests by mocking away the contract being selected; verify request payloads, permission context, success and failure semantics, and fallback behavior that matter to the caller.
 - When boundary code changes are made, run relevant validation when possible; otherwise state the exact pending commands and cross-boundary risks.
 
 ## Response Shape
@@ -27,5 +30,6 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 1. Boundary to cross
 2. Existing mechanisms found in the workspace
 3. Recommended interaction pattern
-4. Rejected patterns and reasons
-5. Verification evidence or exact pending commands
+4. Design doc path and test goals when the backend design gate applies
+5. Rejected patterns and reasons
+6. Verification evidence or exact pending commands

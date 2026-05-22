@@ -10,14 +10,15 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 ## Workflow
 
 1. Classify the request as protocol reading, protocol implementation, binary packet analysis, or integration debugging.
-2. Inspect protocol support registration first, then locate routes, config metadata, authenticators, and codec bindings.
-3. Trace the upstream path from transport input to `DeviceMessage`, then trace the downstream path back to encoded packets, topics, or replies.
-4. Read [`references/development-patterns.md`](references/development-patterns.md) when creating a new protocol package or turning a protocol document into implementation tasks.
-5. Read [`references/transport-codecs.md`](references/transport-codecs.md) when the task depends on MQTT, HTTP, TCP, UDP, CoAP, or WebSocket behavior.
-6. Read [`references/binary-message-patterns.md`](references/binary-message-patterns.md) when the task involves framing, message types, ACK or reply correlation, sequence numbers, or dynamic data types.
-7. Read [`references/example-locations.md`](references/example-locations.md) to find local docs, tests, and sample entry points before changing code.
-8. Read [`references/debugging-checklist.md`](references/debugging-checklist.md) when the symptom is auth failure, message loss, bad routing, decode failure, or device/platform mismatch.
-9. Reuse the existing protocol abstraction and update adjacent tests or protocol docs when the wire behavior changes.
+2. If this creates a new protocol package or changes protocol behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): write the design draft, protocol examples, and realistic test goals to the appropriate docs directory and wait for explicit user confirmation.
+3. Inspect protocol support registration first, then locate routes, config metadata, authenticators, and codec bindings.
+4. Trace the upstream path from transport input to `DeviceMessage`, then trace the downstream path back to encoded packets, topics, or replies.
+5. Read [`references/development-patterns.md`](references/development-patterns.md) when creating a new protocol package or turning a protocol document into implementation tasks.
+6. Read [`references/transport-codecs.md`](references/transport-codecs.md) when the task depends on MQTT, HTTP, TCP, UDP, CoAP, or WebSocket behavior.
+7. Read [`references/binary-message-patterns.md`](references/binary-message-patterns.md) when the task involves framing, message types, ACK or reply correlation, sequence numbers, or dynamic data types.
+8. Read [`references/example-locations.md`](references/example-locations.md) to find local docs, tests, and sample entry points before changing code.
+9. Read [`references/debugging-checklist.md`](references/debugging-checklist.md) when the symptom is auth failure, message loss, bad routing, decode failure, or device/platform mismatch.
+10. Reuse the existing protocol abstraction and update adjacent tests or protocol docs when the wire behavior changes.
 
 ## Required Constraints
 
@@ -27,6 +28,8 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 - Do not implement only one direction of a protocol change. Verify both upstream decode and downstream encode when the transport supports both.
 - Do not start from business-field mapping before the transport boundary and frame boundary are stable.
 - Do not make simple protocols carry complex caches, state machines, or split packages just because another protocol does; add those only when the protocol explicitly needs them.
+- Do not implement a new protocol or large wire-behavior change before the design draft, packet examples, upstream/downstream mapping, compatibility risks, and realistic test goals have been documented and confirmed.
+- Do not make protocol tests pass with invented packets that ignore the real document or adjacent examples; validate representative registration, auth, framing, decode, encode, ACK, error, and compatibility cases.
 - If protocol changes cannot be verified in-session, state the exact pending test or debug commands and residual interoperability risks.
 - Combine this skill with `$jetlinks-reactive` or `$jetlinks-delivery` when the task also changes reactive flows or requires commit or PR preparation.
 
@@ -35,5 +38,6 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 1. Task type and target transport or packet family
 2. Confirmed protocol entry points
 3. Upstream and downstream message path
-4. Proposed code, test, and doc changes
-5. Verification evidence and remaining protocol risks
+4. Design doc path and test goals when the backend design gate applies
+5. Proposed code, test, and doc changes
+6. Verification evidence and remaining protocol risks

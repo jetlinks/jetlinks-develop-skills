@@ -34,6 +34,7 @@
 
 3. 查询能力优先复用已有 `_query` 或 QueryParam 体系
    - 不为每个字段单独造接口。
+   - 涉及 `createQuery()`、`createUpdate()`、`createDelete()`、排序、嵌套条件、分页、QueryParam 改写、复杂 SQL 或多查询组合时，读取 `query-dsl-rules.md`。
 
 4. 空模板仓库允许生成首个 CRUD 参考实现
    - 如果目标仓库没有可参考的 Entity / Service / Controller，不要停在“缺少样例”。
@@ -115,10 +116,15 @@
 
 1. Controller 上的资源权限 ID 复用模块现有命名方式
 2. 自定义动作只有在现有模块使用 `@ResourceAction` 或同类注解时才新增
-3. i18n 是否补齐，以当前模块约定为准
+3. 涉及 CRUD 查询、详情、更新、删除、批量操作、导出或自定义接口时，必须分析是否需要 AssetsHolder 数据权限控制
+   - 具体实现切换到 [`../../jetlinks-assets-permission/SKILL.md`](../../jetlinks-assets-permission/SKILL.md)
+   - 优先复用 `@AssetsController`、`AssetsHolderCrudController`、`CorrelatesAssetsHolderCrudController`、`AssetsHolder.injectQueryParam`、`AssetsHolder.assertPermission`、`CrudAssetPermission`
+   - 不要手写租户、机构、部门、创建人过滤来替代 AssetsHolder
+   - 如果资产类型、关联资产字段、权限动作、绑定关系、管理员例外、跨租户或平台上下文拿不准，先询问用户
+4. i18n 是否补齐，以当前模块约定为准
    - 若模块已有 i18n 资源并对权限、动作、字段做本地化，则补齐
    - 若模块尚未建立这套约定，不要臆造单独规则
-4. 保存前校验、唯一性冲突、资源不存在等用户可见异常，优先沿用当前模块的 `i18nCode` / message key 异常写法
+5. 保存前校验、唯一性冲突、资源不存在等用户可见异常，优先沿用当前模块的 `i18nCode` / message key 异常写法
    - 不要直接 `throw new XxxException("名称已存在")`
    - 若本地异常模型只支持 `message`，再在边界层回退到本地化后的 message
 
@@ -139,8 +145,19 @@
 - 动态复杂查询
 - 关联查询
 - 批量处理
+- 复杂 SQL、原生 SQL 或 QueryHelper
 - 性能敏感分页
 - CRUD 后强副作用联动
+
+遇到以下情况时，继续读取 `query-dsl-rules.md`：
+
+- `createQuery()` / `QueryParamEntity` DSL 查询
+- `createUpdate()` / `createDelete()` 批量更新或删除
+- 默认排序、多字段排序、分页稳定排序
+- `nest` / `orNest` / `toNestQuery` 嵌套条件
+- `setParam` 合并前端筛选与服务端固定条件
+- AssetsHolder 查询注入前后的 DSL 组织
+- `QueryHelper.transformPageResult` / `combineOneToMany` 多查询结果组合
 
 ## 自检清单
 
@@ -149,4 +166,5 @@
 - 是否只生成了用户需要的代码
 - 是否避免了重复查询接口和重复样板
 - 权限、路径、文案是否与当前模块一致
+- 是否分析了 AssetsHolder 数据权限：资产类型、权限动作、查询注入、详情访问、更新删除校验、批量操作和关联资产边界
 - 若处于空模板仓库，是否明确区分了“来自现有工作区的事实”和“来自通用规则的默认决策”

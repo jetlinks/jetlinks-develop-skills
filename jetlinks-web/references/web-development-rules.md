@@ -128,6 +128,7 @@
 - 判断区块、统计卡、图表、快捷入口是否该出现：[`block-admission-rules.md`](block-admission-rules.md)
 - 借鉴相似业务案例与避免误抄：[`business-ui-example-rules.md`](business-ui-example-rules.md)
 - 状态边界与 store 使用：[`state-management-rules.md`](state-management-rules.md)
+- 样式变量、字号、间距节奏和局部尺寸约束：结合 `../../jetlinks-web-style/SKILL.md`，以 `jetlinks-web-core/src/style.css` 与 `../../jetlinks-web-style/references/style-rules.md` 为准。
 - 质量与类型约束：[`quality-and-type-rules.md`](quality-and-type-rules.md)
 - 示例查找入口：[`example-locations.md`](example-locations.md)
 - 快速导航总览：[`index.md`](index.md)
@@ -140,6 +141,7 @@
 - 不要在业务模块里重复手写 `jetlinks-web-core` 已有的通用卡片、详情、抽屉、标签、轻量编辑、资源选择或筛选组件。
 - 不要把文档中的能力名称当作固定事实，必须以当前工作区导出为准。
 - 不要在页面内硬编码路由权限、菜单元数据、API base 或 token 行为。
+- 不要在组件内硬编码设计值；颜色、圆角、阴影、字号、字体、间距和局部尺寸优先复用 Ant Design Vue 能力与 `jetlinks-web-core/src/style.css` 变量或工具类，字号必须使用字号变量或组件默认字号，确实没有 token 可用的自定义局部尺寸统一按 `16px` 基准写 `rem`。
 - 不要把一次任务扩展成大范围结构重写，优先最小改动、可验证交付。
 - 不要把 `$frontend-design` 产出的创意风格直接覆盖到 JetLinks 页面；现有框架风格、组件库和交互语法始终优先。
 - 不要因为实现方便就把业务页面压缩成老套的“筛选 + 表格 + 弹窗”后台 CRUD 套壳，除非当前业务和相邻实现都明确证明这就是最合适的结构。

@@ -11,7 +11,7 @@ Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
 
 1. Judge whether the finished work is worth capturing.
 2. Choose the smallest useful output form: `worklog`, `knowledge`, `playbook`, prompt update, or skill update.
-3. Recommend a target path under the local `.ai/` directory before writing anything.
+3. Recommend a target path under the local `.ai/` directory before writing anything, unless the result clearly belongs in an existing owning doc or skill.
 4. Present the recommendation first: whether capture is needed, why, the form/path, and the concise summary.
 5. Only write the formal capture after the user confirms, unless the user already asked for direct generation.
 6. If the knowledge is stable across tasks, recommend updating the related skill or prompt.
@@ -21,6 +21,8 @@ Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
 
 - Do not create capture docs for every trivial change.
 - Do not restate raw diffs when no reusable knowledge was learned.
+- Do not use README as a place for single-task worklogs, test reports, troubleshooting notes, or PR summaries.
+- Do not create a new capture document when an existing knowledge, playbook, or owning source document should be updated instead.
 - Do not promote unstable one-off decisions into skills.
 - Do not silently skip the recommendation when the finished task clearly produced reusable knowledge.
 - Do not auto-create capture docs without user confirmation unless the user explicitly asked to generate them.
