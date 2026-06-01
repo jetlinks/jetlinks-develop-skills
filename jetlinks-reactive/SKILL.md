@@ -7,6 +7,13 @@ description: 在当前 JetLinks 工作区中应用响应式与非阻塞实现实
 
 Read [`references/reactive-practice.md`](references/reactive-practice.md) first.
 
+## Dispatch Contract
+
+- Trigger: Mono / Flux chains, non-blocking flow, blocking-risk review, batching, backpressure, retry / timeout, reactive tests.
+- Owns: reactive boundary, operator semantics, blocking isolation, chain readability, tracing context propagation, and reactive validation.
+- Does not own: business module placement, CRUD permission policy, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send CRUD semantics to `$jetlinks-crud`, command/event ownership to `$jetlinks-boundary` / `$jetlinks-events`, tracing details to `$jetlinks-conventions`, and delivery to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Inspect adjacent code to confirm whether the target module is reactive or blocking.

@@ -4,6 +4,11 @@
 
 ## 核心原则
 
+0. Trellis 项目优先使用 Trellis artifact
+   - 如果工作区存在 `.trellis/` 且有 active task，单次任务的 PRD、设计、任务拆分、测试目标和实现计划优先写入 `.trellis/tasks/<task>/prd.md`、`design.md`、`implement.md`。
+   - 不为同一工作再创建 `docs/plans/...` 平行设计稿；长期架构规则稳定后再同步到既有 docs / ADR / `.trellis/spec/`。
+   - 如果没有 active Trellis task，或用户明确要求不用 Trellis，继续按下方普通文档落点规则处理。
+
 1. README 只放长期总览
    - 根 README：仓库定位、安装 / 使用入口、技能或模块索引、长期约定入口。
    - 模块 README：模块职责、核心能力、启动 / 配置入口、重要链接。
@@ -24,9 +29,9 @@
    - 设计稿只保留测试目标和必要的最终验证摘要。
    - README 不记录测试报告；除非 README 本身就是测试工具或质量门禁模块的长期使用说明。
 
-5. 临时经验先沉淀到 `.ai/`
-   - 单次任务复盘、排坑、工作记录默认走 `$jetlinks-capture`，先建议再写。
-   - 项目内经验放 `.ai/worklog/`、`.ai/knowledge/`、`.ai/playbooks/`。
+5. 临时经验按项目工作流沉淀
+   - Trellis 项目：稳定团队规则优先写 `.trellis/spec/`，单次任务过程和 journal 由 Trellis workspace / task 管理。
+   - 非 Trellis 项目：单次任务复盘、排坑、工作记录默认走 `$jetlinks-capture`，项目内经验放 `.ai/worklog/`、`.ai/knowledge/`、`.ai/playbooks/`。
    - 多次验证后稳定、跨项目通用的内容，再升级为 prompt 或 skill。
 
 ## 落点决策表
@@ -34,12 +39,12 @@
 | 内容 | 推荐落点 | 不推荐 |
 | --- | --- | --- |
 | 仓库 / 模块长期介绍 | 根 README 或模块 README | 每次任务都改 README |
-| 较大功能设计、方案取舍、任务拆分、测试目标 | 既有 design / plans / adr；没有时用最贴近模块的 docs 目录 | 只写在对话里，或拆成多个碎片文档 |
+| 较大功能设计、方案取舍、任务拆分、测试目标 | Trellis active task 下用 `.trellis/tasks/<task>/design.md` / `implement.md`；否则用既有 design / plans / adr 或最贴近模块的 docs 目录 | 只写在对话里，或同一任务同时写 Trellis artifact 和 docs plan |
 | 架构决策、兼容性策略、长期边界规则 | `docs/adr/` 或既有架构文档 | 混在 PR 描述后丢失 |
 | API、配置、启动方式、用户可见行为 | 既有 API / 模块说明 / 用户文档 | 放在测试报告或任务日志里 |
 | 测试命令、覆盖率、CI 结果、集成测试结果 | PR 描述、CI 报告、测试报告目录（若项目已有） | README、模块说明、设计稿正文大段堆叠 |
-| 单次排坑、复盘、经验 | `.ai/worklog/` 或 `.ai/knowledge/`，需用户确认 | 每个任务默认新增 docs 文档 |
-| 稳定执行流程 | `.ai/playbooks/`；成熟后升级 skill | 散落在多个任务总结 |
+| 单次排坑、复盘、经验 | Trellis 项目用 task / workspace journal；非 Trellis 项目用 `.ai/worklog/` 或 `.ai/knowledge/`，需用户确认 | 每个任务默认新增 docs 文档 |
+| 稳定执行流程 | Trellis 项目用 `.trellis/spec/`；非 Trellis 项目用 `.ai/playbooks/`；成熟后升级 skill | 散落在多个任务总结 |
 
 ## 新增文档门槛
 

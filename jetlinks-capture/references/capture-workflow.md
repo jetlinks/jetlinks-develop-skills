@@ -2,15 +2,23 @@
 
 本文件用于在任务结束后判断：本次工作是否值得沉淀，以及应当沉淀成什么形式。
 
+如果工作区存在 `.trellis/`：
+
+- Trellis 拥有 active task、task journal、finish/archive 等任务生命周期记录。
+- 本工作流只沉淀稳定、可复用、非显然的规则或经验。
+- 稳定团队规则优先写入 `.trellis/spec/` 或已有长期归属文档。
+- 不把单次任务过程、finish summary、archive note、journal mirror 另写进 `.ai/`。
+
 ## 核心原则
 
 1. 不是每次改动都要写文档
    - 只有当本次工作产生了稳定、可复用、非显然的知识时，才值得沉淀。
 
 2. 先选最小沉淀形式
-   - 单次任务总结优先写 `worklog`
-   - 项目经验优先写 `knowledge`
-   - 稳定执行流程优先写 `playbook`
+   - Trellis 项目中的单次任务过程由 Trellis journal / archive 承载，不另写 `.ai/worklog`
+   - 非 Trellis 项目的单次任务总结优先写 `worklog`
+   - 项目经验优先写 `knowledge`，Trellis 项目稳定规则优先归入 `.trellis/spec/`
+   - 稳定执行流程优先写 `playbook`；Trellis 项目中与 agent 工作流相关的长期规则优先归入 `.trellis/spec/`
    - 长期稳定且跨任务通用的规则，再考虑更新 prompt 或 skill
    - 如果已有归属文档可以承载，优先更新已有文档，不另起碎片。
 
@@ -118,9 +126,10 @@
 2. 判断是否产出了稳定、可复用、非显然的知识
 3. 若值得沉淀，主动提示用户是否需要整理为文档
 4. 给出推荐形式、目标路径和摘要草稿
-5. 用户确认后，优先更新已有归属文档；否则再写入 `.ai/` 的统一目录
-6. 如果结论已跨任务稳定，再考虑回写 prompt 或 skill
-7. 如果结论已跨项目稳定，再询问是否并入 `jetlinks-develop-skills` 并提交官方 PR
+5. 用户确认后，优先更新已有归属文档；非 Trellis 项目没有更合适归属时再写入 `.ai/` 的统一目录
+6. Trellis 项目中，稳定规则优先写 `.trellis/spec/` 或已有长期文档；不要复制 Trellis journal / archive
+7. 如果结论已跨任务稳定，再考虑回写 prompt 或 skill
+8. 如果结论已跨项目稳定，再询问是否并入 `jetlinks-develop-skills` 并提交官方 PR
 
 ## 推荐目录
 
@@ -140,10 +149,16 @@
 - `knowledge/<domain>-<topic>.md`
 - `playbooks/<workflow>.md`
 
+Trellis 项目推荐落点：
+
+- `.trellis/spec/<domain-or-workflow>.md`：稳定团队规则、长期 agent 协作约定、可复用项目规范。
+- 已有长期归属文档：架构、模块、API 或测试策略已经有明确维护位置时优先更新原文档。
+
 不推荐：
 
 - `README.md`：不放单次经验、测试报告或排查记录。
 - `docs/*-test-report.md`：除非项目已有测试报告目录或用户明确要求。
+- `.ai/worklog/*`：Trellis 项目的单次任务过程不放这里，除非用户明确要求复制到非 Trellis 知识库。
 - `summary.md`、`todo.md`、`note.md`：命名不可检索，容易形成碎片。
 
 ## 标准收尾动作

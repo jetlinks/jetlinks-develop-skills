@@ -7,6 +7,13 @@ description: 在 JetLinks 前端工作区中实现或改造 Vue3 页面，优先
 
 Read [`references/web-development-rules.md`](references/web-development-rules.md) first.
 
+## Dispatch Contract
+
+- Trigger: Vue3 page implementation, page modification, frontend component reuse, state / type quality, enum rendering, route/query behavior.
+- Owns: frontend implementation, current workspace component verification, reuse / decomposition, copy/i18n checks, and UI validation evidence.
+- Does not own: interaction-solution catalog selection for non-trivial pages, backend API implementation, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send non-trivial page structure to `$jetlinks-web-style`, backend behavior to the relevant backend skill, and PR gates to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Read [`references/web-development-rules.md`](references/web-development-rules.md) and classify the task as page implementation, interaction solution selection, capability reuse, state/quality concerns, in-framework interaction polishing, or business-driven experience design.

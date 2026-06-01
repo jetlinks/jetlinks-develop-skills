@@ -7,6 +7,13 @@ description: 为 JetLinks 前端页面选择、复用并约束业务交互方案
 
 Read [`references/style-selection-rules.md`](references/style-selection-rules.md) first. A solution profile is **mandatory by default**; explicit user confirmation is required only when facts are insufficient or the structural choice is risky.
 
+## Dispatch Contract
+
+- Trigger: new page, page shell refactor, information architecture change, main filter/list/detail carrier change, or non-trivial interaction solution choice.
+- Owns: solution profile, candidate templates, confirmation mode, anti-admin-shell constraints, and `jetlinks-web-core` component families to verify.
+- Does not own: final Vue implementation, backend API behavior, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: return the locked solution profile to `$jetlinks-web`; use `$frontend-design` only for local visual refinement after the JetLinks solution is fixed.
+
 ## Workflow
 
 1. Read [`references/style-selection-rules.md`](references/style-selection-rules.md) and determine whether this task hits the **local-tweak whitelist** (single form field, single filter chip, single dialog content, styling/copy/props-only). If it does, hand back to `../jetlinks-web/SKILL.md` for direct implementation; no solution profile is needed.

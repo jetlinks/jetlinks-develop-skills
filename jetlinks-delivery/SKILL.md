@@ -5,7 +5,14 @@ description: 为 JetLinks 代码变更准备合规交付内容。适用于需要
 
 # JetLinks Delivery
 
-Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first.
+Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first. If the workspace contains `.trellis/`, keep Trellis as the owner of task lifecycle, finish/archive, and journal; this skill owns only commit, PR, test evidence, documentation sync checks, and delivery gates.
+
+## Dispatch Contract
+
+- Trigger: commit wording, staging / push / PR preparation, test evidence, coverage, documentation sync, release-risk review.
+- Owns: JetLinks commit / PR rules, backend delivery gates, PR description content, and whether a PR must stay draft.
+- Does not own: Trellis task creation, active-task selection, `finish-work`, archive docs, journal entries, or cross-task planning.
+- Handoff: use Trellis task artifacts as evidence when they already own design or implementation notes; return reusable knowledge decisions to `$jetlinks-capture`.
 
 ## Workflow
 
@@ -17,8 +24,9 @@ Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first.
 6. If the change adds backend functionality or changes existing backend behavior, ensure corresponding unit tests are added or updated before PR preparation.
 7. Run the relevant unit tests and required integration tests, then collect numeric evidence.
 8. Check whether the change also requires synchronizing existing owning documentation. Treat README as durable repository/module overview only; put test reports and PR evidence in PR/CI, and prefer updating an existing source document instead of creating a new task log.
-9. Before creating a ready PR for backend code changes, inspect the touched code for comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md); required comments must exist in code, not only in the PR description.
-10. Prepare the PR description by filling the canonical template in [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) exactly; keep headings, order, and blank lines unchanged. If the repo also has `.github/pull_request_template.md`, keep it synchronized as a mirror, but do not depend on it as the only source.
+9. In Trellis projects, treat `.trellis/tasks/<task>/design.md` and `implement.md` as the active task's design and implementation artifacts when present; do not create parallel task archives, finish notes, or journal files.
+10. Before creating a ready PR for backend code changes, inspect the touched code for comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md); required comments must exist in code, not only in the PR description.
+11. Prepare the PR description by filling the canonical template in [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) exactly; keep headings, order, and blank lines unchanged. If the repo also has `.github/pull_request_template.md`, keep it synchronized as a mirror, but do not depend on it as the only source.
 
 ## Required Constraints
 
@@ -29,6 +37,7 @@ Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first.
 - Do not say delivery is complete when code or behavior changed but required source docs are clearly stale; either update them or state the exact gap and risk.
 - Do not use vague PR text such as “tested” or “optimized” without data.
 - Do not default to creating a new per-task document or archive log; follow repo-local documentation rules and prefer updating existing docs.
+- Do not run or emulate Trellis finish/archive/journal behavior from this skill; leave those lifecycle operations to Trellis or the user.
 - Do not put single-task test reports, PR descriptions, temporary plans, or troubleshooting logs into README files.
 - Do not emit multi-line `git commit` commands that rely on literal `\n` becoming real newlines.
 - Do not create a ready PR for backend code changes when public contracts, SPI methods, complex business branches, compatibility, permissions, lifecycle, tracing, MBean, protocol, event, or boundary logic need comments but the touched code lacks them. Fix the code comments first, or create a draft with the exact blocker.

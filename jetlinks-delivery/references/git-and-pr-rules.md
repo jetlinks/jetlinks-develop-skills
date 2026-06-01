@@ -7,6 +7,13 @@
 - [`commit-message-zh.md`](commit-message-zh.md)
 - [`shell-commit-examples.md`](shell-commit-examples.md)
 
+如果工作区存在 `.trellis/`：
+
+- Trellis 拥有任务生命周期、active task、PRD、design、implement、finish/archive 和 journal。
+- 本文件只负责提交、测试证据、文档同步检查、PR 描述和 ready/draft 判断。
+- 已存在的 `.trellis/tasks/<task>/design.md` / `implement.md` 可以作为设计稿和测试目标证据。
+- 不为同一任务另建 `docs/plans/...`、archive note、journal 或 finish summary；这些由 Trellis 工作流处理。
+
 ## 目标
 
 确保 JetLinks 项目的交付过程符合以下要求：
@@ -255,6 +262,7 @@ PR 前必须完成：
 当本次改动涉及代码、配置、接口、数据结构、页面交互、枚举/字典或业务规则变化时，交付前还需要检查对应文档是否应同步更新。
 
 文档落点先遵循 [`../../jetlinks-router/references/document-placement-rules.md`](../../jetlinks-router/references/document-placement-rules.md)。尤其注意：README 只作为仓库或模块的长期总览，不放单次测试报告、PR 描述、临时计划、排查流水或任务总结。
+Trellis 项目中，active task 的 `design.md` / `implement.md` 是单次任务设计与执行计划的默认载体；PR 只引用它们，不复制生成新的任务归档。
 
 优先级：
 
@@ -266,6 +274,7 @@ PR 前必须完成：
 约束：
 
 - 不要默认为了交付“留痕”而为每个任务新建 task doc、active/archive 流水或归档记录。
+- Trellis 项目不要由交付技能执行或模拟 `finish-work`、archive、journal；交付完成后只说明 PR 状态和测试证据，必要时提示后续由 Trellis 收尾。
 - 不要为了说明本次 PR 通过了哪些测试而修改 README。
 - 不要把同一功能拆成多个 plan、summary、test-report、worklog 文档；较大后端改动优先用一个主设计稿承载设计、任务拆分和测试目标。
 - 如果当前仓库规则要求同步文档，且文档明显滞后于实现，不要把交付描述为已完成。
@@ -310,7 +319,7 @@ PR 描述必须按本文件中的推荐模板输出，标题、顺序和空行�
 
 ## 设计与测试目标
 
-- 设计稿：`docs/plans/yyyy-mm-dd-xxx.md`
+- 设计稿：`docs/plans/yyyy-mm-dd-xxx.md`；Trellis 项目使用 `.trellis/tasks/<task>/design.md`
 - 用户确认：已确认 / 未确认，当前为 draft
 - 测试目标：真实场景、真实数据、正常路径、异常路径、回归路径和边界路径均已覆盖 / 列出未覆盖原因
 - 注释 / 公共契约：适用 / 不适用；适用时说明类注释、SPI 方法注释、必要 `@since` / `@see` 和复杂逻辑注释已补齐到代码中
@@ -366,5 +375,5 @@ PR 描述必须按本文件中的推荐模板输出，标题、顺序和空行�
 9. 判断本次改动是否过大、是否混入多个主题；如果是，先建议拆分 PR。
 10. 如果远端是 GitHub，先检查 `gh auth status`；当前工具支持非沙箱审批时使用非沙箱执行，不支持时说明限制并按可用方式降级。
 11. 生成 PR 标题与 PR 描述，确保包含目的、核心变动、测试数据、文档同步情况和风险说明。
-12. 创建 PR 前，先确认用户是否认为任务已完成。
+12. 创建 PR 前，先确认用户是否认为任务已完成；Trellis 项目只判断 PR ready/draft，不代替 Trellis 判断 task finish/archive。
 13. push 临时分支后，优先使用 `gh pr create` 创建 PR：未完成则 draft，已完成且用户确认后再创建 ready for review；如果 `gh` 不可用，再明确说明阻塞或降级方式。

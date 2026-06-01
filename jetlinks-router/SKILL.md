@@ -5,21 +5,29 @@ description: 将 JetLinks 开发请求路由到当前工作区中最合适的 fo
 
 # JetLinks Router
 
-Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing index.
+Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing index. If the workspace contains `.trellis/`, also read [`references/trellis-integration-rules.md`](references/trellis-integration-rules.md) before deciding plan, document, delivery, or capture ownership.
+
+## Dispatch Contract
+
+- Trigger: unclear JetLinks development tasks, multi-skill tasks, plan-first gates, module routing, or Trellis-aware artifact placement.
+- Owns: task classification, focused-skill selection, design/test gate decision, document target recommendation, and handoff summary.
+- Does not own: focused implementation details, commit / PR execution, Trellis task lifecycle, archive, journal, or long-running workflow state.
+- Handoff: call the smallest focused skill set; in Trellis projects return lifecycle control to the active Trellis phase after JetLinks domain gates are satisfied.
 
 ## Workflow
 
 1. Classify the task.
-2. Decide whether the task must enter a plan-first gate. Use it for complex, cross-module, multi-subtask, or still-changing requirements.
-3. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md), write the design draft and test goals into the appropriate owning docs location, then wait for explicit user confirmation before implementation.
-4. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
-5. Switch to the most relevant focused JetLinks skill.
-6. Combine multiple focused skills when the task crosses boundaries.
-7. Read adjacent production code before changing anything.
-8. Implement complete changes, not pseudo-code.
-9. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
-10. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
-11. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
+2. If `.trellis/` exists, treat Trellis as the workflow owner: task lifecycle, PRD/design/implement artifacts, continue, finish, archive, and journal stay under Trellis control; JetLinks skills provide domain routing and gates.
+3. Decide whether the task must enter a plan-first gate. Use it for complex, cross-module, multi-subtask, or still-changing requirements.
+4. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md); in Trellis projects write the design draft and test goals into the active task artifacts, otherwise use the appropriate owning docs location. Wait for explicit user confirmation before implementation.
+5. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
+6. Switch to the most relevant focused JetLinks skill.
+7. Combine multiple focused skills when the task crosses boundaries, but keep lifecycle control with the orchestrator or Trellis.
+8. Read adjacent production code before changing anything.
+9. Implement complete changes, not pseudo-code.
+10. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
+11. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
+12. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
 
 ## Routing
 
@@ -44,6 +52,8 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - When local examples are missing, clearly separate defaults from verified workspace facts.
 - Do not directly implement complex or unstable requirements before clarifying scope, exclusions, risks, and validation with the user.
 - Do not implement large backend changes or new backend features before a design draft and test goals have been written to the appropriate docs directory and explicitly confirmed by the user.
+- In Trellis projects, do not create a parallel docs plan for the same work when the active task's `.trellis/tasks/<task>/design.md` or `implement.md` should own the design and test goals.
+- Do not let focused JetLinks skills create, start, finish, archive, or journal Trellis tasks unless the user explicitly asks for Trellis operations.
 - Do not place task logs, test reports, PR descriptions, or temporary design notes into README files; README is for durable repository or module overview.
 - Do not treat tests as a checkbox: test goals must map to realistic business scenarios and data, and failures must drive root-cause analysis rather than weaker assertions.
 - For code changes, apply the comment gate from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md) before implementation: identify required comment targets, add comments in the touched code when complex business intent / permission boundary / compatibility / lifecycle / public contract exists, and only report "no comments needed" when the touched code is straightforward. A final summary or PR description does not replace code comments.
@@ -67,21 +77,23 @@ When analyzing first:
 2. Whether plan-first confirmation is required
 3. Whether backend design-test gate applies, plus the design doc path when it does
 4. Focused JetLinks skill or skills to use
-5. Workspace facts to confirm
-6. Proposed code and document locations
-7. Release-boundary decision when compatibility is in question
-8. Comment decision when complex or non-obvious code is involved
-9. Database portability and performance test decision when SQL is involved
-10. TraceHolder tracing decision when critical backend flows are involved
-11. MBean observability decision when long-lived in-memory or cache behavior is involved
-12. Plan summary, test goals, or direct-execution rationale
+5. Trellis phase, artifact target, lifecycle owner, and handoff when `.trellis/` exists
+6. Workspace facts to confirm
+7. Proposed code and document locations
+8. Release-boundary decision when compatibility is in question
+9. Comment decision when complex or non-obvious code is involved
+10. Database portability and performance test decision when SQL is involved
+11. TraceHolder tracing decision when critical backend flows are involved
+12. MBean observability decision when long-lived in-memory or cache behavior is involved
+13. Plan summary, test goals, or direct-execution rationale
 
 When implementing:
 
 1. Quietly classify and inspect
-2. If backend design-test gate applies, write or update the design doc and test goals first, then wait for user confirmation
-3. If plan-first applies without backend design gate, output the plan and wait for confirmation
-4. Load the needed focused skill or skills
-5. Edit the code with the smallest consistent change
-6. Run the needed validation when possible, otherwise state the exact pending commands and residual risks
-7. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository
+2. If `.trellis/` exists, load Trellis integration rules and keep task lifecycle, artifact ownership, archive, and journal under Trellis
+3. If backend design-test gate applies, write or update the design doc and test goals first, then wait for user confirmation
+4. If plan-first applies without backend design gate, output the plan and wait for confirmation
+5. Load the needed focused skill or skills
+6. Edit the code with the smallest consistent change
+7. Run the needed validation when possible, otherwise state the exact pending commands and residual risks
+8. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository

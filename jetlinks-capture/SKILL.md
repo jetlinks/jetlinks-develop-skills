@@ -5,13 +5,20 @@ description: 沉淀 JetLinks 开发过程中的可复用知识。适用于任务
 
 # JetLinks Capture
 
-Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
+Read [`references/capture-workflow.md`](references/capture-workflow.md) first. If the workspace contains `.trellis/`, Trellis owns task journal and task archive; this skill captures only stable reusable knowledge, preferably into `.trellis/spec/` for Trellis projects or `.ai/` for non-Trellis projects.
+
+## Dispatch Contract
+
+- Trigger: a finished task produced stable, reusable, non-obvious JetLinks knowledge.
+- Owns: capture recommendation, smallest durable output form, skill / prompt promotion decision.
+- Does not own: Trellis task lifecycle, active task selection, task archive, journal entries, or PR delivery.
+- Handoff: use `.trellis/spec/` for stable Trellis project rules, `.ai/` for non-Trellis local knowledge, and `$jetlinks-delivery` for commit / PR preparation.
 
 ## Workflow
 
 1. Judge whether the finished work is worth capturing.
 2. Choose the smallest useful output form: `worklog`, `knowledge`, `playbook`, prompt update, or skill update.
-3. Recommend a target path under the local `.ai/` directory before writing anything, unless the result clearly belongs in an existing owning doc or skill.
+3. Recommend a target path before writing anything: in Trellis projects prefer existing `.trellis/spec/` or another owning durable doc for stable rules; in non-Trellis projects use the local `.ai/` directory unless the result clearly belongs in an existing owning doc or skill.
 4. Present the recommendation first: whether capture is needed, why, the form/path, and the concise summary.
 5. Only write the formal capture after the user confirms, unless the user already asked for direct generation.
 6. If the knowledge is stable across tasks, recommend updating the related skill or prompt.
@@ -27,6 +34,8 @@ Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
 - Do not silently skip the recommendation when the finished task clearly produced reusable knowledge.
 - Do not auto-create capture docs without user confirmation unless the user explicitly asked to generate them.
 - Do not recommend an official skill PR unless the conclusion is stable across tasks and not tightly bound to one project.
+- Do not create Trellis task journal, archive, or finish notes; Trellis handles those lifecycle records.
+- Do not put single-task Trellis process notes into `.ai/` just because this skill was triggered.
 - Always separate verified project facts from temporary assumptions.
 
 ## Response Shape
@@ -35,5 +44,5 @@ Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
 2. Why it is or is not worth capturing
 3. Recommended output form and target path
 4. The concise summary to persist
-5. Whether the result should stay in `.ai/` or be promoted into a prompt / skill update
+5. Whether the result should stay in `.trellis/spec/`, `.ai/`, or be promoted into a prompt / skill update
 6. If it can become a common JetLinks skill, whether to merge it into `jetlinks-develop-skills` and submit a PR upstream

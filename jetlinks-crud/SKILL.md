@@ -7,6 +7,13 @@ description: 在 JetLinks 脚手架中实现标准或高级 CRUD 开发。适用
 
 Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 
+## Dispatch Contract
+
+- Trigger: Entity / Service / Controller, query, pagination, batch update/delete, CRUD side effects, CRUD tests.
+- Owns: CRUD implementation pattern, QueryParam / QueryHelper usage, batch DSL, CRUD readability and validation.
+- Does not own: module creation, asset permission policy details, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send module placement to `$jetlinks-routing`, data permission to `$jetlinks-assets-permission`, reactive chains to `$jetlinks-reactive`, and PR gates to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Confirm the target module's execution model and CRUD base abstractions.

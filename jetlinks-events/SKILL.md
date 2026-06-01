@@ -7,6 +7,13 @@ description: 在当前 JetLinks 工作区中实现事件驱动和订阅处理流
 
 Read [`references/event-driven-rules.md`](references/event-driven-rules.md) first.
 
+## Dispatch Contract
+
+- Trigger: lifecycle events, domain events, EventBus topics, subscriptions, message handlers, asynchronous side effects.
+- Owns: trigger timing, transaction boundary, idempotency, replay / retry behavior, subscription lifecycle, and event-chain tests.
+- Does not own: synchronous CRUD semantics, generic boundary contract selection, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send reactive composition to `$jetlinks-reactive`, CRUD persistence to `$jetlinks-crud`, cross-module commands to `$jetlinks-boundary`, and delivery to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Confirm whether the task is a lifecycle event, domain event, or continuous subscription flow.

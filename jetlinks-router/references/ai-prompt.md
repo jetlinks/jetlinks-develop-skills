@@ -4,6 +4,8 @@
 
 **上下文**：本文件较长；日常可先读 `../agents/openai.yaml` 的默认提示词，再按需打开本文件的对应章节。前端交互细则在 `jetlinks-web-style` 分片（`style-catalog-core-base.md` / `style-catalog-core-detail-shell.md` / `style-catalog-templates.md` 等），不要在 router 内复制前端规则正文。
 
+如果工作区存在 `.trellis/`，先读取 [`trellis-integration-rules.md`](trellis-integration-rules.md)：Trellis 拥有任务生命周期、PRD、design、implement、finish/archive 和 journal；JetLinks skills 只负责领域路由、实现规则、测试门禁和 PR 交付边界。
+
 它不提供仓库快照，不硬编码模块清单、包名、版本号或固定目录结构。所有这类信息都必须从当前工作区现有代码、`pom.xml`、资源目录和相邻模块中发现。
 
 ## 全局原则
@@ -58,7 +60,8 @@
 
 10. 任务结束时可以判断是否值得沉淀知识
     - 只有产出了稳定、可复用、非显然的知识时，才建议写总结或沉淀文档。
-    - 沉淀形式优先选择 worklog、knowledge、playbook，再考虑 prompt 或 skill 更新。
+    - Trellis 项目中的单次任务过程、finish/archive 和 journal 由 Trellis 管理；稳定团队规则优先进入 `.trellis/spec/`。
+    - 非 Trellis 项目沉淀形式优先选择 worklog、knowledge、playbook，再考虑 prompt 或 skill 更新。
     - 不为每次任务默认新增文档；先更新已有归属文档，或把一次性测试证据留在 PR / CI。
     - 如果判断值得沉淀，不要直接结束任务；应先提示用户是否需要生成正式文档。
     - 如果结论已经成熟到可抽成通用 JetLinks skill，还应额外询问是否并入 `jetlinks-develop-skills` 并准备官方 PR。
@@ -285,7 +288,7 @@
 
 适用：
 - 任务已经完成，需要判断是否值得总结
-- 需要将经验写入统一目录，便于后续智能体检索
+- 需要将稳定经验写入统一目录，便于后续智能体检索；Trellis 项目稳定规则优先写 `.trellis/spec/`，单次 journal / archive 归 Trellis
 - 需要决定这次结论应写成 worklog、knowledge、playbook，还是回写 prompt / skill
 - 需要判断这次结论是否已经可以抽成 skill，并继续提交到官方 skills 仓库
 
@@ -301,6 +304,7 @@
 - 需要整理提交信息、PR 标题或 PR 描述
 - 需要确认是否允许直接推送到目标分支
 - 需要给出测试和覆盖率证明
+- Trellis 项目中只判断 PR ready/draft 和测试证据，不接管 finish/archive/journal
 - PR 包含后端新增功能或既有功能变动，需要补齐单元测试、覆盖率、集成测试结果或不适用原因
 
 ## 常见组合

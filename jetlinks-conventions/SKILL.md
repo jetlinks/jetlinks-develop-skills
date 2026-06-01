@@ -7,6 +7,13 @@ description: 在当前 JetLinks 工作区中应用共享编码规范。适用于
 
 Read [`references/code-conventions.md`](references/code-conventions.md) first.
 
+## Dispatch Contract
+
+- Trigger: naming/imports, annotations, comments, i18n, TraceHolder / MonoTracer / FluxTracer, MBean observability, root-cause / no-hack decisions.
+- Owns: shared coding conventions, comment gates, i18n decision, tracing / MBean decision, and capability-gap resolution rules.
+- Does not own: primary business implementation, module routing, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: return implementation to the focused skill that owns the business change, and send commit / PR evidence to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Classify the task as annotations/imports, general conventions, comments, i18n, tracing, MBean observability, or a capability-gap / hack-avoidance situation (tool, SDK, framework API not directly satisfying the requirement).

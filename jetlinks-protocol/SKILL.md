@@ -7,6 +7,13 @@ description: 在 JetLinks 协议包中处理协议支持注册、MQTT/HTTP/TCP/U
 
 Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 
+## Dispatch Contract
+
+- Trigger: protocol support, codec, parser, transport route, binary packet, device auth, upstream/downstream mapping, protocol debugging.
+- Owns: protocol entry points, wire compatibility, packet examples, codec paths, auth boundary, and interoperability tests.
+- Does not own: product business CRUD, generic module creation, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send reactive transport flow to `$jetlinks-reactive`, boundary contracts to `$jetlinks-boundary`, comments/tracing/i18n to `$jetlinks-conventions`, and PR gates to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Classify the request as protocol reading, protocol implementation, binary packet analysis, or integration debugging.

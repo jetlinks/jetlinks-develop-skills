@@ -7,6 +7,13 @@ description: 在当前 JetLinks 工作区中使用统一 AssetsHolder 资产权�
 
 Read [`references/assets-holder-rules.md`](references/assets-holder-rules.md) first.
 
+## Dispatch Contract
+
+- Trigger: AssetsHolder data permission for query, detail, update, delete, batch, export, custom endpoints, commands, subscriptions, or aggregate queries.
+- Owns: asset type, permission action, query injection, operation assertion, related-asset filtering, and permission test expectations.
+- Does not own: generic CRUD scaffolding, module placement, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send CRUD structure to `$jetlinks-crud`, command boundaries to `$jetlinks-boundary`, event/subscription propagation to `$jetlinks-events`, and delivery evidence to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Classify the asset-permission scenario: owned CRUD asset, correlated asset, custom endpoint, aggregate query, command boundary, binding or unbinding, subscription or message filtering.

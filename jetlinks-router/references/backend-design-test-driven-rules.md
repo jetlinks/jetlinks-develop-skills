@@ -23,11 +23,12 @@
 
 落点选择顺序：
 
-1. 读取仓库根 README、AGENTS、已有 docs 索引或模块文档规则，确认文档归属；不要把 README 当成任务文档。
-2. 如果已有功能设计、ADR、模块设计或计划文档覆盖同一主题，优先更新该文档。
-3. 优先使用受影响模块已有的 `docs/`、`docs/plans/`、`docs/design/`、`docs/adr/` 或等价目录。
-4. 如果仓库根已有 `docs/plans/`、`docs/design/`、`docs/adr/`，优先落到最贴近用途的根目录。
-5. 如果没有任何文档目录，但用户已经要求较大后端设计先行，默认创建 `docs/plans/`；若仓库明确禁止新增文档目录，先向用户说明阻塞并确认替代落点。
+1. 如果工作区存在 `.trellis/` 且当前会话已有 active task，优先更新 `.trellis/tasks/<task>/design.md`；任务拆分、验证命令和执行顺序写入同任务的 `implement.md`。不要再为同一任务新增 `docs/plans/...`。
+2. 读取仓库根 README、AGENTS、已有 docs 索引或模块文档规则，确认文档归属；不要把 README 当成任务文档。
+3. 如果已有功能设计、ADR、模块设计或计划文档覆盖同一主题，优先更新该文档。
+4. 优先使用受影响模块已有的 `docs/`、`docs/plans/`、`docs/design/`、`docs/adr/` 或等价目录。
+5. 如果仓库根已有 `docs/plans/`、`docs/design/`、`docs/adr/`，优先落到最贴近用途的根目录。
+6. 如果没有任何文档目录，但用户已经要求较大后端设计先行，默认创建 `docs/plans/`；若仓库明确禁止新增文档目录，先向用户说明阻塞并确认替代落点。
 
 文件名使用稳定、可检索的形式：
 
@@ -35,7 +36,7 @@
 docs/plans/<yyyy-mm-dd>-<feature-slug>.md
 ```
 
-如果模块已有命名规范，跟随模块规范。`feature-slug` 使用业务对象或能力名，不使用 `temp`、`todo`、`note`、`summary` 这类泛名。
+如果使用 Trellis active task，沿用 `.trellis/tasks/<task>/design.md` 和 `implement.md`，不要另起日期文件名。如果模块已有命名规范，跟随模块规范。`feature-slug` 使用业务对象或能力名，不使用 `temp`、`todo`、`note`、`summary` 这类泛名。
 
 避免碎片化：
 

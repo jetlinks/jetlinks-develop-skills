@@ -7,6 +7,13 @@ description: 发现 JetLinks 工作区结构并选择正确模块，必要时创
 
 Read [`references/module-list.md`](references/module-list.md) first.
 
+## Dispatch Contract
+
+- Trigger: workspace structure discovery, module selection, symlinked modules, new backend module placement.
+- Owns: module responsibility, `manager` / `core` layering, aggregator / `pom.xml` placement, and whether a new module is justified.
+- Does not own: CRUD behavior, asset permission implementation, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send CRUD to `$jetlinks-crud`, data permission to `$jetlinks-assets-permission`, boundary choices to `$jetlinks-boundary`, and delivery to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Inspect the root layout, parent `pom.xml`, aggregator modules, and symlinked directories.

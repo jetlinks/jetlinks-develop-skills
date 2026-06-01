@@ -7,6 +7,13 @@ description: 在当前 JetLinks 工作区中选择并实现跨边界交互方式
 
 Read [`references/module-reference.md`](references/module-reference.md) first.
 
+## Dispatch Contract
+
+- Trigger: cross-module calls, command services, proxies, support IDs, remote/local boundary choices, permission context propagation.
+- Owns: interaction pattern selection across boundaries, command contract checks, rejected boundary options, and caller/provider responsibilities.
+- Does not own: internal CRUD implementation, event handler details, Trellis task lifecycle, archive, journal, or cross-task planning.
+- Handoff: send CRUD to `$jetlinks-crud`, reactive execution to `$jetlinks-reactive`, events/subscriptions to `$jetlinks-events`, and PR gates to `$jetlinks-delivery`.
+
 ## Workflow
 
 1. Identify the capability boundary that the task needs to cross.
