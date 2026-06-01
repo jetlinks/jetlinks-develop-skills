@@ -79,11 +79,15 @@ jetlinks-develop-skills/
 
 ### `jetlinks-capture`
 
-用于任务结束后的知识沉淀判断、经验归档、playbook 生成，以及决定是否需要继续更新 prompt 或 skill。
+用于任务结束后的知识沉淀判断、经验归档、playbook 生成，以及决定是否需要继续更新 prompt 或 skill。Trellis 项目中只沉淀稳定可复用知识，优先写 `.trellis/spec/` 或已有长期归属文档，不接管 task journal、finish 或 archive。
 
 ### `jetlinks-delivery`
 
-用于提交信息、提交命令、分支策略、后端设计与测试驱动门禁、测试证据和 PR 描述整理。
+用于提交信息、提交命令、分支策略、后端设计与测试驱动门禁、测试证据和 PR 描述整理。Trellis 项目中只判断 commit / PR / test gate，不代替 Trellis 执行 finish、archive 或 journal。
+
+## Trellis Integration
+
+当 JetLinks skills 运行在包含 `.trellis/` 的工作区中时，Trellis 是任务生命周期主控，负责 task、PRD、design、implement、finish、archive 和 journal。JetLinks skills 只负责领域路由、实现规则、测试门禁、知识沉淀建议和 PR 交付边界；单次任务过程不复制到 `.ai/`，稳定团队规则优先进入 `.trellis/spec/`。
 
 ## Scenario Routing
 
@@ -100,8 +104,8 @@ jetlinks-develop-skills/
 - 只想处理事件或订阅：`$jetlinks-events`
 - 只想处理前端页面改造、能力复用、前端质量约束或在现有设计体系内优化交互：`$jetlinks-web`；若涉及页面壳层、首屏组织、信息架构或风格复用，同时用 `$jetlinks-web-style`
 - 只想先选择或复用前端页面风格/页面壳层：`$jetlinks-web-style`
-- 只想判断是否值得沉淀知识：`$jetlinks-capture`
-- 只想整理提交、设计门禁、测试和 PR：`$jetlinks-delivery`
+- 只想判断是否值得沉淀知识：`$jetlinks-capture`；Trellis 项目不接管 task journal / archive
+- 只想整理提交、设计门禁、测试和 PR：`$jetlinks-delivery`；Trellis 项目不接管 finish / archive / journal
 
 ## Install
 

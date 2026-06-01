@@ -27,7 +27,7 @@
 - `jetlinks-delivery` 负责 commit 标题、分支策略、测试证据、PR 描述和 JetLinks 后端门禁。
 - Trellis `finish-work` 负责 task archive 和 session journal；JetLinks skills 不替它归档。
 - 在 Trellis 项目中，work commit 可以按 JetLinks delivery 规范生成；archive / journal commit 顺序由 Trellis finish 流程维护。
-- 如果 Trellis finish 要求 clean tree，先处理与本次无关的未跟踪文件或写入 `.gitignore`，不要把无关产物混进工作提交。
+- 如果 Trellis finish 要求 clean tree，先清理或隔离与本次任务无关的未跟踪文件。只有当产物规则具备项目级长期价值且用户确认时，才把 `.gitignore` 变更纳入工作提交。
 
 ## 调度输出
 
