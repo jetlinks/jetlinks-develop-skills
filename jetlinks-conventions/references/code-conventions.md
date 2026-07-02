@@ -82,9 +82,13 @@
 ### 常用工具类
 
 - 对字符串、集合、Map、数组和对象的判空、blank 判断、默认值处理等常用操作，在当前模块已引入 Apache Commons 或相邻实现已使用时，优先复用相关工具类。
-- 常见优先选择包括 `StringUtils`、`ObjectUtils`、`ArrayUtils`、`CollectionUtils`、`MapUtils`。
+- 集合、Map、数组和对象优先选择 `ObjectUtils`、`ArrayUtils`、`CollectionUtils`、`MapUtils`；字符串 blank / trim 等当前依赖未废弃的场景可沿用 `StringUtils`。
+- 字符串默认值处理优先看 JDK `Objects.toString(Object, String)`、`ObjectUtils` 或相邻代码；不要在当前依赖已标记废弃时继续使用 `StringUtils.defaultString`。
+- 字符串比较、前后缀、包含、索引 / 查找、普通字符串替换 / 移除等 Commons Lang 操作，当前依赖提供 `org.apache.commons.lang3.Strings` 时，按大小写语义选择 `Strings.CS` 或 `Strings.CI`。
+- 不再使用已废弃的 `StringUtils.startsWith`、`StringUtils.endsWith`、`StringUtils.contains`、`StringUtils.equals`、`StringUtils.compare`、`StringUtils.indexOf`、`StringUtils.lastIndexOf`、`StringUtils.replace`、`StringUtils.remove`、`StringUtils.appendIfMissing`、`StringUtils.prependIfMissing` 及对应 `*IgnoreCase` / `*Any` 变体；例如使用 `Strings.CS.startsWith(str, prefix)`、`Strings.CI.contains(str, keyword)`、`Strings.CI.equals(a, b)`。
+- 正则替换 / 移除不要套用 `Strings.CS` / `Strings.CI`，按当前 Commons Lang 版本和相邻代码选择 `RegExUtils` 等非废弃 API。
 - 避免手写 `str != null && !str.isEmpty()`、`collection == null || collection.isEmpty()`、`map != null && !map.isEmpty()` 这类重复样板判断。
-- 如果当前仓库已有更统一的本地工具类，或目标模块并未引入相关依赖，则保持本地风格，不为了单个判空场景额外引入一套工具依赖。
+- 如果当前仓库已有更统一的本地工具类，或目标模块并未引入相关依赖，则保持本地风格，不为了单个判空场景额外引入一套工具依赖；如果 commons-lang3 版本尚未提供 `Strings`，不要为单个 helper 私自升级依赖，先跟随相邻代码或说明版本约束。
 
 ### 链式调用可读性
 
