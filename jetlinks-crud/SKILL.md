@@ -30,7 +30,7 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 - Do not treat SQL as complete just because it returns correct rows on tiny samples; complex SQL, native SQL, deep pagination, aggregation, joins, or batch writes need pressure testing or documented performance evidence.
 - Do not perform row-by-row save / delete when `createUpdate()` / `createDelete()` can express the batch operation; use `setNull(...)` for real null assignment.
 - Prefer moving heavy side effects out of the main CRUD flow.
-- When Apache Commons utilities are already available in the target module or adjacent CRUD code, prefer them for common null or empty checks instead of handwritten repetitive validation branches.
+- When Apache Commons utilities are already available in the target module or adjacent CRUD code, prefer them for common null or empty checks; for string comparison/search/prefix/suffix operations, follow `$jetlinks-conventions` and use `Strings.CS` / `Strings.CI` instead of deprecated `StringUtils.*` variants when available.
 - Do not implement a large CRUD feature before the design draft, task breakdown, and realistic test goals have been documented and confirmed.
 - For any CRUD query, detail, update, delete, batch operation, export, or custom endpoint, analyze whether AssetsHolder data permission control is required. Route implementation details to `$jetlinks-assets-permission`. If asset type, related asset field, permission action, binding relation, or admin / tenant / platform exception semantics are unclear, ask the user before implementation.
 - Do not weaken tests to satisfy the CRUD gate; tests must assert realistic business results, persistence effects, permissions, validation, and regression paths that matter to the change.
