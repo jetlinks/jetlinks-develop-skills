@@ -36,7 +36,7 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 - Prefer local examples over generic memory.
 - Clearly separate workspace facts from fallback defaults when the repository is low-context.
 - Do not introduce i18n into a module unless the module already follows an i18n convention or the user explicitly asks for it.
-- When Apache Commons utilities are already available or aligned with adjacent code, prefer them for null or empty checks and common object or collection operations instead of handwritten repetitive branches.
+- When Apache Commons utilities are already available or aligned with adjacent code, prefer them for null or empty checks and common object or collection operations instead of handwritten repetitive branches; for Commons Lang string comparison, prefix/suffix, contains, index/search, or plain replace/remove operations, use `org.apache.commons.lang3.Strings.CS` / `Strings.CI` by case-sensitivity when the dependency provides them, and do not call the deprecated `StringUtils.*` variants.
 - Keep convention-driven changes scoped to the required consistency fix; do not expand into unrelated cleanup.
 - Prefer readable code over dense fluent chains. When a chained call mixes multiple business phases or becomes hard to summarize in one sentence, split it into named local variables, named private methods, or a small existing abstraction.
 - Do not force Java Stream or fluent style onto business workflows, protocol parsing, state transitions, or complex validation. Use imperative code when named intermediate results and early returns make the behavior clearer.
