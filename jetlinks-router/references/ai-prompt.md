@@ -21,6 +21,7 @@
     - 对较大的后端改动或新功能，必须遵循 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md)。
     - 文档落点遵循 [`document-placement-rules.md`](document-placement-rules.md)：README 只放长期总览，测试报告、任务流水和 PR 证据不放 README。
     - 先把设计稿、任务拆分和测试目标写入当前工作区对应归属文档，再等待用户明确确认。
+    - 计划 / PRD / 设计稿是稳定契约，不是执行日志；实现过程中只有需求、方案、任务拆分、风险或测试目标变化时才回写，不追加扫描记录、步骤进度、调试尝试、测试日志、PR 文案或会话总结。
     - 用户确认后，先按真实使用场景和数据制定测试目标，再实现代码，直到测试目标达成。
     - 不允许为了让测试通过而删除测试、弱化断言、只跑无关测试、改低业务期望或绕过真实校验。
     - 兼容性是通用发布边界判断，不只限于 CRUD：API / DTO / Event / Topic / Command / 协议 / 配置 / 前端路由 / QueryParam / termType 等同一 PR 内未发布中间形态优先收敛到最佳实践；已合入、已发布、已有持久化数据或外部依赖时才设计兼容 / 迁移。
@@ -59,6 +60,7 @@
 10. 任务结束时可以判断是否值得沉淀知识
     - 只有产出了稳定、可复用、非显然的知识时，才建议写总结或沉淀文档。
     - 沉淀形式优先选择 worklog、knowledge、playbook，再考虑 prompt 或 skill 更新。
+    - 沉淀文档记录可复用结论，不反向污染计划 / PRD / 设计稿；单次过程流水留在对话、PR / CI、工作流 journal / task log 或用户确认的 worklog。
     - 不为每次任务默认新增文档；先更新已有归属文档，或把一次性测试证据留在 PR / CI。
     - 如果判断值得沉淀，不要直接结束任务；应先提示用户是否需要生成正式文档。
     - 如果结论已经成熟到可抽成通用 JetLinks skill，还应额外询问是否并入 `jetlinks-develop-skills` 并准备官方 PR。
