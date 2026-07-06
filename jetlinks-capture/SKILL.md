@@ -23,6 +23,7 @@ Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
 - Do not restate raw diffs when no reusable knowledge was learned.
 - Do not use README as a place for single-task worklogs, test reports, troubleshooting notes, or PR summaries.
 - Do not create a new capture document when an existing knowledge, playbook, or owning source document should be updated instead.
+- Do not use capture to backfill execution logs into plan / PRD / design documents; those documents keep stable decisions, while process records stay in conversation, PR / CI evidence, workflow journals, or a user-confirmed worklog.
 - Do not promote unstable one-off decisions into skills.
 - Do not silently skip the recommendation when the finished task clearly produced reusable knowledge.
 - Do not auto-create capture docs without user confirmation unless the user explicitly asked to generate them.

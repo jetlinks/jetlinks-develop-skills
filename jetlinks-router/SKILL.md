@@ -11,7 +11,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 
 1. Classify the task.
 2. Decide whether the task must enter a plan-first gate. Use it for complex, cross-module, multi-subtask, or still-changing requirements.
-3. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md), write the design draft and test goals into the appropriate owning docs location, then wait for explicit user confirmation before implementation.
+3. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md), write only stable requirements, decisions, task breakdown, and test goals into the appropriate owning docs location, then wait for explicit user confirmation before implementation.
 4. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
 5. Switch to the most relevant focused JetLinks skill.
 6. Combine multiple focused skills when the task crosses boundaries.
@@ -44,6 +44,8 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - When local examples are missing, clearly separate defaults from verified workspace facts.
 - Do not directly implement complex or unstable requirements before clarifying scope, exclusions, risks, and validation with the user.
 - Do not implement large backend changes or new backend features before a design draft and test goals have been written to the appropriate docs directory and explicitly confirmed by the user.
+- Treat plan / PRD / design documents as stable contracts, not execution logs. Do not append scan notes, step progress, debug attempts, raw test output, PR text, or session summaries to them.
+- If the workspace has a task/workflow system, keep process records in its journal, task log, research artifact, or agent-context artifact instead of copying them into stable plan documents.
 - Do not place task logs, test reports, PR descriptions, or temporary design notes into README files; README is for durable repository or module overview.
 - Do not treat tests as a checkbox: test goals must map to realistic business scenarios and data, and failures must drive root-cause analysis rather than weaker assertions.
 - For code changes, apply the comment gate from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md) before implementation: identify required comment targets, add comments in the touched code when complex business intent / permission boundary / compatibility / lifecycle / public contract exists, and only report "no comments needed" when the touched code is straightforward. A final summary or PR description does not replace code comments.
