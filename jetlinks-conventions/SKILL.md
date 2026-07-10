@@ -1,6 +1,6 @@
 ---
 name: jetlinks-conventions
-description: 在当前 JetLinks 工作区中应用共享编码规范。适用于需要确认注解和导入、遵循本地命名与包结构、保持最小改动，判断模块是否应该补 i18n，实现 LocaleUtils、I18nEnumDict、messages_zh/messages_en、权限动作文案，补充 TraceHolder / MonoTracer / FluxTracer 链路追踪埋点，为常驻任务、缓存、队列等能力设计 MBean 运维可观测性，或平衡人类可读性与大模型理解成本来编写代码注释的场景。
+description: 在当前 JetLinks 工作区中应用共享编码规范。适用于需要确认注解和导入、遵循本地命名与包结构、保持最小改动，判断模块是否应该补 i18n，实现 LocaleUtils、I18nEnumDict、messages_zh/messages_en、权限动作文案，补充 TraceHolder / MonoTracer / FluxTracer 链路追踪埋点，为常驻任务、缓存、队列等能力设计 MBean 运维可观测性，平衡人类可读性与大模型理解成本来编写代码注释，或当具体场景暴露公共组件、基类、框架、工具类等通用能力缺口时避免硬编码特调并从共同根因修复的场景。
 ---
 
 # JetLinks Conventions
@@ -9,7 +9,7 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 
 ## Workflow
 
-1. Classify the task as annotations/imports, general conventions, comments, i18n, tracing, MBean observability, or a capability-gap / hack-avoidance situation (tool, SDK, framework API not directly satisfying the requirement).
+1. Classify the task as annotations/imports, general conventions, comments, i18n, tracing, MBean observability, or a capability-gap / hack-avoidance situation (tool, SDK, framework API, or shared capability not directly satisfying the requirement).
 2. Inspect adjacent production code before changing anything.
 3. Confirm the current module's programming style, package roots, naming patterns, and smallest-change expectation.
 4. Use [`references/annotations-and-imports-reference.md`](references/annotations-and-imports-reference.md) when imports or annotations are unclear.
@@ -29,8 +29,10 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 - Prefer local examples over generic memory.
 - Clearly separate workspace facts from fallback defaults when the repository is low-context.
 - Do not introduce i18n into a module unless the module already follows an i18n convention or the user explicitly asks for it.
-- When Apache Commons utilities are already available or aligned with adjacent code, prefer them for null or empty checks and common object or collection operations instead of handwritten repetitive branches; for Commons Lang string comparison, prefix/suffix, contains, index/search, or plain replace/remove operations, use `org.apache.commons.lang3.Strings.CS` / `Strings.CI` by case-sensitivity when the dependency provides them, and do not call the deprecated `StringUtils.*` variants.
+- When Apache Commons utilities are already available or aligned with adjacent code, prefer `ObjectUtils`, `ArrayUtils`, `CollectionUtils`, and `MapUtils` for object, array, collection, and map checks instead of handwritten repetitive branches.
+- Do not add new `org.apache.commons.lang3.StringUtils` imports or calls in new or modified Java code. For Commons Lang string comparison, prefix/suffix, contains, index/search, or plain replace/remove operations, use `org.apache.commons.lang3.Strings.CS` / `Strings.CI` by case-sensitivity when the dependency provides `Strings`; if it does not, do not fall back to `StringUtils`, and use JDK, Spring, local helpers, or state the version constraint. For regex replace/remove use `RegExUtils`; for blank, empty, trim, or default string handling prefer JDK, Spring, local helpers, or a small private helper when null-safety is needed.
 - Keep convention-driven changes scoped to the required consistency fix; do not expand into unrelated cleanup.
+- When a specific scenario exposes a problem in a shared/general capability, fix the common contract, extension point, adapter, default policy, or test matrix so the same class of problems is handled; do not hardcode scenario-specific branches into shared code unless the business rule is explicitly modeled as configuration or strategy.
 - Prefer readable code over dense fluent chains. When a chained call mixes multiple business phases or becomes hard to summarize in one sentence, split it into named local variables, named private methods, or a small existing abstraction.
 - Do not force Java Stream or fluent style onto business workflows, protocol parsing, state transitions, or complex validation. Use imperative code when named intermediate results and early returns make the behavior clearer.
 - Do not hide side effects in `Stream.peek(...)`, `map` / `filter` lambdas, mutable external variables, or stream operations that call remote services, databases, caches, or event publishers.
@@ -52,9 +54,10 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 2. Adjacent files or patterns checked
 3. I18n decision or unresolved import/i18n risks
 4. If a tool/API capability gap was hit, the root cause analysis, the chosen resolution path (official extension point / adjacent abstraction / dependency change / informing the user), and any usage of reflection / visibility bypass / copied source that was explicitly confirmed by the user
-5. Release-boundary decision when compatibility code is considered
-6. Readability decision for long chained calls when relevant
-7. Comment decision for complex or non-obvious code when relevant
-8. TraceHolder / tracing decision when relevant
-9. MBean / operations observability decision when relevant
-10. Verification evidence or exact pending commands
+5. General-capability decision when the change touches shared code: common root-cause fix, explicitly modeled strategy/configuration, or why the case is truly local
+6. Release-boundary decision when compatibility code is considered
+7. Readability decision for long chained calls when relevant
+8. Comment decision for complex or non-obvious code when relevant
+9. TraceHolder / tracing decision when relevant
+10. MBean / operations observability decision when relevant
+11. Verification evidence or exact pending commands

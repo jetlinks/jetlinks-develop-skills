@@ -15,10 +15,12 @@
 3. 优先复用现有抽象
    - 先复用现有 CRUD 基类、查询抽象、事件机制、命令边界、工具类。
    - 不为单个需求新建平行框架。
+   - 通用能力被某个具体场景暴露问题时，优先修正通用契约、扩展点、适配层或默认策略，不为该场景写硬编码特调分支。
 
 4. 保持最小实现
    - 只实现用户明确要求的能力。
    - 不额外生成样板接口、演示字段、假设性的扩展点。
+   - 最小实现不等于单场景打补丁；如果能力本身会被多个模块、租户、协议、页面或任务复用，改动应覆盖同类问题的共同根因。
 
 5. 可读性优先于长链压缩
    - 链式调用只适合表达同一层次的连续操作。
@@ -36,6 +38,7 @@
 
 8. 根因优先，禁用奇技淫巧
    - 当工具、SDK、框架或现有 API 不直接满足需求（无法访问方法、序列化报错、响应式/阻塞不匹配、类型/泛型不兼容、第三方行为不符合预期、异常体系缺口等）时，必须从根本上解决：官方扩展点 → 相邻模块封装 → 依赖版本/选择 → 告知用户与替代方案。
+   - 当问题发生在通用功能上，先判断失败是否代表同类场景都会受影响；若是，修通用入口、数据模型、策略接口、默认实现或测试矩阵，不把场景名、产品 ID、模块 ID、租户 ID、页面路由等写成特殊判断。
    - 禁止用反射 + `setAccessible`、`Unsafe`、改可见性、复制粘贴第三方源码、字节码注入、monkey patch、改类加载器、把代码挪进库的包路径下骗封装、`catch(Exception e){}` 静默吞、`e.printStackTrace()` 当处理、`@SuppressWarnings` 大范围压制告警、注释掉失败测试等手法绕过问题。
    - 任何上述路径如果是唯一可行方案，必须先告知用户限制、风险与建议，取得确认后再使用，并在代码注释或交付说明中留痕。
    - 详细场景见 [`root-cause-and-no-hack-rules.md`](root-cause-and-no-hack-rules.md)。
@@ -81,14 +84,14 @@
 
 ### 常用工具类
 
-- 对字符串、集合、Map、数组和对象的判空、blank 判断、默认值处理等常用操作，在当前模块已引入 Apache Commons 或相邻实现已使用时，优先复用相关工具类。
-- 集合、Map、数组和对象优先选择 `ObjectUtils`、`ArrayUtils`、`CollectionUtils`、`MapUtils`；字符串 blank / trim 等当前依赖未废弃的场景可沿用 `StringUtils`。
-- 字符串默认值处理优先看 JDK `Objects.toString(Object, String)`、`ObjectUtils` 或相邻代码；不要在当前依赖已标记废弃时继续使用 `StringUtils.defaultString`。
-- 字符串比较、前后缀、包含、索引 / 查找、普通字符串替换 / 移除等 Commons Lang 操作，当前依赖提供 `org.apache.commons.lang3.Strings` 时，按大小写语义选择 `Strings.CS` 或 `Strings.CI`。
-- 不再使用已废弃的 `StringUtils.startsWith`、`StringUtils.endsWith`、`StringUtils.contains`、`StringUtils.equals`、`StringUtils.compare`、`StringUtils.indexOf`、`StringUtils.lastIndexOf`、`StringUtils.replace`、`StringUtils.remove`、`StringUtils.appendIfMissing`、`StringUtils.prependIfMissing` 及对应 `*IgnoreCase` / `*Any` 变体；例如使用 `Strings.CS.startsWith(str, prefix)`、`Strings.CI.contains(str, keyword)`、`Strings.CI.equals(a, b)`。
+- 对集合、Map、数组和对象的判空、默认值处理等常用操作，在当前模块已引入 Apache Commons 或相邻实现已使用时，优先复用 `ObjectUtils`、`ArrayUtils`、`CollectionUtils`、`MapUtils` 等相关工具类。
+- 新增或修改 Java 代码时，默认禁止新增 `org.apache.commons.lang3.StringUtils` import、静态导入或新调用；不要因为 adjacent code 里已有 `StringUtils` 就继续扩散。
+- 字符串比较、前后缀、包含、索引 / 查找、普通字符串替换 / 移除等 Commons Lang 操作，当前依赖提供 `org.apache.commons.lang3.Strings` 时，必须按大小写语义选择 `Strings.CS` 或 `Strings.CI`。
+- 禁止新增或保留本次触达代码中的 `StringUtils.startsWith`、`StringUtils.endsWith`、`StringUtils.contains`、`StringUtils.equals`、`StringUtils.compare`、`StringUtils.indexOf`、`StringUtils.lastIndexOf`、`StringUtils.replace`、`StringUtils.remove`、`StringUtils.appendIfMissing`、`StringUtils.prependIfMissing`、`StringUtils.defaultString` 及对应 `*IgnoreCase` / `*Any` / `*Once` / `*Start` / `*End` 变体；例如使用 `Strings.CS.startsWith(str, prefix)`、`Strings.CI.contains(str, keyword)`、`Strings.CI.equals(a, b)`。
 - 正则替换 / 移除不要套用 `Strings.CS` / `Strings.CI`，按当前 Commons Lang 版本和相邻代码选择 `RegExUtils` 等非废弃 API。
-- 避免手写 `str != null && !str.isEmpty()`、`collection == null || collection.isEmpty()`、`map != null && !map.isEmpty()` 这类重复样板判断。
-- 如果当前仓库已有更统一的本地工具类，或目标模块并未引入相关依赖，则保持本地风格，不为了单个判空场景额外引入一套工具依赖；如果 commons-lang3 版本尚未提供 `Strings`，不要为单个 helper 私自升级依赖，先跟随相邻代码或说明版本约束。
+- 字符串 blank / empty / trim / strip / 默认值处理不要再把 `StringUtils` 当默认工具：接收方已确认非空时优先用 JDK `String.isBlank()`、`isEmpty()`、`strip()`、`trim()`；需要 null-safe 时优先复用本地工具、Spring `StringUtils.hasText` / `hasLength` 或局部私有 helper；默认值优先看 `Objects.toString(Object, String)`、`ObjectUtils` 或相邻非废弃工具。
+- 避免把禁止 `StringUtils` 理解成鼓励到处手写重复样板。若同一类里多次需要 null-safe 字符串判断，提取命名清晰的私有 helper；若仓库已有统一本地工具类，优先复用。
+- 如果 commons-lang3 版本尚未提供 `Strings`，不要为单个 helper 私自升级依赖；先跟随已存在的非废弃本地方案，或在交付说明中明确版本约束和无法替换的原因。
 
 ### 链式调用可读性
 
@@ -152,10 +155,19 @@ private boolean shouldTriggerAlarm(Device device, AlarmRule rule) {
 - 用户可见异常优先复用当前模块支持的 `i18nCode` / message key 写法，不要在异常构造里直接写死中文或英文 message。
 - 不为内部日志和调试信息补 i18n。
 
+### 通用能力与场景特调
+
+- 判断改动对象是否是通用能力：基础服务、公共组件、协议 / 命令 / 事件框架、CRUD 基类、权限模型、缓存 / 队列 / 调度、序列化、前端通用组件、工具类、模板或可配置策略。
+- 如果是通用能力，某个场景的问题通常只是触发样例；先定位同类场景的共同根因，并在通用入口、抽象契约、策略接口、默认实现、配置模型或测试矩阵上解决。
+- 禁止为了快速通过当前场景而写 `if (场景名 / productId / tenantId / route / moduleId / commandId)` 这类特调分支，除非业务明确要求该场景具有独立规则，并且规则已建模为配置、策略或可解释的业务条件。
+- 真正局部的一次性需求可以局部实现，但必须说明它为什么不是通用能力缺口；不要把局部 workaround 混进公共层。
+- 修改通用能力时，至少验证原始触发场景和一个同类代表场景；无法补自动化测试时，在交付说明中写清未覆盖的同类风险。
+
 ## 自检清单
 
 - 是否先看了相邻代码而不是直接生成模板
 - 是否复用了现有抽象
+- 如果改的是通用能力，是否从共同根因修正，而不是为单个场景写特调分支
 - 是否保持了目标模块的命名、注解和包结构
 - 是否避免了过长链式调用；复杂流程是否按业务阶段拆成命名步骤
 - 是否为复杂业务、兼容、并发、生命周期、安全、TraceHolder 或 MBean 边界写了必要短注释；是否避免无意义逐行注释
