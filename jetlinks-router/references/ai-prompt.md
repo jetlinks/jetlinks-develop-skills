@@ -34,7 +34,7 @@
 5. 优先复用现有抽象
     - JetLinks 系项目通常已经提供 CRUD 基类、命令服务、事件、订阅、国际化约定。
     - 默认沿用现有模式，不新增平行方案。
-    - 对集合、Map、数组和对象判空以及常见默认值处理，在依赖已存在或相邻实现已使用时，优先复用 Apache Commons 工具类，不手写重复判空模板；新增或修改 Java 代码默认不引入 `org.apache.commons.lang3.StringUtils`。字符串比较 / 前后缀 / 包含 / 索引 / 普通替换等 Commons Lang 操作按大小写语义必须用 `Strings.CS` / `Strings.CI`；blank / empty / trim / 默认值等不适合 `Strings` 的场景切到 `$jetlinks-conventions` 判断 JDK、Spring、本地工具或局部 helper。
+    - 对集合、Map、数组和对象判空以及常见默认值处理，在依赖已存在或相邻实现已使用时，优先复用 Apache Commons 工具类，不手写重复判空模板；不要把 `org.apache.commons.lang3.StringUtils` 整类视为禁用。字符串比较 / 前后缀 / 包含 / 索引 / 普通替换等已废弃 Commons Lang 操作按大小写语义必须用 `Strings.CS` / `Strings.CI`；`StringUtils.isEmpty` / `isBlank` 等未废弃 null-safe predicate 可按模块 Commons Lang 风格使用，具体规则切到 `$jetlinks-conventions`。
 
 6. 以当前模块风格为准
     - 响应式或阻塞式、`javax` 或 `jakarta`、控制器基类、服务基类、i18n 路径，都以目标模块现状为准。
