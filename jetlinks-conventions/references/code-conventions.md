@@ -85,12 +85,13 @@
 ### 常用工具类
 
 - 对集合、Map、数组和对象的判空、默认值处理等常用操作，在当前模块已引入 Apache Commons 或相邻实现已使用时，优先复用 `ObjectUtils`、`ArrayUtils`、`CollectionUtils`、`MapUtils` 等相关工具类。
-- 新增或修改 Java 代码时，默认禁止新增 `org.apache.commons.lang3.StringUtils` import、静态导入或新调用；不要因为 adjacent code 里已有 `StringUtils` 就继续扩散。
+- 不把 `org.apache.commons.lang3.StringUtils` 整类视为禁用；按当前 Commons Lang Javadoc 的 deprecated 状态决策。禁止的是已废弃方法和会继续扩散废弃 API 的新调用，不是仍有效的 null-safe predicate。
 - 字符串比较、前后缀、包含、索引 / 查找、普通字符串替换 / 移除等 Commons Lang 操作，当前依赖提供 `org.apache.commons.lang3.Strings` 时，必须按大小写语义选择 `Strings.CS` 或 `Strings.CI`。
-- 禁止新增或保留本次触达代码中的 `StringUtils.startsWith`、`StringUtils.endsWith`、`StringUtils.contains`、`StringUtils.equals`、`StringUtils.compare`、`StringUtils.indexOf`、`StringUtils.lastIndexOf`、`StringUtils.replace`、`StringUtils.remove`、`StringUtils.appendIfMissing`、`StringUtils.prependIfMissing`、`StringUtils.defaultString` 及对应 `*IgnoreCase` / `*Any` / `*Once` / `*Start` / `*End` 变体；例如使用 `Strings.CS.startsWith(str, prefix)`、`Strings.CI.contains(str, keyword)`、`Strings.CI.equals(a, b)`。
+- 禁止新增或保留本次触达代码中的废弃 `StringUtils` 方法：`startsWith`、`endsWith`、`contains`、`equals`、`compare`、`indexOf`、`lastIndexOf`、`replace`、`remove`、`appendIfMissing`、`prependIfMissing`、`defaultString(str, defaultValue)` 及对应 `*IgnoreCase` / `*Any` / `*Once` / `*Start` / `*End` 变体；例如使用 `Strings.CS.startsWith(str, prefix)`、`Strings.CI.contains(str, keyword)`、`Strings.CI.equals(a, b)`，使用 `Objects.toString(value, defaultValue)` 替代带默认值的 `defaultString`。
 - 正则替换 / 移除不要套用 `Strings.CS` / `Strings.CI`，按当前 Commons Lang 版本和相邻代码选择 `RegExUtils` 等非废弃 API。
-- 字符串 blank / empty / trim / strip / 默认值处理不要再把 `StringUtils` 当默认工具：接收方已确认非空时优先用 JDK `String.isBlank()`、`isEmpty()`、`strip()`、`trim()`；需要 null-safe 时优先复用本地工具、Spring `StringUtils.hasText` / `hasLength` 或局部私有 helper；默认值优先看 `Objects.toString(Object, String)`、`ObjectUtils` 或相邻非废弃工具。
-- 避免把禁止 `StringUtils` 理解成鼓励到处手写重复样板。若同一类里多次需要 null-safe 字符串判断，提取命名清晰的私有 helper；若仓库已有统一本地工具类，优先复用。
+- `StringUtils.isEmpty`、`isNotEmpty`、`isBlank`、`isNotBlank`、`defaultIfEmpty`、`defaultIfBlank`、`firstNonEmpty`、`firstNonBlank`、`defaultString(str)` 等未废弃 null-safe 方法可以在模块已有 Commons Lang 风格、入参可能为 `null`、且能减少重复样板判断时使用。
+- 接收方已确认非空时优先用 JDK `String.isEmpty()`、`isBlank()`、`strip()`、`trim()`；Spring 场景可按本地风格使用 `org.springframework.util.StringUtils.hasText` / `hasLength`，但要避免与 Apache Commons `StringUtils` 导入混淆。
+- 避免把禁用废弃 `StringUtils` 方法理解成鼓励到处手写重复样板。若同一类里多次需要 null-safe 字符串判断，优先复用未废弃工具方法、本地统一工具类，或提取命名清晰的私有 helper。
 - 如果 commons-lang3 版本尚未提供 `Strings`，不要为单个 helper 私自升级依赖；先跟随已存在的非废弃本地方案，或在交付说明中明确版本约束和无法替换的原因。
 
 ### 链式调用可读性
