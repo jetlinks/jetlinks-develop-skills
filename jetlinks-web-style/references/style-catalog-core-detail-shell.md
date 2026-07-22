@@ -178,7 +178,7 @@
 
 | # | 规则 |
 | --- | --- |
-| 1 | caret 用 `chevron-down`，**12px**，最弱色阶（`--ink-4` 或等价）；折叠时 `rotate(-90deg)`，过渡 `0.15s ease` |
+| 1 | caret 用 `chevron-down`，**12px**，最弱色阶（`--text-disabled` 或等价）；折叠时 `rotate(-90deg)`，过渡 `0.15s ease` |
 | 2 | 父项跟普通导航链接同样的 28px 行高 / `padding 0 8px` / 小圆角 |
 | 3 | 父项**自身没有 active 状态**；子项任一 active 时父项**加粗**，caret 不变色 |
 | 4 | 子项区用 **CSS Grid `0fr ↔ 1fr` + `min-height: 0; overflow: hidden`** 做任意高度动画（不要 `max-height: 1000px` 这种 hack） |
