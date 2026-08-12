@@ -11,6 +11,7 @@
 1. 先发现，再实现
     - 不凭记忆假设模块名、注解包、依赖坐标、命令 ID、Topic、资源路径。
     - 先查看当前工作区的相邻代码、父子模块结构、现有配置和示例。
+    - 结构检索先定义问题，再走“Git / `rg` / build facts → LSP / compiler symbols → 有界结构图 → JetLinks 领域边 → 深层数据流 / runtime”的漏斗；向量相似度和推断调用边只能发现候选，不能替代精确引用或构建依赖事实。
 
 2. 复杂任务先 plan 再实施
     - 对跨模块、多子任务、需求仍在变化、存在多个方案或兼容性风险的任务，先输出精简计划并等待用户确认。
@@ -106,9 +107,10 @@
     - 任务即使起初简单，只要一次实现仍未通过验收、失败转移、继续需要特例 / fallback / retry / mock / 兼容分支，或连续操作没有得到新证据，也立即切入。
     - 先冻结任务契约，建立完整执行路径、竞争假设、区分检查、解法层级和验证矩阵，再允许生产代码编辑。
 
-4. 扫描当前工作区
-    - 查看根目录、父 `pom.xml`、聚合模块、相邻模块、资源目录和已有实现。
-    - 额外检查符号链接目录，确认是否有链接进来的外部模块、组件或子工程。
+4. 检索当前工作区
+    - 若已有 Recovery Capsule 或精确 symbol / changed path，从锚点开始，不重新全仓扫描。
+    - 否则先查看根目录、父 `pom.xml`、聚合模块、资源目录和符号链接，再使用 [`$jetlinks-code-navigation`](../../jetlinks-code-navigation/SKILL.md) 定向查 ownership、引用 / 调用、领域流和影响面。
+    - 结构图只返回有界路径、文件 / symbol 锚点、revision、证据来源和置信度；高影响推断边必须回到源码、构建或运行时证据确认。
 
 5. 切换最少 skill
     - 只切到覆盖当前任务的 focused skill。
@@ -216,6 +218,23 @@
 - 如果存在 `manager` / `core` 分层，CRUD、Controller、应用 Service、持久化 Entity / Repository、权限校验、i18n 和运行时装配归 `manager`。
 - `core` 只承载公共 domain、DTO、命令 / 事件定义、常量、SPI / 扩展接口等跨模块契约。
 - 不因“需要 CRUD”“存在 DTO”“以后可能复用”把 CRUD 放进 `core`，也不默认创建 `xxx-api`。
+
+### 代码结构 / 调用链 / 变更影响检索
+
+切换：
+- [`$jetlinks-code-navigation`](../../jetlinks-code-navigation/SKILL.md)
+
+适用：
+- 查 definition / references / implementations / type hierarchy / callers / callees
+- 梳理 Maven 模块依赖、跨层生产者—边界—消费者路径
+- 追踪 Command / Event / Topic / AssetsHolder / Protocol / Vue route-API 领域关系
+- 根据 changed paths 识别影响面、同类实现和候选测试
+- 为复杂任务或上下文恢复建立少量可验证锚点
+
+边界：
+- 精确事实优先；语义检索只给候选。
+- 不一次加载整张图，默认从一个入口 1–2 hop 展开。
+- 动态分派、Spring 代理 / 反射、事件 Topic 和 Vue runtime registration 保留置信度并按需用运行时证据复核。
 
 ### 标准 CRUD
 
@@ -399,6 +418,11 @@
     - `$jetlinks-delivery`
     - 如改动涉及具体模块，再加对应业务 skill
 
+- 复杂问题需要先建立调用链和影响面
+    - `$jetlinks-code-navigation`
+    - `$jetlinks-systematic-solving`
+    - 再按 owning module 加对应领域 skill
+
 - 任务完成后沉淀经验
     - `$jetlinks-capture`
     - 如需回写项目规则，再加对应业务 skill
@@ -412,19 +436,21 @@
 1. 任务分类
 2. 需要切换的 focused skill
 3. 系统性求解触发、竞争假设与局部修补预算（如适用）
-4. 需要先确认的工作区事实
-5. 建议落点和实现边界
-6. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
+4. 代码检索问题、确认锚点、推断边和剩余不确定性（如适用）
+5. 需要先确认的工作区事实
+6. 建议落点和实现边界
+7. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
 
 ### 当用户要求直接实现
 
 执行顺序：
 1. 静默完成分类
 2. 复杂或停滞任务先用 `$jetlinks-systematic-solving` 建立问题模型；同一假设下一次实现失败后停止编辑并重构
-3. 切换最少 domain-focused skill
-4. 查看完整执行路径和相邻代码
-5. 实现最小完整闭环
-6. 如果任务要求交付，再补原场景 / 同类代表 / 反例边界 / 回归证据、测试、提交与 PR 规范检查
-7. 如果任务产出了跨任务稳定经验，再建议应更新的 canonical 来源或合理的新知识路径；单次完成总结不落档
-8. 如果结论已成熟到可抽成通用 skill，再询问是否并入 `jetlinks-develop-skills` 并准备官方 PR
-9. 只汇报最终规则结论、验证结果和风险，不输出操作流水
+3. 没有精确 ownership / consumer / impact 锚点时，用 `$jetlinks-code-navigation` 建立有界且带置信度的最小执行路径
+4. 切换最少 domain-focused skill
+5. 查看路径锚点和必要相邻代码
+6. 实现最小完整闭环
+7. 如果任务要求交付，再补原场景 / 同类代表 / 反例边界 / 回归证据、测试、提交与 PR 规范检查
+8. 如果任务产出了跨任务稳定经验，再建议应更新的 canonical 来源或合理的新知识路径；单次完成总结不落档
+9. 如果结论已成熟到可抽成通用 skill，再询问是否并入 `jetlinks-develop-skills` 并准备官方 PR
+10. 只汇报最终规则结论、验证结果和风险，不输出操作流水

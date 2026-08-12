@@ -26,7 +26,7 @@
 | In-flight | 尚未提交阶段的当前状态、是否已集中验证、预期 changed paths；没有则写 `none` |
 | Worktree | branch、HEAD、预期 changed paths 或 diff-stat 指纹 |
 | Live evidence | 仍有效的假设、最新区分证据、禁止重试的已否定路线 |
-| Anchors | 恢复下一步所需的 3–7 个精确文件 / symbol / 测试 / 规范路径及读取原因 |
+| Anchors | 恢复下一步所需的 3–7 个精确文件 / symbol / test / 规范路径；可附已确认的 graph flow / edge ID、index revision 及读取原因 |
 | Next | 一个唯一下一步和它要产生的验收信号 |
 | Blockers | 尚需用户 / 外部环境决定的事项；没有则写 `none` |
 
@@ -49,7 +49,7 @@
 1. **定身份**：读取 active task / task contract 与 Recovery Capsule，确认 task ID、revision、目标和唯一下一步。
 2. **对 Git 指纹**：只运行轻量只读检查，例如 `git status --short --branch`、`git diff --stat`、必要时 `git log -n 3 --oneline`；比较 branch、HEAD 和 changed paths。
 3. **选择恢复范围**：
-   - 指纹匹配：只读取胶囊列出的当前 focused skill / reference 和 3–7 个 anchors，直接继续 `Next`。
+   - 指纹匹配：只读取胶囊列出的当前 focused skill / reference 和 3–7 个 anchors；若记录了匹配 revision 的 graph flow / edge，从该节点做有界查询，直接继续 `Next`。
    - 指纹部分失配：先查看失配 changed paths、最近提交或 task revision，做有界对账并重写胶囊。
    - task 身份、已确认契约或主分支状态无法建立：停止执行，向用户确认任务归属；不要猜路线。
 4. **验证路线仍成立**：用胶囊中的不变量、有效假设和下一验收信号检查新上下文是否沿主线；不因为重新阅读到相邻 TODO 或旧方案而扩大范围。
@@ -69,6 +69,7 @@
 ## 偏航门禁
 
 - 恢复后的第一项生产改动必须服务于胶囊的 `Next` 和对应验收信号。
+- 恢复后需要补充调用方或影响面时，从 capsule 的 symbol / flow / edge anchor 扩一跳；不得因为索引工具可用就重新生成或读取整张图。
 - 若新发现与主任务无关，记录到任务运行态的候选后续项，不顺手实现、不写入权威 docs。
 - 若当前代码已超出已确认范围，先定位是哪一阶段 / 提交引入，再决定保留、回退或询问用户；不要用更多改动掩盖偏航。
 - 恢复胶囊不能伪造“已验证”；每个 `Validated` 阶段必须能指向测试证据和实际本地提交。集中验证通过但尚未提交的阶段仍属于 `In-flight`。

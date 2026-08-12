@@ -9,7 +9,7 @@ Read [`references/module-list.md`](references/module-list.md) first.
 
 ## Workflow
 
-1. Inspect the root layout, parent `pom.xml`, aggregator modules, and symlinked directories.
+1. Inspect the root layout, parent `pom.xml`, aggregator modules, and symlinked directories. When the workspace already has a fresh module / symbol graph, use `$jetlinks-code-navigation` to narrow candidate modules, then confirm ownership against the actual build manifests.
 2. If the request creates a new backend module or large backend capability, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in Trellis or the chosen Git-ignored runtime artifact, wait for explicit user confirmation, then update authoritative docs only for accepted durable module boundaries.
 3. Identify the candidate business modules and explain why each one matches the request.
 4. If no existing module fits, read [`references/module-creation-rules.md`](references/module-creation-rules.md) and create the smallest compliant module structure.
@@ -20,6 +20,7 @@ Read [`references/module-list.md`](references/module-list.md) first.
 ## Required Constraints
 
 - Do not hardcode module inventories into the skill output.
+- Do not treat imports or graph communities as Maven dependency / ownership facts; confirm the selected module in reactor and module build files.
 - Do not ignore symlinked modules or external subprojects linked into the workspace.
 - Do not create a new module just because the static list is unclear.
 - Keep module placement or creation changes scoped to the requested capability; do not reshuffle unrelated modules or aggregators.

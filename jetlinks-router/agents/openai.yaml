@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Router"
-  short_description: "JetLinks 复杂任务路由、恢复与交付分层总入口"
-  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务，并选择最少必要的系统性求解与领域技能。"
+  short_description: "JetLinks 复杂任务、代码检索、恢复与交付分层总入口"
+  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务，并选择最少必要的代码导航、系统性求解与领域技能。"

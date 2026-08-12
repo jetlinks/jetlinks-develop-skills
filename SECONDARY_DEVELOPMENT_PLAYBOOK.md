@@ -56,7 +56,7 @@
    - 计划至少包含目标、范围、不做什么、实施步骤、风险 / 待确认点和验证方式。
    - 简单低风险小任务可在简短计划后直接实施。
 3. 再发现
-   - 扫描当前 workspace、父 `pom.xml`、相邻模块、现有 controller/service/entity/事件实现
+   - 已有 Recovery Capsule / 精确 symbol / changed paths 时从锚点继续；否则扫描当前 workspace、父 `pom.xml` 和符号链接，再用 `$jetlinks-code-navigation` 按 Git / 文本 / build facts、LSP symbol、有界结构图和 JetLinks 领域边逐层定位 ownership、消费者与影响面
 4. 再落地
    - 只切到必要的 focused skill，例如 CRUD、boundary、events、reactive
    - 同一根因假设的一次实现仍未通过验收、故障转移到同类场景，或下一步需要继续增加条件 / fallback / retry / mock / 兼容分支时，停止编辑，回到 `$jetlinks-systematic-solving` 重建问题模型
@@ -80,6 +80,7 @@
 | --- | --- |
 | 不确定从哪下手 | `jetlinks-router` |
 | 复杂、高难度或反复失败 | `jetlinks-systematic-solving` + 对应领域 skill |
+| 代码结构、调用链或变更影响 | `jetlinks-code-navigation` + 对应领域 skill |
 | 简单 CRUD | `jetlinks-routing` + `jetlinks-crud` + `jetlinks-conventions` |
 | 复杂业务 | `jetlinks-routing` + `jetlinks-boundary` + `jetlinks-events`，如链路是响应式再加 `jetlinks-reactive` |
 | 测试、提交、PR 整理 | `jetlinks-delivery` |
@@ -184,6 +185,7 @@
 
 - 不要只说“帮我做个功能”，至少要给业务目标、约束和验收结果。
 - 不要让 AI 凭记忆猜模块名、注解、包结构、Topic 或命令 ID。
+- 不要让 AI 一开始读取整个仓库或整张依赖图；从任务 / Git / symbol 锚点开始，有界展开并保留关系来源与置信度。
 - 简单 CRUD 不要上升成复杂架构；复杂业务也不要只靠一个 CRUD 提示词硬顶。
 - 较大的后端改动或新功能必须先设计、落档、确认，再按测试目标开发。
 - CRUD 相关能力必须显式判断是否需要走 `AssetsHolder` 数据权限，不确定就问，不要手写平行的租户 / 部门 / 创建人过滤。

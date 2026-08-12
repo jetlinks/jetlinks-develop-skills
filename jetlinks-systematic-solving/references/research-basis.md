@@ -52,3 +52,9 @@
 | Small CL / feature branch | 阶段闭环后本地提交；完整任务统一 push / PR，不逐步远程流水 |
 | 安全回归测试选择 | 将证据映射到验收矩阵，只补跑受影响或缺失的检查 |
 | 输入哈希缓存 + Git tree 语义 | 以相关输入和 tree / diff 判断证据有效性，不因交付阶段或 commit 元数据机械重跑 |
+
+## 7. 代码结构检索依据
+
+- [AutoCodeRover](https://arxiv.org/abs/2404.05427) 使用 AST 级 class / method 搜索与测试定位缩小真实仓库问题的检索范围；[Agentless](https://arxiv.org/abs/2407.01489) 表明清晰的定位—修复—验证阶段本身就是强基线。系统性求解因此先请求能区分假设的精确 symbol / path，而不是累计更多泛搜索结果。
+- [SCIP](https://github.com/sourcegraph/scip) 把 definition、references 和 implementations 表达为持久的语言无关索引；JDT LS、TypeScript language service 与 Vue language tools 提供编译器 / 类型感知导航。它们比向量相似度更适合证明精确代码关系。
+- 调用图对动态分派、代理、反射、事件总线和 runtime registration 不完备。JetLinks 采用多证据图并保留 extractor / revision / confidence；结构检索细则和工具选型统一归 [`../../jetlinks-code-navigation/SKILL.md`](../../jetlinks-code-navigation/SKILL.md)，系统性求解只消费有界且已复核的系统图。

@@ -13,6 +13,7 @@ jetlinks-develop-skills/
 │   └── pull_request_template.md
 ├── jetlinks-router/
 ├── jetlinks-systematic-solving/
+├── jetlinks-code-navigation/
 ├── jetlinks-protocol/
 ├── jetlinks-conventions/
 ├── jetlinks-reactive/
@@ -42,6 +43,10 @@ jetlinks-develop-skills/
 ### `jetlinks-systematic-solving`
 
 用于复杂、高难度、高不确定性、跨边界或反复失败任务的系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设，再以原场景、同类代表、反例边界和回归矩阵验证共同根因方案。
+
+### `jetlinks-code-navigation`
+
+用于 Java/Maven 与 Vue/TypeScript 工作区的分层代码检索：从 Git / `rg` / build facts 开始，按需升级到 JDT / TypeScript / Vue 符号语义、持久结构图和 JetLinks 领域边，再以 CodeQL / Joern / runtime 处理少数深层数据流问题。它要求依赖、调用、事件、Topic、权限、路由、覆盖率和 Git 共变使用不同边类型，并为推断关系保留来源、revision 与置信度。
 
 ### `jetlinks-protocol`
 
@@ -97,6 +102,7 @@ jetlinks-develop-skills/
 
 - 不确定该用哪个 skill：`$jetlinks-router`
 - 复杂、高难度、跨边界或已开始反复修补：`$jetlinks-systematic-solving` + 对应领域 skill
+- 只想检索定义 / 引用 / 调用链、模块依赖、领域流、变更影响或候选测试：`$jetlinks-code-navigation`
 - 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
 - 只想确认代码规范、导入、注释、i18n 判断、国际化实现、TraceHolder 埋点边界或 MBean 运维可观测性：`$jetlinks-conventions`
 - 只想处理响应式链路：`$jetlinks-reactive`
@@ -178,6 +184,7 @@ Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
 - 使用 `$jetlinks-systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
+- 使用 `$jetlinks-code-navigation` 从精确 symbol 或 changed paths 出发，有界查询定义、引用、调用、模块 / 领域关系和候选测试；保留 edge 来源与置信度，不把语义相似度或推断调用当成精确事实。
 - 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。
 - 使用 `$jetlinks-crud` 为设备管理模块新增一个查询接口，并在自定义接口、复杂校验、权限边界或复杂查询处补必要代码注释。
 - 使用 `$jetlinks-assets-permission` 判断一个 CRUD 或自定义查询接口是否需要 `AssetsHolder` 数据权限控制，并选择 `@AssetsController`、`AssetsHolderCrudController`、`CorrelatesAssetsHolderCrudController` 或 `AssetsHolder.injectQueryParam`；自定义权限边界必须在代码旁边说明。
@@ -249,6 +256,12 @@ Focused skill 示例：
 ```text
 这个问题已经尝试修过一次，但验收仍失败或失败转移到了同类场景。
 请停止继续加条件、fallback、retry、mock 或兼容分支，重新列出已验证事实、被否定假设、竞争根因和最小区分检查；确认共同不变量和完整验证矩阵后再实现。
+```
+
+### 代码结构与影响面
+
+```text
+从 <入口 symbol / endpoint / changed paths> 出发，先用精确符号与构建事实确认 ownership，再只展开 1–2 跳调用 / 领域关系，区分确认边与推断边，给出影响消费者和候选测试；不要加载整张依赖图。
 ```
 
 ### 链路追踪

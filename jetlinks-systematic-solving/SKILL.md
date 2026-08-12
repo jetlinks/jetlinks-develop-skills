@@ -13,7 +13,7 @@ Read [`references/systematic-solving-rules.md`](references/systematic-solving-ru
    - Enter proactively for a complex or high-uncertainty task.
    - Enter immediately when a task shows a stagnation signal, even if it started as a small fix.
 2. Freeze the task contract before editing: observable success, current failure, invariants, scope, non-goals, constraints, and validation signals. Separate verified facts from assumptions. In Trellis, put the contract in the active task's owning requirement / design artifact and put the live hypothesis ledger in its non-versioned runtime / checkpoint; without Trellis, keep both in one Git-ignored runtime file. Do not append either to authoritative docs.
-3. Build the smallest sufficient system map across the real execution path: entry, ownership boundary, data and state transitions, extension points, side effects, and consumers. Inspect all affected variants instead of only the failing sample.
+3. Build the smallest sufficient system map across the real execution path: entry, ownership boundary, data and state transitions, extension points, side effects, and consumers. Use [`../jetlinks-code-navigation/SKILL.md`](../jetlinks-code-navigation/SKILL.md) when the path spans several symbols / modules or the relevant variants are not already bounded. Inspect all affected variants instead of only the failing sample.
 4. Maintain competing, falsifiable hypotheses. For each hypothesis, state the evidence it explains, its prediction, and the cheapest discriminating check. Gather new evidence before choosing a solution level.
 5. Classify the solution level:
    - Use a local correction only for a truly local defect under a sound shared contract.
@@ -36,6 +36,7 @@ Read [`references/systematic-solving-rules.md`](references/systematic-solving-ru
 - Do not treat planning as completion. Every plan item must connect to an observable acceptance signal.
 - Do not turn the hypothesis ledger, system-map evolution, patch attempts, progress checkboxes, or stage summaries into repository docs. Promote only an accepted stable contract or architectural conclusion, and rewrite its canonical source in place.
 - After context compaction or resume, do not reconstruct the whole project by default. Recover from the task contract, Recovery Capsule, Git fingerprint, and its bounded anchors; expand only when those facts conflict.
+- Do not confuse graph completeness with problem understanding. Preserve relation provenance and confidence, confirm high-impact inferred edges in source or runtime evidence, and request only the next hop that can discriminate current hypotheses.
 - Do not over-generalize a local defect. Generalize only to the demonstrated invariant and variation axis, using representative sibling evidence.
 - Do not hide uncertainty. When two materially different contracts remain plausible and workspace facts cannot decide, ask one focused question.
 - Do not broaden the user-visible scope, break a released or external contract, add a dependency, or introduce a risky workaround without explicit user confirmation.
