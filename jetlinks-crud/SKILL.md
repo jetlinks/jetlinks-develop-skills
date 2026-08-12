@@ -18,7 +18,7 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 7. Pair with `$jetlinks-assets-permission` whenever CRUD query, detail, update, delete, batch operation, export, or custom endpoint needs data permission control through AssetsHolder.
 8. Before implementing, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): public Entity / DTO / Controller / Service contracts, custom endpoints, non-obvious validation, AssetsHolder boundaries, compatibility, batch limits, lifecycle guards, and complex QueryHelper / SQL / DSL decisions.
 9. Pair with `$jetlinks-conventions` or `$jetlinks-reactive` when imports, i18n, comments, or reactive style need extra care.
-10. Pair with `$jetlinks-systematic-solving` when CRUD behavior crosses multiple layers or data shapes, has competing root causes, or an attempted fix still fails / moves the failure / needs another query branch, fallback, mock, or compatibility path. Stop patching until the problem model and validation matrix are rebuilt.
+10. Pair with `$systematic-solving` when CRUD behavior crosses multiple layers or data shapes, has competing root causes, or an attempted fix still fails / moves the failure / needs another query branch, fallback, mock, or compatibility path. Stop patching until the problem model and validation matrix are rebuilt.
 
 ## Required Constraints
 

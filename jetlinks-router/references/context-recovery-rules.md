@@ -1,6 +1,6 @@
 # 上下文压缩与任务恢复规则
 
-本文件用于让长任务在上下文压缩、会话恢复、暂停、交接或模型切换后快速回到正确路线。恢复依赖任务制品与 Git 事实，不依赖模型记忆，也不重新全仓扫描。
+本文件把通用 [`$task-continuity`](../../task-continuity/SKILL.md) 恢复协议映射到 JetLinks 的 Trellis 与 Git 工作流。恢复依赖任务制品与 Git 事实，不依赖模型记忆，也不重新全仓扫描；其他执行环境使用通用协议自己的 source identity 与 checkpoint 能力。
 
 ## 真相优先级
 

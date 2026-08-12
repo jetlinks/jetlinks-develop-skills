@@ -1,0 +1,4 @@
+interface:
+  display_name: "Task Continuity"
+  short_description: "长任务计划压缩、上下文恢复、验证证据复用与阶段性交付"
+  default_prompt: "使用 $task-continuity 压缩当前计划、维护可恢复状态，并复用仍有效的验证证据完成分阶段交付。"

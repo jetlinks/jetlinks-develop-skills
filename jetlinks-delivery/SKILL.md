@@ -7,6 +7,8 @@ description: 为 JetLinks 代码变更准备合规交付内容。适用于需要
 
 Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first.
 
+Use `$task-continuity` as the generic source for plan compression, Recovery Capsule semantics, evidence reuse, coherent local checkpoints, and task-level remote delivery. This skill only adds JetLinks branch, commit, test, documentation, comment, observability, and PR-template policy.
+
 ## Workflow
 
 1. Classify the request as commit drafting, commit review, shell commit command output, delivery preparation, or PR preparation.
@@ -18,7 +20,7 @@ Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first.
 7. Work in coherent stages with independent acceptance signals. When a stage is complete, run its batched validation, create one local commit for the stage, then refresh the Recovery Capsule with the actual commit hash and the next route. Do not commit every operation or file.
 8. Check whether accepted durable requirements, contracts, architecture, API/module behavior, acceptance semantics, or long-term risks require synchronizing an existing authoritative source. Rewrite stale conclusions in place. Treat README as durable repository/module overview only; keep live task state in Trellis / local runtime and test evidence in PR/CI.
 9. Before creating a ready PR for backend code changes, inspect the touched code for comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md); required comments must exist in code, not only in the PR description.
-10. If the implementation was complex or entered a stagnation gate, verify the `$jetlinks-systematic-solving` outcome: violated invariant, common root cause or explicit variation axis, removal / retention of special handling, and evidence for the original trigger, a sibling scenario, a boundary / counterexample, and regressions. Report conclusions, not the debugging transcript.
+10. If the implementation was complex or entered a stagnation gate, verify the `$systematic-solving` outcome plus the JetLinks extension: violated invariant, common root cause or explicit variation axis, removal / retention of special handling, and evidence for the original trigger, a sibling scenario, a boundary / counterexample, and regressions. Report conclusions, not the debugging transcript.
 11. After all stages satisfy the overall acceptance matrix, map existing validation evidence to that matrix before running anything. Reuse evidence whose tested code / Git fingerprint and relevant tests, configuration, dependencies, base, environment, and check semantics are still valid; run only missing, invalidated, failed, or explicitly time-sensitive checks. Record the evidence source and reuse decision, then push the branch once and create or update the PR as a single delivery action.
 12. Prepare the PR description by filling the canonical template in [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) exactly; keep headings, order, and blank lines unchanged. If the repo also has `.github/pull_request_template.md`, keep it synchronized as a mirror, but do not depend on it as the only source.
 

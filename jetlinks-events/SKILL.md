@@ -15,7 +15,7 @@ Read [`references/event-driven-rules.md`](references/event-driven-rules.md) firs
 4. For Topic, EventBus, or message-stream handlers, follow [`references/realtime-subscription-rules.md`](references/realtime-subscription-rules.md).
 5. Before implementing handlers, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): trigger timing, transaction boundary, idempotency, loop prevention, replay handling, batch / backpressure limits, Topic compatibility, and subscription lifecycle cleanup.
 6. Pair with `$jetlinks-reactive` or `$jetlinks-crud` when the flow also touches reactive chains or CRUD logic.
-7. Pair with `$jetlinks-systematic-solving` when a timing, idempotency, replay, ordering, lifecycle, or multi-consumer issue has competing root causes, or a first implementation only moves the failure. Do not add another retry, delay, deduplication branch, or mock before rebuilding the event-flow hypothesis.
+7. Pair with `$systematic-solving` when a timing, idempotency, replay, ordering, lifecycle, or multi-consumer issue has competing root causes, or a first implementation only moves the failure. Do not add another retry, delay, deduplication branch, or mock before rebuilding the event-flow hypothesis.
 
 ## Required Constraints
 

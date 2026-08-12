@@ -40,7 +40,7 @@ Read [`references/web-development-rules.md`](references/web-development-rules.md
 19. When backend fields come from `EnumDict` / `I18nEnumDict` or are shaped as `{ value, text }`, load [`references/enum-rendering-rules.md`](references/enum-rendering-rules.md): render `text` to users, use `value` for submit/filter/status logic, and never display `[object Object]` or duplicate backend enum copy maps.
 20. Run quality, comment, and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output; if no comment is added, explicitly confirm that the touched frontend files contain no complex business rule, compatibility branch, hidden state linkage, race guard, or public contract that needs one.
 21. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
-22. Pair with `$jetlinks-systematic-solving` when a frontend problem spans API / route / state / component / async boundaries, has competing root causes, or one attempted implementation still fails / moves the symptom / needs another page-specific conditional, compatibility conversion, watcher, retry, or local wrapper. Rebuild the full state and data-flow model before further edits.
+22. Pair with `$systematic-solving` when a frontend problem spans API / route / state / component / async boundaries, has competing root causes, or one attempted implementation still fails / moves the symptom / needs another page-specific conditional, compatibility conversion, watcher, retry, or local wrapper. Rebuild the full state and data-flow model before further edits.
 
 ## Required Constraints
 

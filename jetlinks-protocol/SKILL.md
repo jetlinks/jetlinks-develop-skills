@@ -20,7 +20,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 9. Read [`references/debugging-checklist.md`](references/debugging-checklist.md) when the symptom is auth failure, message loss, bad routing, decode failure, or device/platform mismatch.
 10. Before implementing or changing protocol code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): Provider / Codec / parser public contracts, wire compatibility, endian / framing assumptions, ACK or sequence correlation, ByteBuf lifecycle, auth boundary, retry / timeout, and transport-specific deviations.
 11. Reuse the existing protocol abstraction and update adjacent tests or protocol docs when the wire behavior changes.
-12. Pair with `$jetlinks-systematic-solving` when a protocol issue crosses transport / framing / auth / mapping / reply correlation, has competing root causes, or a first implementation merely moves failure to another packet or direction. Do not add packet-specific fallback parsing before rebuilding the protocol model.
+12. Pair with `$systematic-solving` when a protocol issue crosses transport / framing / auth / mapping / reply correlation, has competing root causes, or a first implementation merely moves failure to another packet or direction. Do not add packet-specific fallback parsing before rebuilding the protocol model.
 
 ## Required Constraints
 

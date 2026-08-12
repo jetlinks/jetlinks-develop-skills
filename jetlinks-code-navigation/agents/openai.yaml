@@ -1,4 +1,0 @@
-interface:
-  display_name: "JetLinks 代码导航"
-  short_description: "分层检索代码结构、精确符号、领域调用链和变更影响范围"
-  default_prompt: "使用 $jetlinks-code-navigation 定位当前 JetLinks 任务的代码结构、调用链和最小影响范围。"

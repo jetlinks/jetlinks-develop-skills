@@ -12,8 +12,9 @@ jetlinks-develop-skills/
 ├── .github/
 │   └── pull_request_template.md
 ├── jetlinks-router/
-├── jetlinks-systematic-solving/
-├── jetlinks-code-navigation/
+├── systematic-solving/
+├── task-continuity/
+├── code-navigation/
 ├── jetlinks-protocol/
 ├── jetlinks-conventions/
 ├── jetlinks-reactive/
@@ -40,13 +41,17 @@ jetlinks-develop-skills/
 
 总入口 skill，用于 JetLinks 二开场景下的任务分类与路由。
 
-### `jetlinks-systematic-solving`
+### `systematic-solving`
 
-用于复杂、高难度、高不确定性、跨边界或反复失败任务的系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设，再以原场景、同类代表、反例边界和回归矩阵验证共同根因方案。
+用于任意领域复杂、高难度、高不确定性、跨边界或反复失败任务的环境无关系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设。
 
-### `jetlinks-code-navigation`
+### `task-continuity`
 
-用于 Java/Maven 与 Vue/TypeScript 工作区的分层代码检索：从 Git / `rg` / build facts 开始，按需升级到 JDT / TypeScript / Vue 符号语义、持久结构图和 JetLinks 领域边，再以 CodeQL / Joern / runtime 处理少数深层数据流问题。它要求依赖、调用、事件、Topic、权限、路由、覆盖率和 Git 共变使用不同边类型，并为推断关系保留来源、revision 与置信度。
+用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。它维护有界 current-state 与 Recovery Capsule，不要求 Trellis、Git、GitHub、本地文件或 hooks；环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
+
+### `code-navigation`
+
+用于任意语言、构建系统和代码仓库的环境无关代码导航。它先发现当前环境实际提供的路径 / 文本搜索、构建元数据、符号语义、结构索引和运行时证据能力，再选择最低成本的充分证据；不要求 Git、`rg`、特定 LSP、图数据库、MCP 或本机安装工具。JetLinks 的 Command / Event / Topic / AssetsHolder / Protocol 等领域关系由 router reference 按需扩展。
 
 ### `jetlinks-protocol`
 
@@ -101,8 +106,9 @@ jetlinks-develop-skills/
 推荐按场景直接使用 focused skill，不确定时再走总入口：
 
 - 不确定该用哪个 skill：`$jetlinks-router`
-- 复杂、高难度、跨边界或已开始反复修补：`$jetlinks-systematic-solving` + 对应领域 skill
-- 只想检索定义 / 引用 / 调用链、模块依赖、领域流、变更影响或候选测试：`$jetlinks-code-navigation`
+- 复杂、高难度、跨边界或已开始反复修补：`$systematic-solving` + `$jetlinks-router` 领域扩展 + 对应领域 skill；长任务再加 `$task-continuity`
+- 只想压缩计划、恢复上下文、复用测试证据或约束阶段 / PR 生命周期：`$task-continuity`
+- 只想检索定义 / 引用 / 调用链、组件依赖、领域流、变更影响或候选测试：`$code-navigation`
 - 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
 - 只想确认代码规范、导入、注释、i18n 判断、国际化实现、TraceHolder 埋点边界或 MBean 运维可观测性：`$jetlinks-conventions`
 - 只想处理响应式链路：`$jetlinks-reactive`
@@ -183,8 +189,9 @@ Use $jetlinks-router to classify this JetLinks scaffold task, choose the right f
 Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
-- 使用 `$jetlinks-systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
-- 使用 `$jetlinks-code-navigation` 从精确 symbol 或 changed paths 出发，有界查询定义、引用、调用、模块 / 领域关系和候选测试；保留 edge 来源与置信度，不把语义相似度或推断调用当成精确事实。
+- 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
+- 使用 `$task-continuity` 原位压缩实时计划，维护有界 Recovery Capsule，从 source fingerprint 与少量锚点恢复，并复用仍覆盖当前验收矩阵的验证证据；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
+- 使用 `$code-navigation` 先发现当前环境可用的检索能力，再从精确 symbol 或 changed items 出发，有界查询定义、引用、调用、组件 / 领域关系和候选测试；保留关系来源与置信度，不把语义相似度或作者机器上的工具当成精确事实或必需依赖。
 - 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。
 - 使用 `$jetlinks-crud` 为设备管理模块新增一个查询接口，并在自定义接口、复杂校验、权限边界或复杂查询处补必要代码注释。
 - 使用 `$jetlinks-assets-permission` 判断一个 CRUD 或自定义查询接口是否需要 `AssetsHolder` 数据权限控制，并选择 `@AssetsController`、`AssetsHolderCrudController`、`CorrelatesAssetsHolderCrudController` 或 `AssetsHolder.injectQueryParam`；自定义权限边界必须在代码旁边说明。

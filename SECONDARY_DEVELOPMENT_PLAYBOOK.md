@@ -52,14 +52,14 @@
 1. 先路由
    - 不确定场景时，先用 `$jetlinks-router`
 2. 复杂任务先计划
-   - 新功能、跨模块、前后端联动、接口 / 数据结构 / 事件变更、需求仍在变化或会拆成多个子任务的任务，先输出计划并等待确认，并组合 `$jetlinks-systematic-solving` 建立可证伪的根因假设和验证矩阵。
+   - 新功能、跨模块、前后端联动、接口 / 数据结构 / 事件变更、需求仍在变化或会拆成多个子任务的任务，先输出计划并等待确认，组合通用 `$systematic-solving` 建立可证伪的根因假设和验证矩阵，并用 `$task-continuity` 约束实时计划、恢复和阶段性交付，再加载 JetLinks router 扩展。
    - 计划至少包含目标、范围、不做什么、实施步骤、风险 / 待确认点和验证方式。
    - 简单低风险小任务可在简短计划后直接实施。
 3. 再发现
-   - 已有 Recovery Capsule / 精确 symbol / changed paths 时从锚点继续；否则扫描当前 workspace、父 `pom.xml` 和符号链接，再用 `$jetlinks-code-navigation` 按 Git / 文本 / build facts、LSP symbol、有界结构图和 JetLinks 领域边逐层定位 ownership、消费者与影响面
+   - 已有 Recovery Capsule / 精确 symbol / changed items 时从锚点继续；否则发现当前 workspace 的构建 / 包配置、链接边界和可用检索能力，再用 `$code-navigation` 按精确事实、符号语义、有界结构关系逐层定位 ownership、消费者与影响面；JetLinks 领域关系由 router 按需补充
 4. 再落地
    - 只切到必要的 focused skill，例如 CRUD、boundary、events、reactive
-   - 同一根因假设的一次实现仍未通过验收、故障转移到同类场景，或下一步需要继续增加条件 / fallback / retry / mock / 兼容分支时，停止编辑，回到 `$jetlinks-systematic-solving` 重建问题模型
+   - 同一根因假设的一次实现仍未通过验收、故障转移到同类场景，或下一步需要继续增加条件 / fallback / retry / mock / 兼容分支时，停止编辑，回到 `$systematic-solving` 重建问题模型
 5. 再验证
    - 在阶段边界集中跑相关测试；如果已有证据仍覆盖当前代码 / Git 指纹且相关输入未变化，直接复用，只补跑缺失或失效范围；如果当前工具不能直接执行，也要明确给出待执行命令和风险边界
 6. 最后收尾
@@ -79,8 +79,9 @@
 | 场景 | 推荐组合 |
 | --- | --- |
 | 不确定从哪下手 | `jetlinks-router` |
-| 复杂、高难度或反复失败 | `jetlinks-systematic-solving` + 对应领域 skill |
-| 代码结构、调用链或变更影响 | `jetlinks-code-navigation` + 对应领域 skill |
+| 复杂、高难度或反复失败 | `systematic-solving` + `task-continuity` + `jetlinks-router` 领域扩展 + 对应领域 skill |
+| 计划压缩、上下文恢复、证据复用或阶段性交付 | `task-continuity` + `jetlinks-router` 宿主扩展 |
+| 代码结构、调用链或变更影响 | `code-navigation` + 对应领域 skill |
 | 简单 CRUD | `jetlinks-routing` + `jetlinks-crud` + `jetlinks-conventions` |
 | 复杂业务 | `jetlinks-routing` + `jetlinks-boundary` + `jetlinks-events`，如链路是响应式再加 `jetlinks-reactive` |
 | 测试、提交、PR 整理 | `jetlinks-delivery` |
@@ -185,7 +186,7 @@
 
 - 不要只说“帮我做个功能”，至少要给业务目标、约束和验收结果。
 - 不要让 AI 凭记忆猜模块名、注解、包结构、Topic 或命令 ID。
-- 不要让 AI 一开始读取整个仓库或整张依赖图；从任务 / Git / symbol 锚点开始，有界展开并保留关系来源与置信度。
+- 不要让 AI 一开始读取整个仓库或整张依赖图；从任务、source fingerprint 和精确 locator / symbol 锚点开始，有界展开并保留关系来源与置信度。
 - 简单 CRUD 不要上升成复杂架构；复杂业务也不要只靠一个 CRUD 提示词硬顶。
 - 较大的后端改动或新功能必须先设计、落档、确认，再按测试目标开发。
 - CRUD 相关能力必须显式判断是否需要走 `AssetsHolder` 数据权限，不确定就问，不要手写平行的租户 / 部门 / 创建人过滤。

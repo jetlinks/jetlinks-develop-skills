@@ -15,7 +15,7 @@ Read [`references/module-reference.md`](references/module-reference.md) first.
 4. Read [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md) before implementing providers or consumers.
 5. Before implementing boundary code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): public command contracts, service / command IDs, permission context, retry or fallback, remote / local boundary choice, payload compatibility, and provider-side side effects.
 6. Keep the chosen pattern aligned with the module's execution model, existing naming scheme, and local command invocation style.
-7. Pair with `$jetlinks-systematic-solving` when the failure crosses provider / consumer / transport / lifecycle boundaries, has competing contract hypotheses, or a first implementation still fails or requires another fallback. Rebuild the boundary model before further edits.
+7. Pair with `$systematic-solving` when the failure crosses provider / consumer / transport / lifecycle boundaries, has competing contract hypotheses, or a first implementation still fails or requires another fallback. Rebuild the boundary model before further edits.
 
 ## Required Constraints
 

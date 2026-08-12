@@ -1,4 +1,0 @@
-interface:
-  display_name: "JetLinks Systematic Solving"
-  short_description: "JetLinks 复杂任务根因求解、停滞止损与定向恢复"
-  default_prompt: "使用 $jetlinks-systematic-solving 对复杂或反复失败的任务重建可证伪的问题模型，并以完整验证矩阵约束实现。"

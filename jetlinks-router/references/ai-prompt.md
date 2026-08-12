@@ -11,16 +11,16 @@
 1. 先发现，再实现
     - 不凭记忆假设模块名、注解包、依赖坐标、命令 ID、Topic、资源路径。
     - 先查看当前工作区的相邻代码、父子模块结构、现有配置和示例。
-    - 结构检索先定义问题，再走“Git / `rg` / build facts → LSP / compiler symbols → 有界结构图 → JetLinks 领域边 → 深层数据流 / runtime”的漏斗；向量相似度和推断调用边只能发现候选，不能替代精确引用或构建依赖事实。
+    - 结构检索先定义问题，并用 `$code-navigation` 发现当前环境可用能力，再走“已有锚点 → 精确事实 → 符号语义 → 有界结构关系 → JetLinks 领域扩展 → 深层 / runtime 证据”的漏斗；不预设 Git、`rg`、LSP、图数据库或 MCP，向量相似度和推断调用边只能发现候选。
 
 2. 复杂任务先 plan 再实施
     - 对跨模块、多子任务、需求仍在变化、存在多个方案或兼容性风险的任务，先输出精简计划并等待用户确认。
     - 计划至少包含目标、范围、不做什么、实施步骤、风险 / 待确认点和验证方式。
     - 简单低风险小任务可在给出简短计划后直接实施。
-    - 计划只描述怎么推进，不能替代问题模型。复杂 / 高不确定任务还必须切 `$jetlinks-systematic-solving`，明确可观察目标、不变量、变化轴、竞争假设、区分证据、局部修补预算和验证矩阵。
+    - 计划只描述怎么推进，不能替代问题模型。复杂 / 高不确定任务还必须切通用 `$systematic-solving` 并加载 [`systematic-solving-jetlinks-rules.md`](systematic-solving-jetlinks-rules.md)，明确可观察目标、不变量、变化轴、竞争假设、区分证据、局部修补预算和验证矩阵，再映射到 JetLinks 制品与交付。
     - 同一根因假设的一次实现仍未通过验收、失败转移到同类场景，或下一步准备新增场景判断 / fallback / retry / mock / 兼容分支时，立即停止编辑并重构假设；不要在原计划下面继续追加微补丁。
-    - 实时计划是当前状态投影，不是历史账本：阶段切换时替换已失效步骤并压缩为当前阶段、剩余事项、有效假设、下一步和阻塞，不逐轮追加完成项或阶段总结。
-    - 长任务按 [`context-recovery-rules.md`](context-recovery-rules.md) 维护有界 Recovery Capsule。上下文压缩或恢复后先对 task ID / revision、branch / HEAD、changed paths，再只读胶囊列出的 3–7 个锚点；指纹一致时禁止重新全仓扫描。
+    - 实时计划与长任务连续性切通用 [`$task-continuity`](../../task-continuity/SKILL.md)，把计划维护成当前状态投影：阶段切换时替换已失效步骤并压缩为当前阶段、剩余事项、有效假设、下一步和阻塞，不逐轮追加完成项或阶段总结。
+    - JetLinks 工作区再按 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用 Recovery Capsule 映射到 task ID / revision、branch / HEAD、changed paths。上下文压缩或恢复后只读胶囊列出的 3–7 个锚点；指纹一致时禁止重新全仓扫描。
 
 3. 后端大改先设计与测试目标，再开发
     - 对较大的后端改动或新功能，必须遵循 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md)。
@@ -81,7 +81,7 @@
    - 只有本地异常体系确实只支持 `message` 时，才在边界层回退到本地化后的文本。
 
 13. 根因优先，禁用奇技淫巧：统一以 [`jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../../jetlinks-conventions/references/root-cause-and-no-hack-rules.md) 为准；router 不重复列举禁止清单。
-    - 上述文件负责实现红线；复杂问题的动态求解、失败止损和假设重构统一由 [`$jetlinks-systematic-solving`](../../jetlinks-systematic-solving/SKILL.md) 负责。
+    - 上述文件负责实现红线；复杂问题的动态求解、失败止损和假设重构统一由 [`$systematic-solving`](../../systematic-solving/SKILL.md) 负责，JetLinks 制品与领域映射由 [`systematic-solving-jetlinks-rules.md`](systematic-solving-jetlinks-rules.md) 补充。
 
 14. 注释要平衡人类可读性和模型上下文
    - 复杂业务规则、兼容逻辑、并发 / 生命周期保护、安全边界、TraceHolder / MBean 决策等，需要结合 [`jetlinks-conventions/references/code-comments.md`](../../jetlinks-conventions/references/code-comments.md) 写短注释。
@@ -103,13 +103,13 @@
     - 如果是较大的后端改动或新功能，先读取 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md) 和 [`document-placement-rules.md`](document-placement-rules.md)；有 `.trellis/` 再读 [`trellis-integration-rules.md`](trellis-integration-rules.md)。把待确认设计和测试目标落到任务运行态，等待用户确认后才能实现，再按需提升稳定结论到权威 docs。
 
 3. 判断是否进入系统性求解
-    - 复杂、高不确定、跨边界、候选根因不唯一的任务，组合 [`$jetlinks-systematic-solving`](../../jetlinks-systematic-solving/SKILL.md)。
+    - 复杂、高不确定、跨边界、候选根因不唯一的任务，组合 [`$systematic-solving`](../../systematic-solving/SKILL.md) 与 [`systematic-solving-jetlinks-rules.md`](systematic-solving-jetlinks-rules.md)。
     - 任务即使起初简单，只要一次实现仍未通过验收、失败转移、继续需要特例 / fallback / retry / mock / 兼容分支，或连续操作没有得到新证据，也立即切入。
     - 先冻结任务契约，建立完整执行路径、竞争假设、区分检查、解法层级和验证矩阵，再允许生产代码编辑。
 
 4. 检索当前工作区
-    - 若已有 Recovery Capsule 或精确 symbol / changed path，从锚点开始，不重新全仓扫描。
-    - 否则先查看根目录、父 `pom.xml`、聚合模块、资源目录和符号链接，再使用 [`$jetlinks-code-navigation`](../../jetlinks-code-navigation/SKILL.md) 定向查 ownership、引用 / 调用、领域流和影响面。
+    - 若已有 Recovery Capsule 或精确 symbol / changed path，先用 `$task-continuity` 核对身份和指纹，再从锚点开始，不重新全仓扫描。
+    - 否则先查看当前工作区实际存在的根目录、构建 / 包配置、聚合模块、资源目录和链接边界，再使用 [`$code-navigation`](../../code-navigation/SKILL.md) 定向查 ownership、引用 / 调用和影响面；涉及 JetLinks 领域流时再读 [`code-navigation-jetlinks-rules.md`](code-navigation-jetlinks-rules.md)。
     - 结构图只返回有界路径、文件 / symbol 锚点、revision、证据来源和置信度；高影响推断边必须回到源码、构建或运行时证据确认。
 
 5. 切换最少 skill
@@ -147,7 +147,8 @@
 ### 复杂、高难度或反复失败的问题
 
 切换：
-- [`$jetlinks-systematic-solving`](../../jetlinks-systematic-solving/SKILL.md)
+- [`$systematic-solving`](../../systematic-solving/SKILL.md) + [`JetLinks 系统性求解扩展`](systematic-solving-jetlinks-rules.md)
+- [`$task-continuity`](../../task-continuity/SKILL.md) + [`JetLinks 上下文恢复适配`](context-recovery-rules.md)
 - 再组合承担具体实现的领域 skill
 
 适用：
@@ -222,7 +223,8 @@
 ### 代码结构 / 调用链 / 变更影响检索
 
 切换：
-- [`$jetlinks-code-navigation`](../../jetlinks-code-navigation/SKILL.md)
+- [`$code-navigation`](../../code-navigation/SKILL.md)
+- JetLinks 领域关系按需读取 [`code-navigation-jetlinks-rules.md`](code-navigation-jetlinks-rules.md)
 
 适用：
 - 查 definition / references / implementations / type hierarchy / callers / callees
@@ -357,7 +359,8 @@
 ## 常见组合
 
 - 复杂任务或一次修复后仍失败
-    - `$jetlinks-systematic-solving`
+    - `$systematic-solving`
+    - 任务较长、需要恢复或分阶段交付时加 `$task-continuity`
     - 加入与真实执行路径匹配的 `$jetlinks-crud` / `$jetlinks-boundary` / `$jetlinks-events` / `$jetlinks-reactive` / `$jetlinks-protocol` / `$jetlinks-web`
     - 公共能力和 no-hack 红线再加 `$jetlinks-conventions`
 
@@ -415,12 +418,14 @@
     - 参考案例只辅助业务方案和交互节奏，组件仍以当前 workspace 的 `jetlinks-web-core` 为准
 
 - 提交并发起 PR
+    - `$task-continuity`
     - `$jetlinks-delivery`
     - 如改动涉及具体模块，再加对应业务 skill
 
 - 复杂问题需要先建立调用链和影响面
-    - `$jetlinks-code-navigation`
-    - `$jetlinks-systematic-solving`
+    - `$code-navigation`
+    - `$systematic-solving`
+    - 长任务再加 `$task-continuity`
     - 再按 owning module 加对应领域 skill
 
 - 任务完成后沉淀经验
@@ -445,8 +450,8 @@
 
 执行顺序：
 1. 静默完成分类
-2. 复杂或停滞任务先用 `$jetlinks-systematic-solving` 建立问题模型；同一假设下一次实现失败后停止编辑并重构
-3. 没有精确 ownership / consumer / impact 锚点时，用 `$jetlinks-code-navigation` 建立有界且带置信度的最小执行路径
+2. 复杂或停滞任务先用 `$systematic-solving` 建立问题模型，并加载 JetLinks 扩展；同一假设下一次实现失败后停止编辑并重构。长任务同时用 `$task-continuity` 管理计划、恢复与阶段性交付
+3. 没有精确 ownership / consumer / impact 锚点时，用 `$code-navigation` 按当前环境可用能力建立有界且带置信度的最小执行路径；需要时加载 JetLinks 领域扩展
 4. 切换最少 domain-focused skill
 5. 查看路径锚点和必要相邻代码
 6. 实现最小完整闭环
