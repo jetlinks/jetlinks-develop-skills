@@ -10,7 +10,7 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 ## Workflow
 
 1. Confirm the target module's execution model and CRUD base abstractions.
-2. If this is a new backend feature, large CRUD change, or CRUD change spanning multiple layers, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): write the design draft and test goals to the appropriate docs directory and wait for explicit user confirmation.
+2. If this is a new backend feature, large CRUD change, or CRUD change spanning multiple layers, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and test goals in Trellis or the chosen Git-ignored runtime artifact, wait for explicit user confirmation, then update authoritative docs only for accepted durable CRUD contracts.
 3. Follow the smallest existing Entity, Service, and Controller pattern that matches the task.
 4. If the task includes `createQuery()`, `createUpdate()`, `createDelete()`, `QueryParamEntity`, sorting, nested conditions, pagination, AssetsHolder query injection, QueryHelper, complex SQL, native SQL, or multi-query result composition, read [`references/query-dsl-rules.md`](references/query-dsl-rules.md).
 5. If the task includes complex query, batch processing, or CRUD side effects, read [`references/advanced-crud-rules.md`](references/advanced-crud-rules.md).
@@ -18,6 +18,7 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 7. Pair with `$jetlinks-assets-permission` whenever CRUD query, detail, update, delete, batch operation, export, or custom endpoint needs data permission control through AssetsHolder.
 8. Before implementing, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): public Entity / DTO / Controller / Service contracts, custom endpoints, non-obvious validation, AssetsHolder boundaries, compatibility, batch limits, lifecycle guards, and complex QueryHelper / SQL / DSL decisions.
 9. Pair with `$jetlinks-conventions` or `$jetlinks-reactive` when imports, i18n, comments, or reactive style need extra care.
+10. Pair with `$jetlinks-systematic-solving` when CRUD behavior crosses multiple layers or data shapes, has competing root causes, or an attempted fix still fails / moves the failure / needs another query branch, fallback, mock, or compatibility path. Stop patching until the problem model and validation matrix are rebuilt.
 
 ## Required Constraints
 
@@ -31,7 +32,7 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 - Do not perform row-by-row save / delete when `createUpdate()` / `createDelete()` can express the batch operation; use `setNull(...)` for real null assignment.
 - Prefer moving heavy side effects out of the main CRUD flow.
 - When Apache Commons utilities are already available in the target module or adjacent CRUD code, prefer them for object, collection, map, and array checks. For string comparison/search/prefix/suffix/plain replace operations, follow `$jetlinks-conventions` and use `Strings.CS` / `Strings.CI` when the dependency provides `Strings`; do not fall back to deprecated `StringUtils` variants. Non-deprecated null-safe predicates such as `StringUtils.isEmpty` / `isBlank` may be used when they match the module's Commons Lang style.
-- Do not implement a large CRUD feature before the design draft, task breakdown, and realistic test goals have been documented and confirmed.
+- Do not implement a large CRUD feature before the task contract, stable delivery slices, and realistic test goals have been documented and confirmed.
 - For any CRUD query, detail, update, delete, batch operation, export, or custom endpoint, analyze whether AssetsHolder data permission control is required. Route implementation details to `$jetlinks-assets-permission`. If asset type, related asset field, permission action, binding relation, or admin / tenant / platform exception semantics are unclear, ask the user before implementation.
 - Do not weaken tests to satisfy the CRUD gate; tests must assert realistic business results, persistence effects, permissions, validation, and regression paths that matter to the change.
 - Do not leave generated CRUD code comment-free when it adds public classes, custom endpoints, permission boundaries, complex query composition, compatibility, batch limits, or non-obvious validation. Add concise code comments at those points; skip comments only for plain fields, standard inherited CRUD, direct DTO mapping, or obvious one-line delegation.
@@ -42,7 +43,7 @@ Read [`references/common-crud-rules.md`](references/common-crud-rules.md) first.
 
 1. CRUD scope
 2. Existing abstractions to reuse
-3. Design doc path and test goals when the backend design gate applies
+3. Task-contract path, authoritative-doc sync decision, and test goals when the backend design gate applies
 4. Whether advanced CRUD rules are needed
 5. Whether Query DSL rules are needed
 6. Whether QueryHelper or batch update/delete DSL is needed

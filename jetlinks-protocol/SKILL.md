@@ -10,7 +10,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 ## Workflow
 
 1. Classify the request as protocol reading, protocol implementation, binary packet analysis, or integration debugging.
-2. If this creates a new protocol package or changes protocol behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): write the design draft, protocol examples, and realistic test goals to the appropriate docs directory and wait for explicit user confirmation.
+2. If this creates a new protocol package or changes protocol behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract, protocol examples, and realistic test goals in Trellis or the chosen Git-ignored runtime artifact, wait for explicit user confirmation, then update authoritative docs only for accepted durable wire contracts.
 3. Inspect protocol support registration first, then locate routes, config metadata, authenticators, and codec bindings.
 4. Trace the upstream path from transport input to `DeviceMessage`, then trace the downstream path back to encoded packets, topics, or replies.
 5. Read [`references/development-patterns.md`](references/development-patterns.md) when creating a new protocol package or turning a protocol document into implementation tasks.
@@ -20,6 +20,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 9. Read [`references/debugging-checklist.md`](references/debugging-checklist.md) when the symptom is auth failure, message loss, bad routing, decode failure, or device/platform mismatch.
 10. Before implementing or changing protocol code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): Provider / Codec / parser public contracts, wire compatibility, endian / framing assumptions, ACK or sequence correlation, ByteBuf lifecycle, auth boundary, retry / timeout, and transport-specific deviations.
 11. Reuse the existing protocol abstraction and update adjacent tests or protocol docs when the wire behavior changes.
+12. Pair with `$jetlinks-systematic-solving` when a protocol issue crosses transport / framing / auth / mapping / reply correlation, has competing root causes, or a first implementation merely moves failure to another packet or direction. Do not add packet-specific fallback parsing before rebuilding the protocol model.
 
 ## Required Constraints
 
@@ -29,7 +30,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 - Do not implement only one direction of a protocol change. Verify both upstream decode and downstream encode when the transport supports both.
 - Do not start from business-field mapping before the transport boundary and frame boundary are stable.
 - Do not make simple protocols carry complex caches, state machines, or split packages just because another protocol does; add those only when the protocol explicitly needs them.
-- Do not implement a new protocol or large wire-behavior change before the design draft, packet examples, upstream/downstream mapping, compatibility risks, and realistic test goals have been documented and confirmed.
+- Do not implement a new protocol or large wire-behavior change before the task contract, packet examples, upstream/downstream mapping, compatibility risks, and realistic test goals have been documented and confirmed.
 - Do not make protocol tests pass with invented packets that ignore the real document or adjacent examples; validate representative registration, auth, framing, decode, encode, ACK, error, and compatibility cases.
 - Do not leave protocol providers, codecs, parsers, packet registries, or compatibility branches comment-free when they encode wire contracts, framing / endian assumptions, ACK or sequence correlation, ByteBuf lifecycle, auth boundary, or transport-specific deviations. Add concise code comments and complete public contract comments where implementers depend on them.
 - If protocol changes cannot be verified in-session, state the exact pending test or debug commands and residual interoperability risks.
@@ -40,7 +41,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 1. Task type and target transport or packet family
 2. Confirmed protocol entry points
 3. Upstream and downstream message path
-4. Design doc path and test goals when the backend design gate applies
+4. Task-contract path, authoritative-doc sync decision, and test goals when the backend design gate applies
 5. Proposed code, test, and doc changes
 6. Comment targets added, or the concrete reason no code comments were needed
 7. Verification evidence and remaining protocol risks

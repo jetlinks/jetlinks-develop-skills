@@ -1,6 +1,6 @@
 ---
 name: jetlinks-router
-description: 将 JetLinks 开发请求路由到当前工作区中最合适的 focused skill。适用于尚不确定应使用哪个 JetLinks 技能，或任务同时涉及模块落点、通用编码规范、响应式实践、CRUD、跨边界调用、事件与订阅流程、前端页面改造以及交付准备的场景。
+description: 将 JetLinks 开发请求路由到当前工作区中最合适的 focused skill。适用于尚不确定应使用哪个 JetLinks 技能，或任务同时涉及复杂高难度问题的系统性求解、模块落点、通用编码规范、响应式实践、CRUD、跨边界调用、事件与订阅流程、前端页面改造以及交付准备的场景。
 ---
 
 # JetLinks Router
@@ -11,19 +11,22 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 
 1. Classify the task.
 2. Decide whether the task must enter a plan-first gate. Use it for complex, cross-module, multi-subtask, or still-changing requirements.
-3. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md), write only stable requirements, decisions, task breakdown, and test goals into the appropriate owning docs location, then wait for explicit user confirmation before implementation.
-4. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
-5. Switch to the most relevant focused JetLinks skill.
-6. Combine multiple focused skills when the task crosses boundaries.
-7. Read adjacent production code before changing anything.
-8. Implement complete changes, not pseudo-code.
-9. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
-10. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
-11. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
+3. For a complex or high-uncertainty task, or whenever an attempted fix still fails / moves the failure / requires another special branch, load [`../jetlinks-systematic-solving/SKILL.md`](../jetlinks-systematic-solving/SKILL.md). Establish the task contract, competing hypotheses, local-patch budget, solution level, and validation matrix before further implementation.
+4. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md). When `.trellis/` exists also read [`references/trellis-integration-rules.md`](references/trellis-integration-rules.md). Draft the task contract in Trellis or one Git-ignored runtime artifact, wait for explicit confirmation, and only then promote accepted durable decisions into authoritative docs by rewriting their current state in place.
+5. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
+6. For long-running work, or after context compaction / resume / handoff, read [`references/context-recovery-rules.md`](references/context-recovery-rules.md). Recover from the task contract, bounded Recovery Capsule, Git fingerprint, and listed anchors; do not restart workspace discovery unless these conflict.
+7. Switch to the most relevant domain-focused JetLinks skill.
+8. Combine multiple focused skills when the task crosses boundaries.
+9. Read adjacent production code before changing anything, except when a valid Recovery Capsule already narrows the next step to verified anchors.
+10. Implement complete changes, not pseudo-code.
+11. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
+12. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
+13. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
 
 ## Routing
 
 - Protocol package registration, transport codecs, and binary packet handling: [`../jetlinks-protocol/SKILL.md`](../jetlinks-protocol/SKILL.md)
+- Complex, high-uncertainty, cross-boundary, or repeatedly failing tasks that need problem-model reconstruction and stagnation control: [`../jetlinks-systematic-solving/SKILL.md`](../jetlinks-systematic-solving/SKILL.md)
 - Shared coding conventions, comments, imports, i18n habits, tracing, and MBean observability: [`../jetlinks-conventions/SKILL.md`](../jetlinks-conventions/SKILL.md)
 - Reactive and non-blocking implementation practice: [`../jetlinks-reactive/SKILL.md`](../jetlinks-reactive/SKILL.md)
 - Workspace discovery, module placement, and module creation: [`../jetlinks-routing/SKILL.md`](../jetlinks-routing/SKILL.md)
@@ -43,9 +46,12 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Prefer local examples over generic memory.
 - When local examples are missing, clearly separate defaults from verified workspace facts.
 - Do not directly implement complex or unstable requirements before clarifying scope, exclusions, risks, and validation with the user.
-- Do not implement large backend changes or new backend features before a design draft and test goals have been written to the appropriate docs directory and explicitly confirmed by the user.
-- Treat plan / PRD / design documents as stable contracts, not execution logs. Do not append scan notes, step progress, debug attempts, raw test output, PR text, or session summaries to them.
-- If the workspace has a task/workflow system, keep process records in its journal, task log, research artifact, or agent-context artifact instead of copying them into stable plan documents.
+- Do not treat plan-first as sufficient protection against iterative patching. For complex tasks, establish falsifiable hypotheses and a validation matrix through `$jetlinks-systematic-solving`; after one failed implementation under the same root-cause hypothesis, stop adding local branches or fallbacks and rebuild the problem model before editing again.
+- Treat any new scenario-specific condition, fallback, retry, mock, compatibility alias, hidden switch, copied implementation, failure migration to a sibling scenario, or repeated action without new discriminating evidence as a stagnation signal. Route through `$jetlinks-systematic-solving` even when the task originally appeared small.
+- Do not implement large backend changes or new backend features before a task contract and test goals have been recorded in the workspace's task artifact and explicitly confirmed by the user.
+- Treat authoritative docs as the current accepted state, not drafts or execution logs. Rewrite stale requirements and decisions in place; do not append progress checkboxes, scan notes, debug attempts, raw test output, PR text, completion summaries, or timelines.
+- Keep live plans, hypothesis ledgers, attempts, failures, next actions, and stage summaries in Trellis when present. Without Trellis or an existing task system, use one repository-local runtime file verified as ignored by Git; do not default to a committable task / worklog document or modify shared `.gitignore` merely for agent state.
+- Before expected context compaction, pause, or handoff, and after each validated stage commit, refresh a bounded Recovery Capsule. On resume, verify task ID / revision, branch / HEAD, and changed paths, then read only its 3–7 anchors and continue its single next action. Do not reread the whole repository just because conversation context was compressed.
 - Do not place task logs, test reports, PR descriptions, or temporary design notes into README files; README is for durable repository or module overview.
 - Do not treat tests as a checkbox: test goals must map to realistic business scenarios and data, and failures must drive root-cause analysis rather than weaker assertions.
 - For code changes, apply the comment gate from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md) before implementation: identify required comment targets, add comments in the touched code when complex business intent / permission boundary / compatibility / lifecycle / public contract exists, and only report "no comments needed" when the touched code is straightforward. A final summary or PR description does not replace code comments.
@@ -68,23 +74,26 @@ When analyzing first:
 
 1. Task classification
 2. Whether plan-first confirmation is required
-3. Whether backend design-test gate applies, plus the design doc path when it does
+3. Whether backend design-test gate applies, plus the task-contract/runtime artifact and any authoritative doc that needs promotion
 4. Focused JetLinks skill or skills to use
-5. Workspace facts to confirm
-6. Proposed code and document locations
-7. Release-boundary decision when compatibility is in question
-8. Comment decision when complex or non-obvious code is involved
-9. Database portability and performance test decision when SQL is involved
-10. TraceHolder tracing decision when critical backend flows are involved
-11. MBean observability decision when long-lived in-memory or cache behavior is involved
-12. Plan summary, test goals, or direct-execution rationale
+5. Systematic-solving trigger, current hypotheses, and local-patch budget when applicable
+6. Workspace facts to confirm
+7. Proposed code and document locations
+8. Release-boundary decision when compatibility is in question
+9. Comment decision when complex or non-obvious code is involved
+10. Database portability and performance test decision when SQL is involved
+11. TraceHolder tracing decision when critical backend flows are involved
+12. MBean observability decision when long-lived in-memory or cache behavior is involved
+13. Plan summary, test goals, or direct-execution rationale
 
 When implementing:
 
 1. Quietly classify and inspect
-2. If backend design-test gate applies, write or update the design doc and test goals first, then wait for user confirmation
+2. If backend design-test gate applies, write or update the task contract and test goals in Trellis or the chosen Git-ignored runtime artifact, then wait for user confirmation; only accepted durable changes update authoritative docs
 3. If plan-first applies without backend design gate, output the plan and wait for confirmation
-4. Load the needed focused skill or skills
-5. Edit the code with the smallest consistent change
-6. Run the needed validation when possible, otherwise state the exact pending commands and residual risks
-7. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository
+4. If systematic solving applies, build the evidence-backed problem model and validation matrix before production edits; if stagnation occurs later, stop and rebuild it
+5. On resume, recover and validate the bounded route before loading only the needed domain-focused skill or skills
+6. Edit the code with the smallest complete change that restores the demonstrated invariant
+7. Run validation at the coherent stage boundary; when it passes, create one local stage commit and then refresh the Recovery Capsule with its actual hash and the next route
+8. Push and create or update the PR only after the entire task meets its acceptance matrix; do not use PR updates as per-step progress records
+9. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository

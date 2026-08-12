@@ -16,12 +16,17 @@
     - 对跨模块、多子任务、需求仍在变化、存在多个方案或兼容性风险的任务，先输出精简计划并等待用户确认。
     - 计划至少包含目标、范围、不做什么、实施步骤、风险 / 待确认点和验证方式。
     - 简单低风险小任务可在给出简短计划后直接实施。
+    - 计划只描述怎么推进，不能替代问题模型。复杂 / 高不确定任务还必须切 `$jetlinks-systematic-solving`，明确可观察目标、不变量、变化轴、竞争假设、区分证据、局部修补预算和验证矩阵。
+    - 同一根因假设的一次实现仍未通过验收、失败转移到同类场景，或下一步准备新增场景判断 / fallback / retry / mock / 兼容分支时，立即停止编辑并重构假设；不要在原计划下面继续追加微补丁。
+    - 实时计划是当前状态投影，不是历史账本：阶段切换时替换已失效步骤并压缩为当前阶段、剩余事项、有效假设、下一步和阻塞，不逐轮追加完成项或阶段总结。
+    - 长任务按 [`context-recovery-rules.md`](context-recovery-rules.md) 维护有界 Recovery Capsule。上下文压缩或恢复后先对 task ID / revision、branch / HEAD、changed paths，再只读胶囊列出的 3–7 个锚点；指纹一致时禁止重新全仓扫描。
 
 3. 后端大改先设计与测试目标，再开发
     - 对较大的后端改动或新功能，必须遵循 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md)。
     - 文档落点遵循 [`document-placement-rules.md`](document-placement-rules.md)：README 只放长期总览，测试报告、任务流水和 PR 证据不放 README。
-    - 先把设计稿、任务拆分和测试目标写入当前工作区对应归属文档，再等待用户明确确认。
-    - 计划 / PRD / 设计稿是稳定契约，不是执行日志；实现过程中只有需求、方案、任务拆分、风险或测试目标变化时才回写，不追加扫描记录、步骤进度、调试尝试、测试日志、PR 文案或会话总结。
+    - 待确认设计先写 Trellis active task；无 Trellis 时写经 `git check-ignore -v` 验证的单一运行态文件，再等待用户明确确认，不先污染受 Git 管理的 `docs`。
+    - 用户确认后，只有长期需求、稳定契约、架构 / API / 模块设计、验收语义或长期风险变化时，才原位更新权威 docs；删除过时描述，不追加“本轮总结”“完成情况”或时间线。
+    - 实时任务拆分、checkbox、假设账本、步骤进度、调试尝试、失败轨迹、临时下一步、测试日志、PR 文案或会话总结留在任务运行态，不进入权威文档。
     - 用户确认后，先按真实使用场景和数据制定测试目标，再实现代码，直到测试目标达成。
     - 不允许为了让测试通过而删除测试、弱化断言、只跑无关测试、改低业务期望或绕过真实校验。
     - 兼容性是通用发布边界判断，不只限于 CRUD：API / DTO / Event / Topic / Command / 协议 / 配置 / 前端路由 / QueryParam / termType 等同一 PR 内未发布中间形态优先收敛到最佳实践；已合入、已发布、已有持久化数据或外部依赖时才设计兼容 / 迁移。
@@ -58,9 +63,9 @@
     - 退化模式不仅适用于模块创建，也适用于 CRUD、权限、命令边界、事件驱动和基础 i18n 决策。
 
 10. 任务结束时可以判断是否值得沉淀知识
-    - 只有产出了稳定、可复用、非显然的知识时，才建议写总结或沉淀文档。
-    - 沉淀形式优先选择 worklog、knowledge、playbook，再考虑 prompt 或 skill 更新。
-    - 沉淀文档记录可复用结论，不反向污染计划 / PRD / 设计稿；单次过程流水留在对话、PR / CI、工作流 journal / task log 或用户确认的 worklog。
+    - 只有产出了稳定、跨任务可复用、非显然的知识时，才建议沉淀；任务完成或需要总结本身不是创建 worklog 的理由。
+    - 优先原位更新已有权威来源、项目规范或 skill；只有缺少归属且确有长期价值时才新增 knowledge / playbook。
+    - 单次过程流水留在 Trellis / 本地运行态，测试证据留在 PR / CI；不把它们转换成可提交的总结文档。
     - 不为每次任务默认新增文档；先更新已有归属文档，或把一次性测试证据留在 PR / CI。
     - 如果判断值得沉淀，不要直接结束任务；应先提示用户是否需要生成正式文档。
     - 如果结论已经成熟到可抽成通用 JetLinks skill，还应额外询问是否并入 `jetlinks-develop-skills` 并准备官方 PR。
@@ -75,6 +80,7 @@
    - 只有本地异常体系确实只支持 `message` 时，才在边界层回退到本地化后的文本。
 
 13. 根因优先，禁用奇技淫巧：统一以 [`jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../../jetlinks-conventions/references/root-cause-and-no-hack-rules.md) 为准；router 不重复列举禁止清单。
+    - 上述文件负责实现红线；复杂问题的动态求解、失败止损和假设重构统一由 [`$jetlinks-systematic-solving`](../../jetlinks-systematic-solving/SKILL.md) 负责。
 
 14. 注释要平衡人类可读性和模型上下文
    - 复杂业务规则、兼容逻辑、并发 / 生命周期保护、安全边界、TraceHolder / MBean 决策等，需要结合 [`jetlinks-conventions/references/code-comments.md`](../../jetlinks-conventions/references/code-comments.md) 写短注释。
@@ -93,41 +99,65 @@
 
 2. 判断是否进入 `plan-first`
     - 如果任务复杂、跨模块、需求仍在变化、涉及多个子任务，或存在多个方案 / 明显风险，先输出计划并等待用户确认。
-    - 如果是较大的后端改动或新功能，先读取 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md) 和 [`document-placement-rules.md`](document-placement-rules.md)，把设计稿和测试目标落到对应归属文档，等待用户确认后才能实现。
+    - 如果是较大的后端改动或新功能，先读取 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md) 和 [`document-placement-rules.md`](document-placement-rules.md)；有 `.trellis/` 再读 [`trellis-integration-rules.md`](trellis-integration-rules.md)。把待确认设计和测试目标落到任务运行态，等待用户确认后才能实现，再按需提升稳定结论到权威 docs。
 
-3. 扫描当前工作区
+3. 判断是否进入系统性求解
+    - 复杂、高不确定、跨边界、候选根因不唯一的任务，组合 [`$jetlinks-systematic-solving`](../../jetlinks-systematic-solving/SKILL.md)。
+    - 任务即使起初简单，只要一次实现仍未通过验收、失败转移、继续需要特例 / fallback / retry / mock / 兼容分支，或连续操作没有得到新证据，也立即切入。
+    - 先冻结任务契约，建立完整执行路径、竞争假设、区分检查、解法层级和验证矩阵，再允许生产代码编辑。
+
+4. 扫描当前工作区
     - 查看根目录、父 `pom.xml`、聚合模块、相邻模块、资源目录和已有实现。
     - 额外检查符号链接目录，确认是否有链接进来的外部模块、组件或子工程。
 
-4. 切换最少 skill
+5. 切换最少 skill
     - 只切到覆盖当前任务的 focused skill。
 
-5. 找相邻示例
+6. 找相邻示例
     - 在目标模块或相似模块中定位同类实现。
     - 如果示例位于软链接模块中，允许沿链接读取其真实内容。
     - 如果没有相邻示例，切换到模板仓库模式，按通用规则生成最小实现。
 
-6. 实现
+7. 实现
     - 复用现有抽象，保持命名、分层、注解和返回类型一致。
 
-7. 校验
+8. 校验
     - 检查依赖、注解、导入、编程模型、权限、i18n、事件或 Topic 是否与当前工作区一致。
     - 如果当前环境无法直接执行验证，也要明确给出待执行命令、预期验证点和剩余风险边界。
 
-8. 交付
+9. 交付
     - 如果任务包含提交、推送或发 PR，切换到 `$jetlinks-delivery`。
     - 后端新增功能或既有功能变动必须先补或更新对应单元测试。
-    - 较大后端改动或新功能的交付说明必须引用设计稿路径、用户确认状态和测试目标达成情况。
+    - 较大后端改动或新功能的交付说明必须引用任务契约路径、用户确认状态、权威文档同步结论和测试目标达成情况。
     - 运行改单涉及的单元测试；涉及数据库、消息、协议、跨模块边界、外部依赖、启动装配或事件链路时再跑集成测试，未触发时写明不适用原因。
     - 输出测试命令、通过数、失败数、跳过数和覆盖率数据。
+    - 每个有独立验收信号的连贯阶段完成并验证后，先创建一个本地 commit，再用实际 commit hash 和下一步刷新恢复胶囊；不要为每个操作、文件或小步骤提交。
+    - 所有阶段和总体验收矩阵完成后，才统一 push 分支并创建或更新一次 PR。未获用户明确要求时，不为中间步骤创建 draft PR，也不把 PR 描述 / 评论当进度流水。
 
-9. 沉淀
+10. 沉淀
     - 如果任务已经完成，且产出了稳定经验，切换到 `$jetlinks-capture`。
-    - 先判断值不值得沉淀，再决定写成 worklog、knowledge、playbook，还是回写 skill / prompt。
+    - 先判断值不值得沉淀；默认不把单次任务总结写成 worklog，优先回写已有 canonical knowledge / playbook / skill。
     - 先给出沉淀建议、推荐路径和摘要草稿；用户确认后再生成正式文档。
     - 如果结论已具备跨项目复用价值，再询问是否并入 `https://github.com/jetlinks/jetlinks-develop-skills` 并准备 PR。
 
 ## 任务路由
+
+### 复杂、高难度或反复失败的问题
+
+切换：
+- [`$jetlinks-systematic-solving`](../../jetlinks-systematic-solving/SKILL.md)
+- 再组合承担具体实现的领域 skill
+
+适用：
+- 跨多个模块、层次或同步 / 异步边界才能理解完整行为
+- 涉及并发、生命周期、兼容、性能、权限、状态一致性或多种实现变体
+- 同一验收信号在一次实现后仍失败，或失败转移到同类输入 / 相邻实现
+- 下一步准备继续增加特例、fallback、retry、mock、兼容别名、隐藏开关或复制实现
+- 连续搜索、构建或操作没有产生能区分候选根因的新证据
+
+边界：
+- 该 skill 管问题模型、停滞门禁、解法层级和验证矩阵；CRUD、协议、响应式、前端等细节仍由对应领域 skill 管理。
+- 根因明确且不影响共享契约的导入、语法、格式或单点机械修复不强制进入。
 
 ### 先看哪些模块、能力和目录
 
@@ -286,9 +316,9 @@
 - [`$jetlinks-capture`](../../jetlinks-capture/SKILL.md)
 
 适用：
-- 任务已经完成，需要判断是否值得总结
-- 需要将经验写入统一目录，便于后续智能体检索
-- 需要决定这次结论应写成 worklog、knowledge、playbook，还是回写 prompt / skill
+- 任务已经完成，需要判断是否产生了跨任务稳定知识
+- 需要判断应原位更新哪个 canonical 来源，或是否确有必要新增 knowledge / playbook
+- 需要区分任务运行态、PR / CI 证据和长期知识，避免把过程总结固化成仓库文档
 - 需要判断这次结论是否已经可以抽成 skill，并继续提交到官方 skills 仓库
 
 ### 提交、分支、PR 与测试交付
@@ -306,6 +336,11 @@
 - PR 包含后端新增功能或既有功能变动，需要补齐单元测试、覆盖率、集成测试结果或不适用原因
 
 ## 常见组合
+
+- 复杂任务或一次修复后仍失败
+    - `$jetlinks-systematic-solving`
+    - 加入与真实执行路径匹配的 `$jetlinks-crud` / `$jetlinks-boundary` / `$jetlinks-events` / `$jetlinks-reactive` / `$jetlinks-protocol` / `$jetlinks-web`
+    - 公共能力和 no-hack 红线再加 `$jetlinks-conventions`
 
 - 新建模块并提供 CRUD
     - `$jetlinks-routing`
@@ -376,18 +411,20 @@
 输出：
 1. 任务分类
 2. 需要切换的 focused skill
-3. 需要先确认的工作区事实
-4. 建议落点和实现边界
-5. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
+3. 系统性求解触发、竞争假设与局部修补预算（如适用）
+4. 需要先确认的工作区事实
+5. 建议落点和实现边界
+6. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
 
 ### 当用户要求直接实现
 
 执行顺序：
 1. 静默完成分类
-2. 切换最少 focused skill
-3. 查看相邻代码
-4. 直接实现
-5. 如果任务要求交付，再补测试、提交与 PR 规范检查
-6. 如果任务产出了稳定经验，再补沉淀建议、推荐路径和摘要草稿，并询问是否生成正式文档
-7. 如果结论已成熟到可抽成通用 skill，再询问是否并入 `jetlinks-develop-skills` 并准备官方 PR
-8. 总结本次遵循的规则和验证结果
+2. 复杂或停滞任务先用 `$jetlinks-systematic-solving` 建立问题模型；同一假设下一次实现失败后停止编辑并重构
+3. 切换最少 domain-focused skill
+4. 查看完整执行路径和相邻代码
+5. 实现最小完整闭环
+6. 如果任务要求交付，再补原场景 / 同类代表 / 反例边界 / 回归证据、测试、提交与 PR 规范检查
+7. 如果任务产出了跨任务稳定经验，再建议应更新的 canonical 来源或合理的新知识路径；单次完成总结不落档
+8. 如果结论已成熟到可抽成通用 skill，再询问是否并入 `jetlinks-develop-skills` 并准备官方 PR
+9. 只汇报最终规则结论、验证结果和风险，不输出操作流水
