@@ -28,13 +28,15 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 5. 实现失败且契约未变时，只更新 Trellis 运行态；若证据表明已接受的设计必须改变，先更新 task contract 并重新确认，再同步权威 docs。
 6. 完成时由 Trellis 负责 archive / journal；JetLinks delivery 将测试证据写入 PR / CI，只把稳定结论提升到 canonical docs / spec / skill。
 
+提升前执行四问门禁：结论是否已确认；离开当前任务后是否仍成立；后续维护者是否需要；已有 canonical 来源是否能原位承载。任一答案为否，就留在 task / runtime / research / PR / CI。`Phase` / `Slice`、fixture / case 编号、当前测试数量、待执行评测、阶段 commit、日期和完成进度永不因“已经验证”而变成权威架构内容。
+
 ## 上下文恢复
 
 遵循 [`context-recovery-rules.md`](context-recovery-rules.md) 维护有界 Recovery Capsule：
 
 - 优先使用本地 workflow 已声明且不受 Git 管理的 runtime / checkpoint artifact；若其定义的 `info.md` 受 Git 管理，只在其中保留任务契约或稳定技术事实，胶囊改用 Git-ignored sidecar。
 - 在用户确认契约、路线变化、阶段验证并本地提交、暂停 / 交接 / 压缩前更新；阶段提交后写入实际 commit hash，提交前暂停则只标记 in-flight，不在每个命令后写 journal。
-- 恢复时先读 active task、任务契约、胶囊和 Git 指纹，只加载胶囊列出的少量 anchors；不要因对话被压缩就重新扫描全仓。
+- 恢复时先读 active task、任务契约、胶囊和复合 Git 指纹；外部任务 / 会话 / research 先比较 revision / cursor，未变化时复用胶囊中的已提取事实，只加载少量 anchors；不要因对话被压缩就重新扫描全仓或重读完整历史。
 - 胶囊只保存当前路线索引，不复制 PRD、research、diff 或阶段流水。
 - 胶囊刷新后用 `git status --short` 和必要的 `git check-ignore -v` 确认它不会出现在阶段提交或最终 PR 中。
 

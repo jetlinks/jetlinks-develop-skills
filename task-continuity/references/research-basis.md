@@ -8,4 +8,4 @@
 - Rothermel 与 Harrold 的 [安全回归测试选择](https://doi.org/10.1145/248233.248262) 以变更影响关系选择可能受影响的测试，支持先映射验收矩阵再补跑失效范围。
 - [Bazel Remote Caching](https://bazel.build/remote/caching) 用动作和输入摘要识别可复用结果，说明证据有效性取决于相关输入、语义和环境，而不是工作流进入了新的阶段。
 
-维护本技能时至少前向验证：无文件 / 无 VCS 宿主的可复制恢复、非 Git source identity、压缩后锚点恢复、计划原位收敛而不保留流水、阶段本地 checkpoint 与整体单一 review、已有有效证据在交付阶段不机械重跑。
+维护本技能时使用 [`evaluation-cases.md`](evaluation-cases.md) 前向验证：除无文件 / 无 VCS、非 Git identity、计划收敛、阶段 checkpoint、单一 review 和证据复用外，必须覆盖同 HEAD 脏树漂移、外部引用 revision 未变化时不完整重读、revision 变化时只取增量，以及运行态不能提升到权威文档。

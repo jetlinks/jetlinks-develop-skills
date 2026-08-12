@@ -82,7 +82,7 @@ confidence, confidence_tier,
 workspace_id, source_fingerprint, observed_at
 ```
 
-`source_fingerprint` 使用当前环境可提供的稳定身份，例如 revision / tree、change-set ID、构建快照、内容摘要或任务 revision；不能强制要求某一种版本控制标识。
+`source_fingerprint` 使用当前环境可提供的稳定身份，例如 revision / tree、change-set ID、构建快照、内容摘要或任务 revision；不能强制要求某一种版本控制标识。存在未提交内容时，优先复用 `$task-continuity` 或宿主状态提供的复合指纹；仅有 base revision、changed file 数或 index build time 的关系结果标为部分新鲜，不能支撑“源码未变化”的结论。
 
 ### 置信度
 
@@ -157,5 +157,6 @@ explain_relation(relation_id_or_tuple)
 
 - 查询结果是任务证据，不自动成为仓库权威文档。
 - 若当前任务系统支持恢复状态，只记录少量文件 / symbol / test locator、必要 relation / flow handle、source fingerprint 和唯一下一查询；不复制整张图。
+- 外部任务、线程或研究来源已经由恢复账本保存 revision / cursor 与所需事实时，导航过程只消费这些事实；除非 revision 变化或关系冲突，不重新读取完整历史来寻找代码锚点。
 - 恢复时先核对任务与 source fingerprint。一致则从记录锚点继续；不一致时只扩大到解释失配所需的范围。
 - 失败后比较新失败签名与原关系假设。只有证据否定假设、暴露漏边或关系置信度不足时才扩大检索，不机械重复相同扫描。

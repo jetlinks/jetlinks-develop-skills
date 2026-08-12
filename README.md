@@ -15,6 +15,7 @@ jetlinks-develop-skills/
 ├── systematic-solving/
 ├── task-continuity/
 ├── code-navigation/
+├── scripts/
 ├── jetlinks-protocol/
 ├── jetlinks-conventions/
 ├── jetlinks-reactive/
@@ -177,6 +178,23 @@ cp -R jetlinks-router "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 安装完成后重启 Codex，使新 skill 被重新发现。
+
+## Validate
+
+仓库维护者在一个连贯修改阶段结束后统一运行：
+
+```bash
+python3 scripts/validate_skills.py
+python3 -m unittest scripts/test_validate_skills.py
+```
+
+校验已安装镜像是否与仓库源完全一致时，显式传入宿主的镜像根目录：
+
+```bash
+python3 scripts/validate_skills.py --mirror-root /path/to/installed/skills
+```
+
+校验器只检查技能包结构、frontmatter、UI metadata、本地引用、三个通用技能的作者环境泄漏，以及可选镜像同步；它不假定 CC Switch、Codex、Git 或某个固定安装位置，也不替代真实 prompt 的前向评测。
 
 ## Usage
 

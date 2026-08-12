@@ -5,7 +5,7 @@ description: 对任意领域中的复杂、高难度、高不确定性、跨边�
 
 # Systematic Solving
 
-Read [`references/systematic-solving-rules.md`](references/systematic-solving-rules.md) before acting. Read [`references/research-basis.md`](references/research-basis.md) only when reviewing or evolving this workflow, or when the user asks for its rationale. When the task also needs long-running state, plan compression, resume, evidence reuse, or versioned delivery, route to an available continuity capability such as `$task-continuity`; do not assume a particular task-state backend or that another skill is installed.
+Read [`references/systematic-solving-rules.md`](references/systematic-solving-rules.md) before acting. When reviewing or evolving this workflow, also read [`references/research-basis.md`](references/research-basis.md) and forward-test [`references/evaluation-cases.md`](references/evaluation-cases.md). Do not load them for ordinary problem solving. When the task also needs long-running state, plan compression, resume, evidence reuse, or versioned delivery, route to an available continuity capability such as `$task-continuity`; do not assume a particular task-state backend or that another skill is installed.
 
 ## Workflow
 
@@ -14,7 +14,7 @@ Read [`references/systematic-solving-rules.md`](references/systematic-solving-ru
 3. Build the smallest sufficient system map across the real path: entry, ownership boundary, data and state transitions, extension points, side effects, and consumers. For code tasks whose path is not already bounded, use `$code-navigation` when available. Inspect the variants relevant to the hypothesis, not only the failing sample.
 4. Maintain competing, falsifiable hypotheses. For each, state the evidence it explains, its prediction, and the cheapest discriminating check. Gather new evidence before choosing a solution level.
 5. Choose the solution level: local correction for a local contract violation; shared abstraction or boundary repair for a shared cause; explicit policy / strategy / capability / configuration for a legitimate variation; user decision for a material scope, architecture, release, or external-contract choice.
-6. Allow at most one unverified local implementation attempt under the same root-cause hypothesis. If its acceptance signal still fails, a sibling fails, or another special branch would be required, stop editing. Record what the result falsified, rebuild the bounded hypotheses and system map, then choose again.
+6. Allow at most one unverified local implementation attempt under the same root-cause hypothesis. If its acceptance signal still fails, a sibling fails, or another special branch would be required, stop editing. Replace the current attempt record with expected result, actual failure signature, new evidence, falsified assumption, and one next discriminating check; rebuild the bounded hypotheses and system map before choosing again.
 7. Implement the smallest complete change that restores the invariant for the demonstrated scenario class. Remove obsolete fallback, duplicate compatibility, temporary switches, weakened assertions, and intermediate forms made unnecessary by the canonical solution.
 8. Validate at coherent stage boundaries rather than after every operation. Cover the original trigger, a representative sibling when shared behavior changed, a counterexample or boundary, and relevant regressions. If a check fails, compare its failure signature with the previous one before editing again.
 
@@ -25,6 +25,7 @@ Read [`references/systematic-solving-rules.md`](references/systematic-solving-ru
 - Do not let conditionals, fallbacks, mocks, retries, compatibility aliases, hidden switches, or copied implementations substitute for a revised problem model.
 - Do not modify production behavior until the chosen hypothesis has a falsifiable prediction and supporting evidence.
 - Do not repeatedly run the same failing action or inspect the same surface without stating what new information it can produce.
+- Do not rerun the same check with the same relevant source, inputs, environment, and failure signature. First record which hypothesis the rerun can distinguish or which changed input invalidated the earlier result.
 - Preserve provenance and uncertainty. Do not use a syntactic, inferred, similarity-based, or runtime-scoped relation as stronger evidence than it provides.
 - Do not over-generalize a local defect. Generalize only to the demonstrated invariant and variation axis.
 - Ask one focused question when materially different contracts remain plausible and available evidence cannot decide.

@@ -24,13 +24,16 @@
 | Route | 当前阶段、focused skills、已选解法层级 / 不变量 |
 | Validated | 最近完成并验证的阶段、验收信号、对应本地 commit hash |
 | In-flight | 尚未提交阶段的当前状态、是否已集中验证、预期 changed paths；没有则写 `none` |
-| Worktree | branch、HEAD、预期 changed paths 或 diff-stat 指纹 |
+| Worktree | branch、HEAD、tracked diff digest、untracked manifest digest、相关 submodule / nested source digest、预期 changed paths；缺失层标为 partial |
 | Live evidence | 仍有效的假设、最新区分证据、禁止重试的已否定路线 |
+| Referenced sources | 外部 task / thread / issue / research 的 locator、revision / cursor、已提取事实和重读条件 |
 | Anchors | 恢复下一步所需的 3–7 个精确文件 / symbol / test / 规范路径；可附已确认的 graph flow / edge ID、index revision 及读取原因 |
 | Next | 一个唯一下一步和它要产生的验收信号 |
 | Blockers | 尚需用户 / 外部环境决定的事项；没有则写 `none` |
 
 胶囊应能在约 60 行内表达；字段变化时原位替换。不要写命令流水、全部已完成步骤、长 diff、原始日志、会话总结或重复的设计正文。
+
+Git 工作树有未提交内容时，`branch + HEAD + changed file count` 不是完整指纹。使用当前环境可安全生成的规范化内容摘要：tracked diff digest 覆盖已跟踪变化，untracked manifest digest 覆盖相对路径、类型和内容，submodule / nested digest 覆盖实际参与任务的嵌套源码；同时记录本任务 expected changed paths。无法读取某类内容时将 Worktree 标为 `partial(<missing layers>)`，不写“指纹匹配”。阶段完成并本地提交后优先用 commit / tree 作为稳定 checkpoint，减少长期维护巨型脏树指纹。
 
 ## 何时刷新
 
@@ -47,13 +50,16 @@
 ## 恢复算法
 
 1. **定身份**：读取 active task / task contract 与 Recovery Capsule，确认 task ID、revision、目标和唯一下一步。
-2. **对 Git 指纹**：只运行轻量只读检查，例如 `git status --short --branch`、`git diff --stat`、必要时 `git log -n 3 --oneline`；比较 branch、HEAD 和 changed paths。
+2. **对 Git 指纹**：只运行轻量只读检查，比较 branch、HEAD、tracked diff digest、untracked manifest digest、相关 nested source 状态和 expected changed paths；干净 checkpoint 可直接比较 commit / tree。不要仅用 `git diff --stat` 或文件数声明匹配。
 3. **选择恢复范围**：
-   - 指纹匹配：只读取胶囊列出的当前 focused skill / reference 和 3–7 个 anchors；若记录了匹配 revision 的 graph flow / edge，从该节点做有界查询，直接继续 `Next`。
+   - 指纹匹配：先用保存的 revision / cursor 对外部引用做增量检查；未变化时复用 `extracted facts`。只读取胶囊列出的当前 focused skill / reference 和 3–7 个 anchors；若记录了匹配 revision 的 graph flow / edge，从该节点做有界查询，直接继续 `Next`。
+   - 引用变化但 Git 指纹匹配：优先读取 cursor 之后的增量或紧凑状态，更新引用账本，不重新读取整个引用任务或扫描源码。
    - 指纹部分失配：先查看失配 changed paths、最近提交或 task revision，做有界对账并重写胶囊。
    - task 身份、已确认契约或主分支状态无法建立：停止执行，向用户确认任务归属；不要猜路线。
 4. **验证路线仍成立**：用胶囊中的不变量、有效假设和下一验收信号检查新上下文是否沿主线；不因为重新阅读到相邻 TODO 或旧方案而扩大范围。
 5. **继续工作**：从唯一 `Next` 开始。不要先重新读取整个 README、全仓目录、所有相邻模块、所有历史文档或已经列为已否定的路线。
+
+默认恢复读取预算为：用户最新指令、active task / contract、Recovery Capsule、复合 Git 指纹、引用 revision / cursor、当前阶段强制规则、3–7 个 anchors。超出预算前必须指出哪个失配需要扩大、要读取的最小范围以及可观察的结束条件。
 
 ## 允许扩大重读的门槛
 
@@ -84,7 +90,9 @@
 - Validated: `<stage>`; evidence: `<test / signal>`; commit: `<hash>`
 - In-flight: `none` / `<stage>`; validation: `<pending / passed>`; expected paths: `<paths>`
 - Worktree: branch `<name>`; HEAD `<hash>`; expected paths: `<paths>`
+- Worktree fingerprints: tracked `<digest>`; untracked `<digest>`; nested `<digest>`; strength `<strong / partial(reason)>`
 - Live evidence: keep `<hypothesis>` because `<evidence>`; do not retry `<rejected route>`
+- Referenced sources: `<locator>@<revision/cursor>`; facts: `<bounded facts>`; reread when: `<condition>`
 - Anchors:
   - `<file-or-symbol>` — `<why needed next>`
 - Next: `<single action>` → `<observable signal>`
