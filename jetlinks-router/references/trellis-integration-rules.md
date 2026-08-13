@@ -42,6 +42,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 - 恢复时先读 active task、任务契约、胶囊主视图和复合 Git 指纹；外部任务 / 会话 / research 先比较 metadata 中的 revision / cursor，未变化时复用已提取事实，只加载少量 anchors；不要因对话被压缩就重新扫描全仓或重读完整历史。
 - 胶囊只保存当前路线索引，不复制 PRD、research、diff 或阶段流水。
 - 胶囊刷新后用 `git status --short` 和必要的 `git check-ignore -v` 确认它不会出现在阶段提交或最终 PR 中。
+- 可选 adapter 可以将 task identity / revision、Git Source Snapshot 和引用 / 规则 revisions 映射为 `$task-continuity/scripts/validate_continuity_state.py` 的通用 JSON，再按 `suggested_gate` 覆盖写 runtime sidecar。核心脚本不理解 `.trellis/` 路径、不修改 task / journal / docs；adapter 也不能把每次校验结果追加成 PRD 或 journal 流水。
 
 ## 官方 Trellis 与 Codex Hooks 组合
 
@@ -51,6 +52,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 
 - `PreCompact`：覆盖保存 Recovery Capsule、Continuity Metadata 与 Git Source Snapshot；失败时显式保持 `SNAPSHOT_REQUIRED`。
 - `PostCompact` 或 `SessionStart(source=compact)`：只注入 `Contract / Checkpoint / DecisionState / Resume`、source / revision match summary、matching-audit count 与必要 locator，并进入 `RESUME_AUDIT`；不要注入完整 metadata ledger、journal、长 diff、完整 rules / system map 或原始日志。
+- 上述恢复入口若能执行 adapter，可先生成通用 JSON 并调用确定性状态校验器；只有 `READY` 才注入并授权 `first_allowed_action`，`SNAPSHOT_REQUIRED` 只返回失配 diagnostics / locator。不要把脚本输出当新的长期 task artifact。
 - `PostToolUse`：只在观察改变 failure signature / acceptance / source identity / Next 时标记 `SNAPSHOT_REQUIRED`，不为每次只读命令写流水。
 - `PreToolUse`：在目标是 `apply_patch` 或可识别的生产写命令且状态不为 `READY` 时阻断；专用 / 托管工具可能绕过本地 hooks，因此技能语义门禁仍是主约束。
 - `Stop`：检查唯一 Next、未映射验收项和 capsule freshness，不自动归档任务或制造 commit。

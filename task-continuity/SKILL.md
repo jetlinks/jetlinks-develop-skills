@@ -16,8 +16,9 @@ Read [`references/task-state-and-recovery-rules.md`](references/task-state-and-r
 5. Maintain a compact model-facing Recovery Capsule with four sections: `Contract`, `Checkpoint`, `DecisionState`, and `Resume`. Keep source digests, reference / rule revisions, audit counters, and full evidence locators in bounded Continuity Metadata beside it. Maintain a separate Source Snapshot for source identity, expected changes, fingerprint strength, and missing layers. These three logical views may share one physical artifact, but machine metadata must not crowd the model-facing recovery index and no view may substitute for another.
 6. Gate continuation with `READY`, `SNAPSHOT_REQUIRED`, and `RESUME_AUDIT`. Any observation that changes the active hypothesis, failure signature, acceptance state, source identity outside the declared in-flight slice, referenced facts, or unique next action enters `SNAPSHOT_REQUIRED`; refresh bounded state before further production mutation. Do not refresh after every command inside one unchanged, declared slice.
 7. After compaction, resume, pause, or handoff, enter `RESUME_AUDIT`: first read the compact capsule, then compare source and referenced revisions through machine metadata. On a match explicitly transition `RESUME_AUDIT -> READY` and make the saved `first_allowed_action` the next action. Reuse extracted facts and `LoadedRules` obligations when revisions are unchanged; expand outward only to explain a recorded mismatch.
-8. Validate at coherent stage boundaries rather than after every operation. Map prior evidence to the current acceptance matrix and reuse it when source, inputs, semantics, environment, and freshness remain valid.
-9. When the environment provides versioned delivery, keep each validated coherent-stage checkpoint local. Publish once and create or update one task-level review only after the whole task passes; use one draft only when the user explicitly requests intermediate sharing.
+8. When a host can export the three logical views as JSON, use [`scripts/validate_continuity_state.py`](scripts/validate_continuity_state.py) as the deterministic fast-path gate. The script validates but never mutates runtime or source state. A host adapter may collect observations and apply its suggested gate; the core skill must still work without the script.
+9. Validate at coherent stage boundaries rather than after every operation. Map prior evidence to the current acceptance matrix and reuse it when source, inputs, semantics, environment, and freshness remain valid.
+10. When the environment provides versioned delivery, keep each validated coherent-stage checkpoint local. Publish once and create or update one task-level review only after the whole task passes; use one draft only when the user explicitly requests intermediate sharing.
 
 ## Required Constraints
 
@@ -36,6 +37,7 @@ Read [`references/task-state-and-recovery-rules.md`](references/task-state-and-r
 - Do not commit after every edit, command, or individual test. A checkpoint represents one coherent, independently accepted stage.
 - Do not push or create / update reviews after every stage. Remote review is a completed-task delivery unit unless the user explicitly requests an intermediate share.
 - Do not assume Trellis, Git, GitHub, pull requests, local files, a particular agent product, or lifecycle hooks. Treat all as optional adapters.
+- Do not make the bundled validators responsible for editing runtime state, source files, VCS state, or remote reviews. They produce diagnostics and metrics; host adapters own collection and authorized mutations.
 - Do not silently install a state backend, modify shared ignore rules, start a service, or create a database merely to persist agent state.
 - When no safe persistent runtime exists, keep bounded state in the active task context and provide a portable Recovery Capsule before handoff.
 
@@ -49,3 +51,10 @@ Read [`references/task-state-and-recovery-rules.md`](references/task-state-and-r
 6. Continuity gate: `READY`, `SNAPSHOT_REQUIRED`, or `RESUME_AUDIT`
 7. Local checkpoint versus remote delivery status
 8. Blockers or residual risk
+
+## Bundled deterministic tools
+
+- [`scripts/validate_continuity_state.py`](scripts/validate_continuity_state.py): validate one JSON Recovery Capsule / Continuity Metadata / Source Snapshot boundary, compare lightweight observed revisions, reject vague or inconsistent actions, and recommend `READY`, `RESUME_AUDIT`, or `SNAPSHOT_REQUIRED`.
+- [`scripts/evaluate_continuity_trace.py`](scripts/evaluate_continuity_trace.py): evaluate normalized host traces, including time to first productive action, repeated reads or checks, full-history / full-workspace recovery, route deviation, idle recovery, runtime leakage into authoritative artifacts, task-irrelevant graph injection, and full-context / capsule / ablation comparisons.
+
+Both programs accept stdin or a JSON file and use only the Python standard library. A Codex, Trellis, VCS, graph, or other host integration converts native state or events into the portable schema; it must not add host paths or product-specific fields to the core contract.

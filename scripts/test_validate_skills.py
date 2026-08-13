@@ -98,7 +98,18 @@ class ValidateSkillsTest(unittest.TestCase):
             (continuity / "references" / "evaluation-cases.md").write_text(
                 "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
                 "空泛 Next 规则 revision 未变化 Continuation 对比协议 "
-                "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交\n",
+                "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交 "
+                "无关代码图注入 scripts/evaluate_continuity_trace.py\n",
+                encoding="utf-8",
+            )
+            (continuity / "scripts").mkdir()
+            (continuity / "scripts" / "validate_continuity_state.py").write_text(
+                "def validate_state():\n    return {'suggested_gate': 'SNAPSHOT_REQUIRED'}\n",
+                encoding="utf-8",
+            )
+            (continuity / "scripts" / "evaluate_continuity_trace.py").write_text(
+                "def evaluate_trace():\n    return {'repeated_read_count': 0, "
+                "'irrelevant_graph_injection_count': 0}\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)

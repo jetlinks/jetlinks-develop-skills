@@ -95,6 +95,8 @@
 
 ## 标准工作流
 
+恢复 / 压缩 / 交接且已有 Recovery Capsule 时，先走 continuation fast path，再进入下面的普通分类：只比较 task contract、Git Source Snapshot、外部引用和 loaded rules 的 identity / revision。全部匹配且 `Next` 为执行级动作时，直接 `RESUME_AUDIT -> READY` 并执行 `first_allowed_action`；默认不重新加载 `$systematic-solving`、`$code-navigation`、交付规则、完整 PRD / research、仓库概览或代码图。只有对应失配确实改变假设、锚点 / owner、影响面或交付边界时，才加载该 focused skill。代码图还必须匹配当前 decision question、task anchor、source fingerprint、目标语言和 task scope。
+
 1. 分类任务
     - 判断这是结构发现、模块创建、CRUD、复杂查询、跨服务调用、实时订阅、事件驱动、国际化、前端页面改造、代码注释、MBean 运维可观测性还是导入/注解确认。
 

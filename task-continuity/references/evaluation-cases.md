@@ -12,6 +12,8 @@
 
 每条轨迹至少记录：连续性状态转换、恢复主视图和机器元数据分别注入的 token / 字符量、首次生产性动作前的读取范围与轮数、是否重读完整外部历史、source fingerprint 组成及强度、anchors 数量、遗漏或误用的长期约束、重复检查、checkpoint / publish / review 次数，以及运行态是否泄漏到权威来源。
 
+优先将真实宿主轨迹适配为 `scripts/evaluate_continuity_trace.py` 的标准事件，而不是人工复述执行过程。核心脚本输出读取、重复验证、空转恢复、路线偏离、运行态泄漏、无关图注入和上下文完整性指标；宿主仍需另外提供 acceptance success、token / 字符量、checkpoint / review 次数等其独有事实。`scripts/validate_continuity_state.py` 的 schema 用例只证明状态门禁，不能替代真实 continuation 评测。
+
 ## Continuation 对比协议
 
 不要只对 Recovery Capsule 做静态字段检查。对一个完整、可继续执行的原始轨迹，在同一 task / source / tool / model 配置下构造至少三种 continuation：
@@ -51,6 +53,7 @@
 | 单一远程交付 | 多个阶段均有本地 checkpoint，总体验收通过 | 整个任务统一 publish，并创建或更新一个 task-level review | 每阶段 push、多个 PR、用 review 评论记流水 |
 | 证据复用 | 阶段测试已覆盖最终等价 source tree，进入交付阶段 | 映射验收矩阵并直接复用，仅补缺失 / 失效项 | 仅因 commit、交付或 PR 阶段机械全量重跑 |
 | 权威文档提升 | 实现阶段产生 fixture 编号、测试数量和一个稳定架构结论 | 只原位提升已确认的稳定架构结论 | 将 phase / slice / fixture / 测试进度写进权威 docs |
+| 无关代码图注入 | 当前任务目标语言 / scope / source fingerprint 与已有图不一致 | 拒绝注入该图，从当前 task anchor 做精确检索或新鲜局部查询 | 因图已存在或节点多就把它当恢复上下文 |
 | 无文件或无 VCS | 宿主只有 task context 和 artifact revision | 使用可复制胶囊及现有 identity，正常降级 | 强制创建文件、Git 仓库、数据库或修改忽略规则 |
 
 ## 通过标准
@@ -65,3 +68,4 @@
 - 每个连贯阶段最多一个本地 checkpoint；每个任务最多一个远程 review。
 - 有效证据重复执行、运行态泄漏到权威来源、伪造 `Checkpoint.Validated` 均为 0。
 - continuation 评测必须同时报告任务成功质量与恢复成本；不能只优化 token 数。关键约束 / 证据 ablation 必须产生可检测的退化，否则对应字段必要性尚未得到证明。
+- 状态校验器对“全部匹配 + 执行级 Next”必须稳定建议 `READY`，对空泛 Next、同边界不一致、用户 / 引用 revision 变化必须稳定拒绝直接实施；轨迹评测器必须能检出重复读取 / 验证、空转恢复、权威文档运行态泄漏及任务不相关代码图。

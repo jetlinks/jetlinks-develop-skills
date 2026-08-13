@@ -48,10 +48,12 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 
 ## 恢复算法
 
+该算法必须先于普通 router 分类运行。若运行态可以导出通用三视图 JSON，可调用 `$task-continuity` 自带的 `scripts/validate_continuity_state.py`，把 Git 复合指纹、task revision、引用 cursor 与 loaded-rules digest 映射为 `observed`。脚本的 `suggested_gate` 只是确定性诊断：适配层负责读取 Git / Trellis 事实并更新运行态，脚本本身不得写文件、提交、发布或替代语义判断。没有脚本执行能力时仍按同一协议人工完成轻量比较，不能回退到完整重读。
+
 1. **进入审计**：压缩、恢复、暂停后继续或交接后先置为 `RESUME_AUDIT`；读取 active task / task contract 与 Recovery Capsule 主视图，确认 task ID、revision、目标、持续约束和执行级唯一下一步。
 2. **对 Git 指纹**：只运行轻量只读检查，比较 branch、HEAD、tracked diff digest、untracked manifest digest、相关 nested source 状态和 expected changed paths；干净 checkpoint 可直接比较 commit / tree。不要仅用 `git diff --stat` 或文件数声明匹配。
 3. **选择恢复范围**：
-   - 指纹匹配：先用机器元数据中的 revision / cursor 对外部引用和 loaded rules 做增量检查；未变化时只返回 match summary 并复用 `extracted facts / obligations`。只读取宿主强制的当前 skill body、`Next` 新需要的 rule 和少量 anchors；若记录了匹配 revision 的 graph flow / edge，直接复用或从该节点做一跳查询。Contract、Checkpoint、DecisionState、Anchors 与 `Next` 一致后显式执行 `RESUME_AUDIT -> READY` 并直接执行 `first allowed action`。
+   - 指纹匹配：先用机器元数据中的 revision / cursor 对外部引用和 loaded rules 做增量检查；未变化时只返回 match summary 并复用 `extracted facts / obligations`。只读取宿主强制的当前 skill body、`Next` 新需要的 rule 和少量 anchors；若记录了匹配 revision 的 graph flow / edge，还必须确认其 decision question、task anchor、目标语言与 scope 匹配，之后才复用或从该节点做一跳查询。Contract、Checkpoint、DecisionState、Anchors 与 `Next` 一致后显式执行 `RESUME_AUDIT -> READY` 并直接执行 `first allowed action`。
    - 引用变化但 Git 指纹匹配：转 `SNAPSHOT_REQUIRED`，优先读取 cursor 之后的增量或紧凑状态，更新引用账本，不重新读取整个引用任务或扫描源码。
    - 指纹部分失配：转 `SNAPSHOT_REQUIRED`，先查看失配 changed paths、最近提交或 task revision，做有界对账并重写三个逻辑视图。
    - task 身份、已确认契约或主分支状态无法建立：停止执行，向用户确认任务归属；不要猜路线。
@@ -87,6 +89,7 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 - 连续匹配恢复后的第一项允许动作必须等于 `first allowed action`；重新加载相同 skills、PRD、系统图或再次宣布“准备实现”不算进展。
 - `SNAPSHOT_REQUIRED` 和尚未完成的 `RESUME_AUDIT` 只允许有界读取、指纹计算和运行态覆盖写，不允许修改生产代码、配置或公共契约。
 - 恢复后需要补充调用方或影响面时，从 capsule 的 symbol / flow / edge anchor 扩一跳；不得因为索引工具可用就重新生成或读取整张图。
+- 已保存图的语言、scope 或 source fingerprint 与当前任务不匹配时，将图视为不可用 evidence，不注入上下文；它不使整个 Source Snapshot 失配，也不授权全仓重建，只从当前 anchor 做最小查询。
 - 若新发现与主任务无关，记录到任务运行态的候选后续项，不顺手实现、不写入权威 docs。
 - 若当前代码已超出已确认范围，先定位是哪一阶段 / 提交引入，再决定保留、回退或询问用户；不要用更多改动掩盖偏航。
 - 恢复胶囊不能伪造“已验证”；每个 `Checkpoint.Validated` 阶段必须能指向测试证据和实际本地提交。集中验证通过但尚未提交的阶段仍属于 `Checkpoint.In-flight`。

@@ -50,6 +50,18 @@ REQUIRED_SKILL_CONTRACTS = {
             "Ablation continuation",
             "陈旧胶囊下修改",
             "用户禁止提交",
+            "无关代码图注入",
+            "scripts/evaluate_continuity_trace.py",
+        ),
+        "scripts/validate_continuity_state.py": (
+            "def validate_state",
+            "suggested_gate",
+            "SNAPSHOT_REQUIRED",
+        ),
+        "scripts/evaluate_continuity_trace.py": (
+            "def evaluate_trace",
+            "repeated_read_count",
+            "irrelevant_graph_injection_count",
         ),
     },
     "systematic-solving": {
@@ -70,8 +82,28 @@ REQUIRED_SKILL_CONTRACTS = {
         ),
         "references/navigation-and-evidence-rules.md": (
             "自适应局部图策略",
+            "任务相关性门禁",
+            "decision_question",
+            "target_languages",
             "source fingerprint",
             "增量刷新受影响节点",
+        ),
+    },
+    "jetlinks-router": {
+        "SKILL.md": (
+            "Before ordinary classification",
+            "first_allowed_action",
+            "Graph size is not evidence of relevance",
+        ),
+        "references/ai-prompt.md": (
+            "continuation fast path",
+            "decision question",
+            "目标语言",
+        ),
+        "references/context-recovery-rules.md": (
+            "validate_continuity_state.py",
+            "suggested_gate",
+            "普通 router 分类",
         ),
     },
 }

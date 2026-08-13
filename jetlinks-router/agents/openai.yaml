@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Router"
   short_description: "JetLinks 复杂任务、代码检索、恢复与交付分层总入口"
-  default_prompt: "使用 $jetlinks-router 分类当前 JetLinks 任务，并按需组合通用 $systematic-solving、$task-continuity、$code-navigation 与领域技能。"
+  default_prompt: "使用 $jetlinks-router 路由当前 JetLinks 任务；恢复场景先用 $task-continuity 完成 continuation fast path 并执行 first_allowed_action，新任务或确有失配时才按需组合 $systematic-solving、$code-navigation、交付与领域技能。"

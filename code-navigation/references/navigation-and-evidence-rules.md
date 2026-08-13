@@ -60,6 +60,23 @@
 
 大仓库或 hub-heavy 结构中主动裁剪重复前向边、低置信邻居和不会改变下一动作的关系；不能因图已生成就全部注入上下文。索引和局部图必须绑定 source fingerprint；源码只发生局部变化且后端支持时增量刷新受影响节点，不在每次编辑或上下文压缩后重建整图。
 
+### 任务相关性门禁
+
+任何代码图查询、缓存复用或上下文注入前，先形成一个可审计的 query envelope：
+
+```text
+decision_question: <这组关系将决定哪个假设、owner、影响面或测试选择>
+task_anchor: <当前 file / symbol / resource / changed item>
+task_source_fingerprint: <当前任务源码身份>
+target_languages: <当前任务实际语言 / artifact 类型>
+task_scope: <workspace / component / package / path boundary>
+relation_kinds: <本次所需的 callers / consumers / hierarchy / domain flow 等>
+```
+
+候选图或索引必须返回自己的 source fingerprint、覆盖语言、文件 / 组件 scope、extractor 与 freshness。出现以下任一情况时不得注入图内容：无法回答 decision question、没有可重定位 task anchor、source fingerprint 不匹配且无法做可信增量刷新、目标语言 / artifact 类型不受支持，或图 scope 与任务边界无交集。此时从当前锚点走精确检索或构建新的有界局部结果；不能因已有图节点多、边密、生成成本高或看起来“全面”而复用。
+
+默认只从精确 symbol / resource 展开一跳高置信生产者、所有者和反向消费者，再由新的决策问题授权下一跳。完整或高密度图只有在多条真实查询证明局部结果持续漏掉会改变动作的关系，并且相对精确检索 / 局部图改善首次有效动作命中率或查询成本时才值得构建或注入。节点数、边数、覆盖文件数本身不是价值指标。
+
 ## 4. 通用多证据图
 
 图不是必需基础设施，而是统一表达查询结果的逻辑模型；可以由内存结构、文本结果、索引文件、关系表或图数据库承载。
@@ -133,6 +150,7 @@ explain_relation(relation_id_or_tuple)
 - 标明截断、未索引、未解析、多个候选和不支持的范围。
 - 默认返回摘要和少量锚点，不返回整仓正文或完整图。
 - 支持从结果继续扩一跳，不要求一次查询解决所有问题。
+- 回显 decision question、task anchor、查询边界和任务相关性判断；不满足语言、scope 或 source fingerprint 门禁的缓存结果不能进入模型上下文。
 
 若后端不提供某个逻辑操作，用可用能力组合出最小结果，并如实降低置信度；不要虚构工具调用或精确度。
 

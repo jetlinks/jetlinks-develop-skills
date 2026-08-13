@@ -1,4 +1,4 @@
 interface:
   display_name: "通用代码导航"
   short_description: "跨语言按环境能力检索代码结构、调用链、依赖与变更影响"
-  default_prompt: "使用 $code-navigation 从当前环境可用的精确证据开始，按精确锚点、已解析符号和高置信局部关系逐层定位代码结构、调用路径和最小影响范围；不要默认加载完整依赖图。"
+  default_prompt: "使用 $code-navigation 从当前环境可用的精确证据开始，按精确锚点、已解析符号和高置信局部关系逐层定位代码结构、调用路径和最小影响范围；代码图必须匹配当前 decision question、task anchor、source fingerprint、目标语言和范围，不默认加载完整依赖图。"

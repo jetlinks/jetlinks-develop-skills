@@ -166,6 +166,17 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 ## 6. 恢复算法与读取预算
 
+恢复快速路径先于普通任务分类与 focused-skill 路由：
+
+```text
+最新指令 + Recovery Capsule 主视图
+  -> 轻量比较 Source Snapshot、contract / reference / rule revisions
+  -> 全部匹配且 Next 可执行：RESUME_AUDIT -> READY -> first_allowed_action
+  -> 任一失配或 Next 不可执行：SNAPSHOT_REQUIRED -> 只对账失配项
+```
+
+匹配恢复默认不加载 `$systematic-solving`、`$code-navigation`、交付 skill、完整 PRD / research / task history 或仓库概览。只有新失败或假设变化需要重建问题模型，anchor / owner / impact 失效需要重新导航，阶段 checkpoint 或最终交付需要交付 skill。技能可用不构成加载理由。
+
 1. 压缩、恢复、暂停后继续或交接后先把状态视为 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束和执行级唯一下一步。
 2. 使用当前环境最轻量的只读能力比较 Source Snapshot、预期 changed items，以及机器元数据中的引用 / 规则 revisions；匹配时不读取完整 metadata、原始证据或外部正文。
 3. 计算当前 `audit_fingerprint`，核对 Contract、Checkpoint、DecisionState、少量 Anchors 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
@@ -173,6 +184,16 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 5. 引用 revision 变化但 source 匹配时转为 `SNAPSHOT_REQUIRED`，先读取引用增量并更新 `extracted_facts`；不因此重新扫描源码。
 6. source 部分失配时转为 `SNAPSHOT_REQUIRED`，先检查失配 changed items 或 artifact，只扩大到解释失配所需的生产者、消费者或所有权边界，并重写三个逻辑视图。
 7. 任务身份、契约或 source state 无法建立时停止实施，向用户请求一个聚焦的决定；不要猜路线。
+
+若宿主能将三个逻辑视图和轻量 observation 导出为 JSON，可以调用 `scripts/validate_continuity_state.py` 执行确定性门禁。核心输入字段采用 `recovery_capsule`、`continuity_metadata`、`source_snapshot` 和可选 `observed`；`observed` 只提供当前 source fingerprint、contract revision、引用 / 规则 revisions 与同边界标识，不复制正文。校验器必须检查：
+
+- `Contract / Checkpoint / DecisionState / Resume`、Continuity Metadata 与 Source Snapshot 是否完整并指向同一 `boundary_id`。
+- `Next` 与 `first_allowed_action` 是否为 mutation / check / blocker，是否含 owner、bounded scope 和 observable signal，以及两者是否同一稳定 action identity。
+- `Checkpoint.Validated` 是否同时有 evidence locator 与真实 checkpoint identity；只通过测试但未 checkpoint 的阶段不能伪装成 validated。
+- partial fingerprint 是否列出 missing layers、expected changed items 与 residual identity risk。
+- source / contract / referenced sources / loaded rules 的轻量 observation 是否匹配；缺 observation 时保持 `RESUME_AUDIT`，失配或 schema 无效时建议 `SNAPSHOT_REQUIRED`。
+
+该脚本只返回 diagnostics、comparisons 和 suggested gate，不写运行态、不修改源码、不阻断工具、不提交或发布。宿主 adapter 负责安全采集 observation、解释 locator，并按授权应用状态转换；不能因为脚本可用就在每条命令后调用。
 
 默认恢复读取预算只包含：最新指令、任务契约、胶囊主视图、复合指纹 / revisions 的比较结果、宿主强制规则和 `Next` 必需的少量 anchors。任何超出预算的读取必须对应一个明确的身份 / 指纹 / 引用 / 锚点失配，并说明它将消除哪项不确定性。恢复后的第一项生产性动作必须直接服务于 `Next`；“继续读取以熟悉项目”不是生产性动作。
 
@@ -227,3 +248,16 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 这些是可选适配，不是技能依赖。自动化必须有界、可审查、可禁用，不能修改问题结论、替代任务证据或把私有数据发送到未授权位置。注入内容设置严格大小上限；溢出时保存 locator 而不是把长日志或完整胶囊反复塞回上下文。
 
 宿主自动化应保存完整有界状态，但 `SessionStart(source=compact)` 或等价入口只注入模型主视图、source strength、revision match summary、匹配计数和 `first_allowed_action`。原始 evidence、完整账本、长规则和完整系统图保持按 locator 拉取。
+
+## 10. 标准化轨迹与评测适配
+
+宿主可把真实执行记录转换成 `scripts/evaluate_continuity_trace.py` 接受的有序 `events`。标准事件至少包含 `type`，按事件种类补充：
+
+- 读取：`target`、`revision/source_fingerprint`、`scope`、可选 `recovery_id`。
+- 生产动作：`action_id`、`turn`、`productive`、`serves_next`、可选 `recovery_id`。
+- 验证：`check_id`、source fingerprint、input revision、environment；等价四元组用于发现无依据重复执行。
+- 权威 artifact 写入：`content_classes`，由 adapter 标记 progress、test counts、todo、attempt history 等运行态类别。
+- 代码图注入：decision question、task anchor、task / graph source fingerprint、目标 / 图语言与范围。
+- 约束与证据消费：稳定 `constraint_ids` / `evidence_ids`，用于 full-context / capsule / ablation 检测真正有害的上下文丢失。
+
+标准化时保留真实发生顺序和来源，不能把事后总结伪造成当时已注入的约束或证据。核心评测器不读取 agent 私有思维，不判定业务代码正确性，也不绑定具体 trace API；adapter 仅做可审计的字段映射。评测在一个阶段或一组 continuation 轨迹完成后集中运行，不在每次工具调用后制造新的验证循环。

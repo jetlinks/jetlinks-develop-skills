@@ -9,20 +9,21 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 
 ## Workflow
 
-1. Classify the task.
-2. Decide whether the task must enter a plan-first gate. Use it for complex, cross-module, multi-subtask, or still-changing requirements.
-3. For a complex or high-uncertainty task, or whenever an attempted fix still fails / moves the failure / requires another special branch, load the generic [`../systematic-solving/SKILL.md`](../systematic-solving/SKILL.md) plus [`references/systematic-solving-jetlinks-rules.md`](references/systematic-solving-jetlinks-rules.md). Establish the task contract, competing hypotheses, local-patch budget, solution level, and validation matrix before further implementation, then map them to JetLinks artifacts and delivery rules.
-4. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md). When `.trellis/` exists also read [`references/trellis-integration-rules.md`](references/trellis-integration-rules.md). Draft the task contract in Trellis or one Git-ignored runtime artifact, wait for explicit confirmation, and only then promote accepted durable decisions into authoritative docs by rewriting their current state in place.
-5. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
-6. For long-running work, plan-state maintenance, evidence reuse, versioned stage delivery, or after context compaction / resume / handoff, load [`../task-continuity/SKILL.md`](../task-continuity/SKILL.md) plus [`references/context-recovery-rules.md`](references/context-recovery-rules.md). Use the generic continuity protocol first, then map it to Trellis and Git facts; keep the model-facing `Contract / Checkpoint / DecisionState / Resume` separate from machine continuity metadata, preserve the cross-compaction audit fingerprint and loaded-rules ledger, and do not restart workspace discovery unless the saved identity or anchors conflict.
-7. When ownership, callers / consumers, domain flows, or change impact are not already bounded by valid anchors, load [`../code-navigation/SKILL.md`](../code-navigation/SKILL.md). For JetLinks-specific Command / Event / Topic / AssetsHolder / protocol / frontend relations, also read [`references/code-navigation-jetlinks-rules.md`](references/code-navigation-jetlinks-rules.md). Pass only confirmed anchors and uncertain relations onward.
-8. Switch to the most relevant domain-focused JetLinks skill.
-9. Combine multiple focused skills when the task crosses boundaries.
-10. Read adjacent production code before changing anything, except when a valid Recovery Capsule or confirmed code-navigation result already narrows the next step to verified anchors.
-11. Implement complete changes, not pseudo-code.
-12. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
-13. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
-14. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
+1. Before ordinary classification, detect compaction / resume / pause continuation / handoff with a Recovery Capsule. Load [`../task-continuity/SKILL.md`](../task-continuity/SKILL.md) and let its fast path compare source, contract, reference, and rule identities. On a match enter `READY` and execute `first_allowed_action`; do not reload the full router, problem model, PRD, research, repository overview, delivery rules, or code graph without a specific recorded mismatch.
+2. Classify a new or mismatched task.
+3. Decide whether the task must enter a plan-first gate. Use it for complex, cross-module, multi-subtask, or still-changing requirements.
+4. For a complex or high-uncertainty task, or whenever an attempted fix still fails / moves the failure / requires another special branch, load the generic [`../systematic-solving/SKILL.md`](../systematic-solving/SKILL.md) plus [`references/systematic-solving-jetlinks-rules.md`](references/systematic-solving-jetlinks-rules.md). Establish the task contract, competing hypotheses, local-patch budget, solution level, and validation matrix before further implementation, then map them to JetLinks artifacts and delivery rules.
+5. For large backend changes or new backend features, read [`references/backend-design-test-driven-rules.md`](references/backend-design-test-driven-rules.md) and [`references/document-placement-rules.md`](references/document-placement-rules.md). When `.trellis/` exists also read [`references/trellis-integration-rules.md`](references/trellis-integration-rules.md). Draft the task contract in Trellis or one Git-ignored runtime artifact, wait for explicit confirmation, and only then promote accepted durable decisions into authoritative docs by rewriting their current state in place.
+6. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
+7. For long-running work, plan-state maintenance, evidence reuse, versioned stage delivery, or a recovery mismatch, combine [`../task-continuity/SKILL.md`](../task-continuity/SKILL.md) with [`references/context-recovery-rules.md`](references/context-recovery-rules.md). Map only the necessary generic state to Trellis and Git facts; do not restart workspace discovery unless saved identity or anchors conflict.
+8. When ownership, callers / consumers, domain flows, or change impact are not already bounded by valid anchors, load [`../code-navigation/SKILL.md`](../code-navigation/SKILL.md). For JetLinks-specific Command / Event / Topic / AssetsHolder / protocol / frontend relations, also read [`references/code-navigation-jetlinks-rules.md`](references/code-navigation-jetlinks-rules.md). Pass only confirmed anchors and uncertain relations onward. Reuse or inject a graph only when its decision question, anchor, source fingerprint, target language, and scope match the current task.
+9. Switch to the most relevant domain-focused JetLinks skill.
+10. Combine multiple focused skills when the task crosses boundaries.
+11. Read adjacent production code before changing anything, except when a valid Recovery Capsule or confirmed code-navigation result already narrows the next step to verified anchors.
+12. Implement complete changes, not pseudo-code.
+13. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
+14. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
+15. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
 
 ## Routing
 
@@ -48,6 +49,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - Do not ignore symlinked modules or linked external subprojects when discovering the workspace.
 - Prefer local examples over generic memory.
 - Use [`../code-navigation/SKILL.md`](../code-navigation/SKILL.md) for bounded structure retrieval when exact anchors are not already known. Discover the active environment's capabilities instead of assuming Git, a search command, language server, index, graph database, or MCP. Load the JetLinks extension only when its domain relations apply.
+- Do not inject a saved or generated code graph unless it answers a current decision question from a precise task anchor and matches the current source fingerprint, target language / artifact type, and task scope. Graph size is not evidence of relevance; default to a one-hop high-confidence local view.
 - When local examples are missing, clearly separate defaults from verified workspace facts.
 - Do not directly implement complex or unstable requirements before clarifying scope, exclusions, risks, and validation with the user.
 - Do not treat plan-first as sufficient protection against iterative patching. For complex tasks, establish falsifiable hypotheses and a validation matrix through `$systematic-solving`; after one failed implementation under the same root-cause hypothesis, stop adding local branches or fallbacks and rebuild the problem model before editing again.
@@ -93,12 +95,12 @@ When analyzing first:
 
 When implementing:
 
-1. Quietly classify and inspect
-2. If backend design-test gate applies, write or update the task contract and test goals in Trellis or the chosen Git-ignored runtime artifact, then wait for user confirmation; only accepted durable changes update authoritative docs
-3. If plan-first applies without backend design gate, output the plan and wait for confirmation
-4. If systematic solving applies, build the evidence-backed problem model and validation matrix before production edits; if stagnation occurs later, stop and rebuild it
-5. On resume, let `$task-continuity` complete `RESUME_AUDIT -> READY`; execute its exact `first_allowed_action` before adjacent analysis. When another relation is needed, continue from capsule symbol / flow anchors instead of scanning the repository again. If this is a repeated matching audit, reuse loaded-rule obligations and the saved code map rather than rereading them. If validation changes the failure signature, partition mixed failures and refresh state before another production patch
-6. Use `$code-navigation` to establish the smallest confirmed producer-boundary-consumer map when the route still lacks ownership, consumers, variants, or test impact; add the JetLinks domain extension only for relevant framework relations
+1. If this is a resume / compaction / handoff and a Recovery Capsule exists, run the continuation fast path before ordinary classification: compare source, contract, reference, and rule identities; on a match transition `RESUME_AUDIT -> READY` and execute `first_allowed_action`. Do not reload the full router, PRD, research, problem model, repository overview, delivery rules, or code graph without a specific mismatch
+2. Otherwise quietly classify and inspect
+3. If backend design-test gate applies, write or update the task contract and test goals in Trellis or the chosen Git-ignored runtime artifact, then wait for user confirmation; only accepted durable changes update authoritative docs
+4. If plan-first applies without backend design gate, output the plan and wait for confirmation
+5. If systematic solving applies, build the evidence-backed problem model and validation matrix before production edits; if stagnation occurs later, stop and rebuild it
+6. Use `$code-navigation` to establish the smallest confirmed producer-boundary-consumer map when the route still lacks ownership, consumers, variants, or test impact; add the JetLinks domain extension only for relevant framework relations. Reuse or inject a graph only when its decision question, task anchor, source fingerprint, language coverage, and scope match the task
 7. Edit the code with the smallest complete change that restores the demonstrated invariant
 8. Run validation at the coherent stage boundary; if it changes acceptance or the next route, enter `SNAPSHOT_REQUIRED` immediately. When the coherent stage passes, create one local stage commit when authorized and then refresh the Recovery Capsule and Git Source Snapshot with its actual hash and next route
 9. Push and create or update the PR only after the entire task meets its acceptance matrix; do not use PR updates as per-step progress records
