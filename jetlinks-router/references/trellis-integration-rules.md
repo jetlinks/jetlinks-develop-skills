@@ -12,8 +12,8 @@
 
 - Trellis task / PRD：当前任务的目标、范围、非目标、验收标准和待确认方案。
 - Trellis task 的 `prd.md` / `design.md` / `implement.md`：分别承载需求契约、技术设计和有界执行方案；文件是否存在以及命名以本地 workflow 为准。它们可以被审查和归档，但不是逐轮运行态。
-- Trellis `.runtime/sessions/` 或本地等价 runtime：官方当前版本用于按 session 隔离 active-task pointer；可以扩展保存有界 Recovery Capsule / Source Snapshot locator，但不要假设 task pointer 本身已经包含复合源码指纹或最新证据。
-- Trellis task log / implement / check runtime：当前阶段、执行上下文、步骤、假设、失败与恢复状态；具体文件名以本地 workflow 为准。智能体滚动维护的当前计划、Recovery Capsule 与 Source Snapshot 必须放不受 Git 管理的 runtime / checkpoint；若本地同名 artifact 受跟踪，则改用 Git-ignored sidecar。
+- Trellis `.runtime/sessions/` 或本地等价 runtime：官方当前版本用于按 session 隔离 active-task pointer；可以扩展保存 Recovery Capsule、Continuity Metadata 与 Source Snapshot locator，但不要假设 task pointer 本身已经包含复合源码指纹或最新证据。
+- Trellis task log / implement / check runtime：当前阶段、执行上下文、步骤、假设、失败与恢复状态；具体文件名以本地 workflow 为准。智能体滚动维护的当前计划、Recovery Capsule、Continuity Metadata 与 Source Snapshot 必须放不受 Git 管理的 runtime / checkpoint；若本地同名 artifact 受跟踪，则改用 Git-ignored sidecar。
 - Trellis research：区分假设所需的来源、关键事实和调研结论。
 - Trellis workspace journal / finish / archive：官方提供跨会话工作日志与生命周期记录，由 Trellis 流程维护；journal 是审计 / 交接记录，不作为每次恢复的首读状态，也不能替代唯一 `Next`。
 - `.trellis/spec/`：稳定、跨任务的项目规范；是否受 Git 管理由本地策略决定。
@@ -25,7 +25,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 
 1. 待确认设计先更新 active task 的需求 / 设计 artifact；不要同时创建 `docs/plans/...` 草稿。
 2. 实时步骤、checkbox、临时下一步、假设账本、失败轨迹和阶段总结进入 Trellis 的运行态 artifact，不进入 PRD 的稳定契约区，更不进入仓库 docs。
-3. 计划阶段切换时压缩当前状态：只保留尚未完成的阶段及其验收信号、一个有效工作假设、最新证据、唯一下一步和阻塞；删除 completed checkbox，不把每轮完成项复制成新总结或计数。最近完成阶段由 Recovery Capsule 的 `Validated` 指针承载。
+3. 计划阶段切换时压缩当前状态：模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`；删除 completed checkbox，不把每轮完成项复制成新总结或计数。最近完成阶段由 `Checkpoint` 的 validated evidence pointer 承载，详细 digest / revisions / evidence ledger 留在 Continuity Metadata。
 4. 用户确认后，只有长期需求、契约、架构 / API / 模块设计或长期风险发生变化，才原位同步权威 docs。纯任务级实施步骤可以只留在 Trellis。
 5. 实现失败且契约未变时，只更新 Trellis 运行态；若证据表明已接受的设计必须改变，先更新 task contract 并重新确认，再同步权威 docs。
 6. 完成时由 Trellis 负责 archive / journal；JetLinks delivery 将测试证据写入 PR / CI，只把稳定结论提升到 canonical docs / spec / skill。
@@ -37,9 +37,9 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 遵循 [`context-recovery-rules.md`](context-recovery-rules.md) 维护有界 Recovery Capsule：
 
 - 优先使用本地 workflow 已声明且不受 Git 管理的 runtime / checkpoint artifact；若其定义的 `info.md` 受 Git 管理，只在其中保留任务契约或稳定技术事实，胶囊改用 Git-ignored sidecar。
-- 在用户确认契约、路线变化、阶段验证并本地提交、暂停 / 交接 / 压缩前更新；阶段提交后写入实际 commit hash，提交前暂停则只标记 in-flight，不在每个命令后写 journal。
-- 验证一旦改变 failure signature、acceptance status 或 `Next`，立即将状态置为 `SNAPSHOT_REQUIRED` 并覆盖更新语义胶囊与 Git Source Snapshot；同一已声明切片内不逐命令更新。
-- 恢复时先读 active task、任务契约、胶囊和复合 Git 指纹；外部任务 / 会话 / research 先比较 revision / cursor，未变化时复用胶囊中的已提取事实，只加载少量 anchors；不要因对话被压缩就重新扫描全仓或重读完整历史。
+- 在用户确认契约、路线变化、阶段验证并本地提交、暂停 / 交接 / 压缩前更新；阶段提交后写入实际 commit hash，提交前暂停则只标记 in-flight，不在每个命令后写 journal。模型主视图与 machine metadata 可以同文件保存，但恢复时必须能先读主视图、只比较 metadata identity。
+- 验证一旦改变 failure signature、acceptance status 或 `Next`，立即将状态置为 `SNAPSHOT_REQUIRED` 并覆盖更新模型主视图、Continuity Metadata 与 Git Source Snapshot；同一已声明切片内不逐命令更新。
+- 恢复时先读 active task、任务契约、胶囊主视图和复合 Git 指纹；外部任务 / 会话 / research 先比较 metadata 中的 revision / cursor，未变化时复用已提取事实，只加载少量 anchors；不要因对话被压缩就重新扫描全仓或重读完整历史。
 - 胶囊只保存当前路线索引，不复制 PRD、research、diff 或阶段流水。
 - 胶囊刷新后用 `git status --short` 和必要的 `git check-ignore -v` 确认它不会出现在阶段提交或最终 PR 中。
 
@@ -49,8 +49,8 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 
 在支持 OpenAI Codex Hooks 的项目中可以增加可选适配；安装或修改 hooks 前先按官方信任模型审查配置：
 
-- `PreCompact`：覆盖保存 Recovery Capsule 与 Git Source Snapshot；失败时显式保持 `SNAPSHOT_REQUIRED`。
-- `PostCompact` 或 `SessionStart(source=compact)`：注入短小的 task、state、Next、anchors locator 与 source strength，并进入 `RESUME_AUDIT`；不要注入 journal、长 diff 或完整日志。
+- `PreCompact`：覆盖保存 Recovery Capsule、Continuity Metadata 与 Git Source Snapshot；失败时显式保持 `SNAPSHOT_REQUIRED`。
+- `PostCompact` 或 `SessionStart(source=compact)`：只注入 `Contract / Checkpoint / DecisionState / Resume`、source / revision match summary、matching-audit count 与必要 locator，并进入 `RESUME_AUDIT`；不要注入完整 metadata ledger、journal、长 diff、完整 rules / system map 或原始日志。
 - `PostToolUse`：只在观察改变 failure signature / acceptance / source identity / Next 时标记 `SNAPSHOT_REQUIRED`，不为每次只读命令写流水。
 - `PreToolUse`：在目标是 `apply_patch` 或可识别的生产写命令且状态不为 `READY` 时阻断；专用 / 托管工具可能绕过本地 hooks，因此技能语义门禁仍是主约束。
 - `Stop`：检查唯一 Next、未映射验收项和 capsule freshness，不自动归档任务或制造 commit。

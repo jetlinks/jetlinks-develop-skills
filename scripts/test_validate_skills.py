@@ -86,17 +86,19 @@ class ValidateSkillsTest(unittest.TestCase):
             (continuity / "SKILL.md").write_text(
                 "---\nname: task-continuity\ndescription: Example.\n---\n\n"
                 "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot "
+                "Contract Checkpoint DecisionState Resume "
                 "consecutive_matching_audits first_allowed_action\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "生产修改 区分检查 真实阻塞\n",
+                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
+                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "evaluation-cases.md").write_text(
                 "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
-                "空泛 Next 规则 revision 未变化 陈旧胶囊下修改 用户禁止提交\n",
+                "空泛 Next 规则 revision 未变化 Continuation 对比协议 "
+                "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
@@ -125,6 +127,60 @@ class ValidateSkillsTest(unittest.TestCase):
             self.assertIn("missing required behavioral contract marker: consecutive_matching_audits", joined)
             self.assertIn("missing required behavioral contract marker: audit_fingerprint", joined)
             self.assertIn("missing required behavioral contract marker: 同一恢复切片连续五次压缩", joined)
+
+    def test_rejects_missing_continuation_evaluation_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            continuity = self.create_skill(root, "task-continuity")
+            (continuity / "SKILL.md").write_text(
+                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
+                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot Contract Checkpoint "
+                "DecisionState Resume consecutive_matching_audits first_allowed_action\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
+                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
+                "生产修改 区分检查 真实阻塞\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "evaluation-cases.md").write_text(
+                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
+                "空泛 Next 规则 revision 未变化 陈旧胶囊下修改 用户禁止提交\n",
+                encoding="utf-8",
+            )
+            result = VALIDATOR.validate_repository(root)
+            joined = "\n".join(result["errors"])
+            self.assertIn("missing required behavioral contract marker: Continuation 对比协议", joined)
+            self.assertIn("missing required behavioral contract marker: Ablation continuation", joined)
+
+    def test_rejects_superseded_continuity_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            continuity = self.create_skill(root, "task-continuity")
+            (continuity / "SKILL.md").write_text(
+                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
+                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot Contract Checkpoint "
+                "DecisionState Resume consecutive_matching_audits first_allowed_action\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
+                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
+                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞\n"
+                "Resume.audit_fingerprint 维护两个有界逻辑视图\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "evaluation-cases.md").write_text(
+                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
+                "空泛 Next 规则 revision 未变化 Continuation 对比协议 Full-context oracle "
+                "Ablation continuation 陈旧胶囊下修改 用户禁止提交\n",
+                encoding="utf-8",
+            )
+            result = VALIDATOR.validate_repository(root)
+            joined = "\n".join(result["errors"])
+            self.assertIn("superseded behavioral contract marker: Resume.audit_fingerprint", joined)
+            self.assertIn("superseded behavioral contract marker: 维护两个有界逻辑视图", joined)
 
 
 if __name__ == "__main__":

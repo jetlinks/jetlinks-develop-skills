@@ -1,4 +1,4 @@
 interface:
   display_name: "Task Continuity"
   short_description: "用状态门禁、复合指纹和少量锚点恢复长任务"
-  default_prompt: "使用 $task-continuity 压缩当前计划，维护 Recovery Capsule、Source Snapshot、规则账本与跨压缩审计指纹；恢复匹配后立即从执行级 Next 继续，阻止重复重读和分析空转，并复用仍有效的验证证据。"
+  default_prompt: "使用 $task-continuity 将恢复主视图压缩为 Contract、Checkpoint、DecisionState、Resume，把源码指纹和规则账本留在机器元数据；恢复匹配后立即从执行级 Next 继续，阻止重复重读和分析空转，并复用仍有效的验证证据。"

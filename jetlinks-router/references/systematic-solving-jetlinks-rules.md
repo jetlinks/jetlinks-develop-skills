@@ -6,7 +6,7 @@
 
 - 先由 `$task-continuity` 建立环境无关状态协议；检测到 `.trellis/` 时，再按 [`trellis-integration-rules.md`](trellis-integration-rules.md) 发现本地 workflow、task、research、runtime 和跟踪策略，不能把某个项目的 Trellis 布局当成全局约定。
 - 没有 Trellis 时，按 [`document-placement-rules.md`](document-placement-rules.md) 复用已有 task / agent runtime；确实没有时才使用经 Git 忽略验证的单一 sidecar。
-- JetLinks Recovery Capsule 与 Source Snapshot 使用 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用语义状态和源码身份分别映射为 route / evidence / Next 与 branch / HEAD / tracked / untracked / nested digest / expected paths；Git 是本仓库交付适配，不是通用技能依赖。
+- JetLinks Recovery Capsule、Continuity Metadata 与 Source Snapshot 使用 [`context-recovery-rules.md`](context-recovery-rules.md) 将模型语义状态、机器 revisions / evidence ledger 和源码身份分别映射为 `Contract / Checkpoint / DecisionState / Resume`、账本 / 审计指纹，以及 branch / HEAD / tracked / untracked / nested digest / expected paths；Git 是本仓库交付适配，不是通用技能依赖。
 - 实时计划、假设、失败和胶囊不进入权威 docs；任务契约和稳定设计是否受跟踪按本地 workflow 与文档归属决定。
 
 ## 2. 领域系统图

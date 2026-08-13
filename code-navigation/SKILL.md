@@ -19,8 +19,9 @@ Read [`references/navigation-and-evidence-rules.md`](references/navigation-and-e
    - Framework / domain extractors for registrations, messages, routes, resources, and other relations generic call graphs cannot resolve.
    - Program analysis or runtime evidence only when cheaper static evidence cannot answer the question.
 4. Start from one explicit anchor and expand the minimum next relation needed for the decision. Bound nodes, paths, files, depth, output size, and uncertainty; expand again only when the result changes the next action.
-5. Confirm high-impact conclusions against the strongest available source: current code, build / package metadata, compiler semantics, tests, or scoped runtime evidence. Treat stale, partial, syntactic, heuristic, and similarity-based results as candidates.
-6. Return a minimal map with stable locators, relation kinds, evidence sources, source fingerprints, confidence, affected consumers, and candidate tests. Pass only these anchors to the active task, domain, recovery, or delivery workflow.
+5. Prefer an adaptive local structure view over an eager repository-wide graph: exact text / path, then resolved symbol relations, then high-confidence local callers / callees / hierarchy / registrations, and only then deeper static or runtime paths. Reuse a fingerprint-matched view across resume and refresh only affected regions when possible.
+6. Confirm high-impact conclusions against the strongest available source: current code, build / package metadata, compiler semantics, tests, or scoped runtime evidence. Treat stale, partial, syntactic, heuristic, and similarity-based results as candidates.
+7. Return a minimal map with stable locators, relation kinds, evidence sources, source fingerprints, confidence, affected consumers, and candidate tests. Pass only these anchors to the active task, domain, recovery, or delivery workflow.
 
 ## Required Constraints
 
@@ -29,6 +30,7 @@ Read [`references/navigation-and-evidence-rules.md`](references/navigation-and-e
 - Do not call every relation “dependency”. Distinguish containment, build dependency, import, reference, inheritance, call, possible dynamic target, registration, message / event flow, data access, routing, test, coverage, and historical co-change.
 - Do not use textual or vector similarity as proof of an exact symbol, call, dependency, coverage, or runtime relationship.
 - Do not read an entire repository or graph when exact anchors or a bounded query can answer the next decision.
+- Do not inject or persist dense structure by default. Large call graphs, forward hub edges, similarity neighbors, and repeated annotations must prove decision value against their context and maintenance cost.
 - Do not stop at the failing file for complex work. Cover the smallest complete producer-boundary-transform-consumer path and the variants relevant to the hypothesis.
 - Preserve uncertainty for dynamic dispatch, dependency injection, proxies, reflection, generated code, runtime registration, and constructed identifiers. Record provenance and confidence and request stronger evidence only when needed.
 - Keep generated indexes, caches, visualizations, and runtime traces outside authoritative source documentation and normal version control unless the active repository explicitly defines another artifact policy.

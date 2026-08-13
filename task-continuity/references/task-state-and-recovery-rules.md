@@ -37,28 +37,42 @@
 - 一个唯一下一动作。
 - 一个阻塞区块；没有则写 `none`。
 
-阶段切换时原位替换：移除完成 checkbox、旧操作列表、被否定假设、重复摘要和累计计数。最近完成边界只在 Recovery Capsule 的 `Validated` 字段保留一个证据指针；审计历史若确实是宿主要求，由宿主的 journal / event log 负责，不能反向膨胀当前计划。
+阶段切换时原位替换：移除完成 checkbox、旧操作列表、被否定假设、重复摘要和累计计数。最近完成边界只在 Recovery Capsule 的 `Checkpoint.Validated` 字段保留一个证据指针；审计历史若确实是宿主要求，由宿主的 journal / event log 负责，不能反向膨胀当前计划。
 
-## 4. Recovery Capsule 与 Source Snapshot
+## 4. Recovery Capsule、机器元数据与 Source Snapshot
 
-维护两个有界逻辑视图。Recovery Capsule 回答“沿哪条路线继续”，Source Snapshot 回答“这些语义状态对应哪一份真实源码 / 制品”。二者可以放在同一物理 artifact，但字段、更新原因和有效性必须可区分；不能用任务摘要代替源码身份，也不能用文件摘要推断当前路线。
+维护三个有界逻辑视图：
 
-Recovery Capsule 是可覆盖写的当前状态索引：
+- **Recovery Capsule** 面向模型，回答“目标和约束是什么、当前沿哪条路线、刚验证到哪里、第一动作是什么”。
+- **Continuity Metadata** 面向宿主或工具，保存源码摘要、引用 / 规则 revisions、证据 locator、审计指纹和计数；恢复正常匹配时只比较，不把全部内容重新注入模型。
+- **Source Snapshot** 回答“语义状态对应哪一份真实源码 / 制品”。
 
-| 字段 | 内容 |
+三者可以位于同一物理 artifact，但必须能独立更新和读取。不能用任务摘要替代源码身份，不能用文件摘要推断当前路线，也不能让机器账本挤占模型恢复后的注意力。
+
+### 模型主视图
+
+Recovery Capsule 只保留四个区块：
+
+| 区块 | 必需内容 |
 | --- | --- |
-| State | `READY`、`SNAPSHOT_REQUIRED` 或 `RESUME_AUDIT`，以及最近一次状态转换原因 |
-| Task | task ID / revision 或等价身份；任务契约 locator |
-| Route | 当前阶段、所用能力 / skills、关键不变量或决策 |
-| Validated | 最近完成阶段、验收信号、证据 locator 与其 source fingerprint |
-| In-flight | 未完成阶段、是否已集中验证、预期 changed items；没有则 `none` |
-| Live evidence | 仍有效的假设、最新区分证据、禁止重试的已否定路线 |
-| Referenced sources | 当前路线依赖的外部 task / thread / issue / research locator、revision / cursor、已提取事实与重读条件 |
-| LoadedRules | 已加载 skill / rule 的 locator、revision / digest、已提取义务和需要重读的条件 |
-| Anchors | 恢复下一步所需的 3–7 个精确 file / symbol / resource / test / rule locator |
-| Next | 一个执行级唯一下一步：类型、精确 owner / locator 或工具动作、有界 changed items / read scope、验收信号 |
-| Resume | `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence` 与 `first_allowed_action` |
-| Blockers | 需要用户、权限或外部状态决定的事项；没有则 `none` |
+| `Contract` | task identity / revision、契约 locator、一句话 observable objective、仍生效的不变量 / 约束、当前 acceptance signals |
+| `Checkpoint` | 当前 phase、最近一个 validated boundary 及 evidence pointer、当前 in-flight slice、expected changed items |
+| `DecisionState` | active hypothesis / chosen decision、最新能区分路线的观察、只保留足以阻止重试的 falsified route、仍需持续 resurfacing 的关键约束 |
+| `Resume` | continuity gate、少量精确 anchors、一个执行级 `Next` / `first_allowed_action`、observable signal、blocker 或 residual risk |
+
+默认只向模型注入这个主视图。它必须一次完整可读，不复制任务全文、整张关系图、长 diff、日志、命令流水、所有已完成阶段、引用正文或全部规则。anchors 默认保持少量且足够定位；`3–7` 是常用预算，不是不能调整的固定常数。
+
+### 机器元数据
+
+Continuity Metadata 保存：
+
+- `source_fingerprint`、strength、missing layers 与 expected changed items。
+- `ReferencedSources` 的 locator、revision / cursor、extracted facts 与重读条件。
+- `LoadedRules` 的 locator、revision / digest、extracted obligations 与重读条件。
+- 验证证据的 locator、输入 / 环境 identity、适用 acceptance 和 freshness。
+- `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence` 与最近 productive action。
+
+宿主无法提供独立机器存储时，可以把 metadata 放在 capsule 后面的折叠区或同一有界 artifact 中；恢复时仍先读主视图，只在 identity / revision 失配或 `Next` 需要时读取相关 metadata 项。
 
 Source Snapshot 至少记录：source / workspace identity、复合 `source_fingerprint`、指纹强度与缺失层、expected changed items、计算该快照的边界或 locator。`source_fingerprint` 使用环境能提供的稳定身份，例如 VCS revision / tree、change-set ID、构建快照、内容摘要、artifact digest 或任务 revision。不能强制某一种实现。若工作区存在未提交或未版本化内容，指纹必须尽可能覆盖内容而不只覆盖名称或数量：
 
@@ -78,7 +92,7 @@ Source Snapshot 至少记录：source / workspace identity、复合 `source_fing
 ReferencedSources:
   - locator: <task / thread / issue / research resource>
     revision: <revision / cursor / updated-at / digest>
-    extracted_facts: [<only facts required by Route or Next>]
+    extracted_facts: [<only facts required by DecisionState or Next>]
     reread_when: <revision changed / fact conflicts / missing decision detail>
 ```
 
@@ -92,7 +106,7 @@ ReferencedSources:
 LoadedRules:
   - locator: <skill or rule resource>
     revision: <version / digest / updated-at>
-    extracted_obligations: [<only obligations required by Route or Next>]
+    extracted_obligations: [<only obligations required by DecisionState or Next>]
     reread_when: <revision changed / route now needs another section / host explicitly requires it>
 ```
 
@@ -108,14 +122,14 @@ LoadedRules:
 
 ### 跨压缩恢复指纹
 
-`Resume.audit_fingerprint` 对当前 task / contract revision、Source Snapshot、ReferencedSources revisions、Route / hypothesis、Anchors 和执行级 `Next` 做稳定摘要；不要把状态名、审计计数或时间戳纳入摘要。它用于识别“仍是同一个恢复切片”，不是替代各组成事实。
+Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revision、Source Snapshot、ReferencedSources revisions、`DecisionState`、Anchors 和执行级 `Next` 做稳定摘要；不要把状态名、审计计数或时间戳纳入摘要。它用于识别“仍是同一个恢复切片”，不是替代各组成事实。
 
 - 每次恢复审计与上次 `audit_fingerprint` 匹配，且其间没有生产修改、产生区分结果的检查、相关新证据或真实阻塞报告时，递增 `consecutive_matching_audits`。
-- 相关 source / reference / contract、Route、hypothesis、Anchors 或 `Next` 因新事实改变时，刷新指纹并把计数重置为 `1`；仅发生上下文压缩、重新表述或重复读取不能清零。
+- 相关 source / reference / contract、`DecisionState`、Anchors 或 `Next` 因新事实改变时，刷新指纹并把计数重置为 `1`；仅发生上下文压缩、重新表述或重复读取不能清零。
 - `last_new_evidence` 只记录最近改变决策或验收状态的 locator；没有则写 `none`。普通恢复核对不冒充新证据。
 - `first_allowed_action` 必须是 `Next` 的可执行实例；它可以是一次有界 mutation、discriminating check 或 blocker report，不能是再次恢复审计或材料重读。
 
-胶囊只保存路线索引，不复制任务全文、整张关系图、长 diff、日志、命令流水或所有已完成步骤。它应小到能在一次恢复中完整读取；引用账本与 anchors 合计仍应保持有界。
+主视图只保存路线索引；引用 / 规则账本与证据细节进入机器元数据。即使物理上共用一个文件，恢复正常匹配时也不能把整个 metadata 区重新注入模型。
 
 ## 5. 连续性状态门禁与刷新边界
 
@@ -123,9 +137,9 @@ LoadedRules:
 
 | 状态 | 含义 | 允许动作 |
 | --- | --- | --- |
-| `READY` | Task、Route、Live evidence、Source Snapshot、引用 / 规则账本和执行级 `Next` 对应同一当前事实 | 执行 `first_allowed_action` 定义的有界实现、区分检查或阻塞报告 |
+| `READY` | Contract、Checkpoint、DecisionState、Source Snapshot 和执行级 Resume 对应同一当前事实；机器元数据 revisions 已匹配 | 执行 `first_allowed_action` 定义的有界实现、区分检查或阻塞报告 |
 | `SNAPSHOT_REQUIRED` | 新事实已经使胶囊或 Source Snapshot 不足以安全决定下一生产动作 | 只做有界只读对账、计算指纹和覆盖写运行态；禁止继续生产修改 |
-| `RESUME_AUDIT` | 刚发生压缩、恢复、暂停后继续或交接，尚未证明保存状态仍对应当前事实 | 按恢复预算核验身份、引用、Route、Anchors 与 `Next`；匹配后转 `READY`，失配则转 `SNAPSHOT_REQUIRED` |
+| `RESUME_AUDIT` | 刚发生压缩、恢复、暂停后继续或交接，尚未证明保存状态仍对应当前事实 | 按恢复预算核验身份、引用、`DecisionState`、Anchors 与 `Next`；匹配后转 `READY`，失配则转 `SNAPSHOT_REQUIRED` |
 
 以下任一事件发生时立即进入 `SNAPSHOT_REQUIRED`，不能等到下一个“成功阶段”再补：
 
@@ -148,25 +162,27 @@ LoadedRules:
 - 准备暂停、交接、主动压缩或预计上下文即将丢失。
 - 外部变化使任务身份、source fingerprint 或锚点失效。
 
-刷新时覆盖旧状态，并使 Recovery Capsule 与 Source Snapshot 指向同一边界。尚未验证的工作只能进入 `In-flight`，不能写成 `Validated`。若宿主有阶段 commit、build、snapshot 或 review ID，可作为证据 locator；通用协议不要求其中任何一种。
+刷新时覆盖旧状态，并使 Recovery Capsule、Continuity Metadata 与 Source Snapshot 指向同一边界。尚未验证的工作只能进入 `Checkpoint.In-flight`，不能写成 `Checkpoint.Validated`。若宿主有阶段 commit、build、snapshot 或 review ID，可作为证据 locator；通用协议不要求其中任何一种。
 
 ## 6. 恢复算法与读取预算
 
-1. 压缩、恢复、暂停后继续或交接后先把状态视为 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule，确认任务身份、目标和执行级唯一下一步。
-2. 使用当前环境最轻量的只读能力比较 Source Snapshot、预期 changed items，以及引用账本中的 revision / cursor。
-3. 计算当前 `audit_fingerprint`，核对 Route、最新 evidence / Attempt、3–7 个 Anchors、LoadedRules 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
+1. 压缩、恢复、暂停后继续或交接后先把状态视为 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束和执行级唯一下一步。
+2. 使用当前环境最轻量的只读能力比较 Source Snapshot、预期 changed items，以及机器元数据中的引用 / 规则 revisions；匹配时不读取完整 metadata、原始证据或外部正文。
+3. 计算当前 `audit_fingerprint`，核对 Contract、Checkpoint、DecisionState、少量 Anchors 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
 4. 指纹、引用和语义状态均匹配时递增或初始化 `consecutive_matching_audits`，显式执行 `RESUME_AUDIT -> READY`，只加载宿主要求的当前 skill body 和 `Next` 新需要的规则，然后立即执行 `first_allowed_action`；不重读 research basis、已提取外部历史、整个任务树或仓库总览。
 5. 引用 revision 变化但 source 匹配时转为 `SNAPSHOT_REQUIRED`，先读取引用增量并更新 `extracted_facts`；不因此重新扫描源码。
-6. source 部分失配时转为 `SNAPSHOT_REQUIRED`，先检查失配 changed items 或 artifact，只扩大到解释失配所需的生产者、消费者或所有权边界，并重写两个逻辑视图。
+6. source 部分失配时转为 `SNAPSHOT_REQUIRED`，先检查失配 changed items 或 artifact，只扩大到解释失配所需的生产者、消费者或所有权边界，并重写三个逻辑视图。
 7. 任务身份、契约或 source state 无法建立时停止实施，向用户请求一个聚焦的决定；不要猜路线。
 
-默认恢复读取预算只包含：最新指令、任务契约、胶囊、复合指纹检查、引用 revision 检查、宿主强制规则和 `Next` 必需的少量 anchors。任何超出预算的读取必须对应一个明确的身份 / 指纹 / 引用 / 锚点失配，并说明它将消除哪项不确定性。恢复后的第一项生产性动作必须直接服务于 `Next`；“继续读取以熟悉项目”不是生产性动作。
+默认恢复读取预算只包含：最新指令、任务契约、胶囊主视图、复合指纹 / revisions 的比较结果、宿主强制规则和 `Next` 必需的少量 anchors。任何超出预算的读取必须对应一个明确的身份 / 指纹 / 引用 / 锚点失配，并说明它将消除哪项不确定性。恢复后的第一项生产性动作必须直接服务于 `Next`；“继续读取以熟悉项目”不是生产性动作。
 
 恢复审计通过后的第一项生产性动作必须服务于胶囊的 `Next` 和验收信号。相邻 TODO、旧方案或新可用工具都不能自动扩大范围。连续匹配恢复按以下止空转门禁处理：
 
 - 第一次允许在默认预算内完成正常审计，随后必须转 `READY`。
-- 第二次且没有 `last_new_evidence` 或生产性动作时，只比较保存的组成事实与当前轻量 identity；禁止完整重读 skills / PRD / research、仓库总览或重建同一系统图，匹配后立即执行 `first_allowed_action`。
-- 第三次及以后仍只有分析时，判定为空转；不能再提出“先恢复 / 再熟悉 / 下一步将实现”。本轮只能执行精确 `Next`、运行一项能区分假设的检查，或明确报告真实阻塞。
+- 默认从第二次且没有 `last_new_evidence` 或生产性动作时，只比较保存的组成事实与当前轻量 identity；禁止完整重读 skills / PRD / research、仓库总览或重建同一系统图，匹配后立即执行 `first_allowed_action`。
+- 默认第三次及以后仍只有分析时判定为空转；不能再提出“先恢复 / 再熟悉 / 下一步将实现”。本轮只能执行精确 `Next`、运行一项能区分假设的检查，或明确报告真实阻塞。
+
+第二 / 第三次门槛是可通过真实轨迹调优的操作默认值，不是论文给出的自然常数。宿主可以按风险调整阈值，但必须保持两个不变量：同一恢复切片不能无限重复消费分析轮次；没有新证据时，后续恢复的读取范围不能扩大。
 
 生产性动作是限定范围内的生产修改、实际产生并记录区分结果的检查，或使任务进入可处理等待状态的真实阻塞报告。重复核对相同 revision、复述设计、重建相同系统图、重新加载相同规则、更新计数或声称“准备实施”都不算。只有用户改变目标、相关 source / reference / contract 漂移、新证据改变路线，或生产性动作已经发生，才按新边界刷新 / 重置停滞状态；压缩本身不能清零。
 
@@ -194,13 +210,13 @@ LoadedRules:
 
 具体分支名、受保护分支、commit 格式、push 权限、review 模板和发布门禁由宿主 / 项目扩展定义，通用技能不硬编码 GitHub、GitLab 或某个仓库策略。
 
-在提供版本化 checkpoint 的环境中，阶段进入 `Validated` 前必须已经创建实际本地 checkpoint，并记录其 identity；只有验证通过但尚未 checkpoint 的阶段仍为 `In-flight(validation=passed)`。checkpoint 之后若 source tree 与被测内容等价，checkpoint metadata 变化本身不使验证证据失效。
+在提供版本化 checkpoint 的环境中，阶段进入 `Checkpoint.Validated` 前必须已经创建实际本地 checkpoint，并记录其 identity；只有验证通过但尚未 checkpoint 的阶段仍为 `Checkpoint.In-flight(validation=passed)`。checkpoint 之后若 source tree 与被测内容等价，checkpoint metadata 变化本身不使验证证据失效。
 
 ## 9. 可选宿主自动化
 
 若宿主提供 lifecycle hooks、checkpoint callbacks 或 equivalent automation，可选择：
 
-- 在压缩前保存有界胶囊与当前 Source Snapshot；保存失败时显式留下 `SNAPSHOT_REQUIRED`，不能伪装成功。
+- 在压缩前保存有界 Recovery Capsule、Continuity Metadata 与当前 Source Snapshot；保存失败时显式留下 `SNAPSHOT_REQUIRED`，不能伪装成功。
 - 在压缩 / 恢复后将状态置为 `RESUME_AUDIT`，只注入胶囊摘要、source strength、`audit_fingerprint`、匹配计数、唯一 `Next` 和 locator。
 - 在停止时检查是否存在执行级唯一下一步、未映射验收项、未说明的失败，或连续匹配恢复后仍只有分析动作。
 - 在工具调用后只采集证据 locator，不把完整输出持续注入上下文。
@@ -209,3 +225,5 @@ LoadedRules:
 - 在宿主确实支持且覆盖目标工具时，阻止 `SNAPSHOT_REQUIRED` / 未完成 `RESUME_AUDIT` 状态下的生产修改；hook 不能覆盖的工具仍由语义门禁负责。
 
 这些是可选适配，不是技能依赖。自动化必须有界、可审查、可禁用，不能修改问题结论、替代任务证据或把私有数据发送到未授权位置。注入内容设置严格大小上限；溢出时保存 locator 而不是把长日志或完整胶囊反复塞回上下文。
+
+宿主自动化应保存完整有界状态，但 `SessionStart(source=compact)` 或等价入口只注入模型主视图、source strength、revision match summary、匹配计数和 `first_allowed_action`。原始 evidence、完整账本、长规则和完整系统图保持按 locator 拉取。

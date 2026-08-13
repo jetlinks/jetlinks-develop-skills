@@ -7,7 +7,7 @@ description: 为 JetLinks 代码变更准备合规交付内容。适用于需要
 
 Read [`references/git-and-pr-rules.md`](references/git-and-pr-rules.md) first.
 
-Use `$task-continuity` as the generic source for plan compression, Recovery Capsule / Source Snapshot semantics, evidence reuse, coherent local checkpoints, and task-level remote delivery. This skill only adds JetLinks branch, commit, test, documentation, comment, observability, and PR-template policy.
+Use `$task-continuity` as the generic source for plan compression, Recovery Capsule / Continuity Metadata / Source Snapshot semantics, evidence reuse, coherent local checkpoints, and task-level remote delivery. This skill only adds JetLinks branch, commit, test, documentation, comment, observability, and PR-template policy.
 
 ## Workflow
 
@@ -17,7 +17,7 @@ Use `$task-continuity` as the generic source for plan compression, Recovery Caps
 4. Read [`references/shell-commit-examples.md`](references/shell-commit-examples.md) when the user wants a ready-to-run command for PowerShell, bash, zsh, or cmd.
 5. Align the commit message with the repository's existing `type(scope): summary` style and clearly separate verified facts from recommended wording.
 6. If the change adds backend functionality or changes existing backend behavior, ensure corresponding unit tests are added or updated before PR preparation.
-7. Work in coherent stages with independent acceptance signals. When a stage is complete, run its batched validation; if the result changes acceptance or the next route, refresh stale continuity state before further production edits. When commits are authorized, create one local commit for the stage, then refresh the Recovery Capsule and Source Snapshot with the actual commit hash and next route. Do not commit every operation or file. If the user forbids commits, retain `In-flight(validation=passed)` with evidence instead of fabricating `Validated`.
+7. Work in coherent stages with independent acceptance signals. When a stage is complete, run its batched validation; if the result changes acceptance or the next route, refresh stale continuity state before further production edits. When commits are authorized, create one local commit for the stage, then refresh the Recovery Capsule, Continuity Metadata, and Source Snapshot with the actual commit hash and next route. Do not commit every operation or file. If the user forbids commits, retain `Checkpoint.In-flight(validation=passed)` with evidence instead of fabricating `Checkpoint.Validated`.
 8. Check whether accepted durable requirements, contracts, architecture, API/module behavior, acceptance semantics, or long-term risks require synchronizing an existing authoritative source. Rewrite stale conclusions in place. Treat README as durable repository/module overview only; keep live task state in Trellis / local runtime and test evidence in PR/CI.
 9. Before creating a ready PR for backend code changes, inspect the touched code for comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md); required comments must exist in code, not only in the PR description.
 10. If the implementation was complex or entered a stagnation gate, verify the `$systematic-solving` outcome plus the JetLinks extension: violated invariant, common root cause or explicit variation axis, removal / retention of special handling, and evidence for the original trigger, a sibling scenario, a boundary / counterexample, and regressions. Report conclusions, not the debugging transcript.

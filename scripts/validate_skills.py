@@ -21,12 +21,19 @@ REQUIRED_SKILL_CONTRACTS = {
             "SNAPSHOT_REQUIRED",
             "RESUME_AUDIT",
             "Source Snapshot",
+            "Contract",
+            "Checkpoint",
+            "DecisionState",
+            "Resume",
             "consecutive_matching_audits",
             "first_allowed_action",
         ),
         "references/task-state-and-recovery-rules.md": (
+            "Continuity Metadata",
             "LoadedRules",
             "audit_fingerprint",
+            "Checkpoint.Validated",
+            "Checkpoint.In-flight",
             "RESUME_AUDIT -> READY",
             "生产修改",
             "区分检查",
@@ -38,6 +45,9 @@ REQUIRED_SKILL_CONTRACTS = {
             "同一恢复切片连续五次压缩",
             "空泛 Next",
             "规则 revision 未变化",
+            "Continuation 对比协议",
+            "Full-context oracle",
+            "Ablation continuation",
             "陈旧胶囊下修改",
             "用户禁止提交",
         ),
@@ -51,6 +61,25 @@ REQUIRED_SKILL_CONTRACTS = {
         "references/evaluation-cases.md": (
             "停滞后再次实施",
             "混合失败批次",
+        ),
+    },
+    "code-navigation": {
+        "SKILL.md": (
+            "adaptive local structure view",
+            "eager repository-wide graph",
+        ),
+        "references/navigation-and-evidence-rules.md": (
+            "自适应局部图策略",
+            "source fingerprint",
+            "增量刷新受影响节点",
+        ),
+    },
+}
+FORBIDDEN_SKILL_CONTRACTS = {
+    "task-continuity": {
+        "references/task-state-and-recovery-rules.md": (
+            "Resume.audit_fingerprint",
+            "维护两个有界逻辑视图",
         ),
     },
 }
@@ -157,6 +186,23 @@ def validate_required_contracts(skill_root: Path) -> list[str]:
     return errors
 
 
+def validate_forbidden_contracts(skill_root: Path) -> list[str]:
+    """Reject superseded contract shapes that would create parallel state schemas."""
+    forbidden_files = FORBIDDEN_SKILL_CONTRACTS.get(skill_root.name)
+    if forbidden_files is None:
+        return []
+    errors: list[str] = []
+    for relative, markers in forbidden_files.items():
+        path = skill_root / relative
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for marker in markers:
+            if marker in text:
+                errors.append(f"{path}: contains superseded behavioral contract marker: {marker}")
+    return errors
+
+
 def iter_files(root: Path) -> dict[str, Path]:
     return {
         str(path.relative_to(root)): path
@@ -206,6 +252,7 @@ def validate_repository(repository_root: Path, mirror_root: Path | None = None) 
             errors.extend(validate_links(markdown, repository_root))
         errors.extend(validate_generic_portability(skill_root))
         errors.extend(validate_required_contracts(skill_root))
+        errors.extend(validate_forbidden_contracts(skill_root))
         if mirror_root is not None:
             errors.extend(validate_mirror(skill_root, mirror_root))
 

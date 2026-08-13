@@ -17,6 +17,7 @@
 ## 3. 真实代码任务与结构检索
 
 - [SWE-bench](https://arxiv.org/abs/2310.06770) 表明真实 issue 通常需要协调多个函数、类和文件并与执行环境交互，复杂任务不能只盯失败文件。
+- [HORIZON](https://arxiv.org/abs/2604.11978) 将长程失败区分为 planning error、history error accumulation、catastrophic forgetting、memory limitation 等机制，并观察到错误会沿依赖步骤累积；这支持按失败机制选择共享根因、执行期计划核验或约束 resurfacing，而不是对所有长任务统一追加反思 / 重试。
 - [AutoCodeRover](https://arxiv.org/abs/2404.05427) 用 AST 级 class / method 搜索与测试定位缩小检索空间；[Agentless](https://arxiv.org/abs/2407.01489) 表明清晰的定位—修复—验证分阶段流程是强基线。
 - [Deterministic Anchoring](https://arxiv.org/abs/2606.26979) 的 2026 研究表明，轻量结构锚点能缩短轨迹、降低跨运行方差，但收益依赖仓库规模和边方向；这支持有界、按需和置信过滤，而不是默认注入整张代码图。
 - [LARGER](https://arxiv.org/abs/2605.16352) 将代码定位表达为 lexical anchor 到高置信局部结构邻域的扩展，并说明这种能力不必依赖外部图数据库或专用图界面。
@@ -32,6 +33,7 @@
 | --- | --- |
 | OpenAI skills | focused 通用核心、渐进披露、真实触发测试 |
 | ReAct / Reflexion / Self-Refine | 每轮由新证据更新假设；失败后先止损重构 |
+| HORIZON | 对失败机制分区；规划、记忆、环境和指令问题采用不同干预 |
 | SWE-bench / AutoCodeRover / Agentless | 有界定位完整路径，不全仓重读 |
 | ACI | 用稳定能力和高密度 locator，避免命令与本机耦合 |
 | Small CLs | 追求最小完整闭环，不追求孤立最小 diff |

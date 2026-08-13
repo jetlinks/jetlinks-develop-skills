@@ -70,7 +70,7 @@ type(scope): summary
 
 1. 确认目标合入分支，例如 `2.12`。
 2. 从该基线分支拉出临时开发分支。
-3. 将任务划分为少量有独立验收信号的连贯阶段；每个阶段完成并集中验证后，在用户允许提交时创建一个本地 commit，再用实际 commit hash 和下一步刷新 Recovery Capsule 与 Source Snapshot。用户禁止提交时保持 `In-flight(validation=passed)` 并记录证据，不伪造 checkpoint。
+3. 将任务划分为少量有独立验收信号的连贯阶段；每个阶段完成并集中验证后，在用户允许提交时创建一个本地 commit，再用实际 commit hash 和下一步刷新 Recovery Capsule、Continuity Metadata 与 Source Snapshot。用户禁止提交时保持 `Checkpoint.In-flight(validation=passed)` 并记录证据，不伪造 checkpoint。
 4. 阶段内部不按命令、文件、步骤或单个小修频繁提交；未完成总体验收前不 push。
 5. 所有阶段和总体验收矩阵完成后，统一 push 临时分支到远端。
 6. 创建或更新一次 PR，base 指向目标版本分支，并用最终事实重写 PR 描述。
@@ -82,9 +82,9 @@ type(scope): summary
 - 该阶段对应一个清晰的不变量、契约切片或可独立评审的能力，不是“改了一个文件”。
 - 生产代码、调用方、测试和必要的权威文档同步已形成最小完整闭环。
 - 该阶段的聚焦验证已通过，或阻塞已明确且用户接受将其作为独立提交。
-- 阶段要进入 `Validated` 前必须已有可引用的本地 commit；提交前的暂停状态只能记为 in-flight。
+- 阶段要进入 `Checkpoint.Validated` 前必须已有可引用的本地 commit；提交前的暂停状态只能记为 `Checkpoint.In-flight`。
 
-阶段事务固定为：完成最小闭环 → 集中验证 → 若结果改变路线先刷新陈旧运行态 → 在用户允许时创建一个本地 commit → 用实际 commit hash、最新 HEAD 和唯一下一步刷新 [`../../jetlinks-router/references/context-recovery-rules.md`](../../jetlinks-router/references/context-recovery-rules.md) 的 Recovery Capsule 与 Source Snapshot。两个区块必须位于不受 Git 管理的 runtime / checkpoint，避免更新 hash 后再次弄脏工作树或形成元数据提交循环。commit 表达该阶段的结果；不要因单个命令成功、一个测试变绿、一处 import 修正或一个文件编辑就提交。
+阶段事务固定为：完成最小闭环 → 集中验证 → 若结果改变路线先刷新陈旧运行态 → 在用户允许时创建一个本地 commit → 用实际 commit hash、最新 HEAD 和唯一下一步刷新 [`../../jetlinks-router/references/context-recovery-rules.md`](../../jetlinks-router/references/context-recovery-rules.md) 的 Recovery Capsule、Continuity Metadata 与 Source Snapshot。三个逻辑视图必须位于不受 Git 管理的 runtime / checkpoint，避免更新 hash 后再次弄脏工作树或形成元数据提交循环。commit 表达该阶段的结果；不要因单个命令成功、一个测试变绿、一处 import 修正或一个文件编辑就提交。
 
 远程操作是整个任务的单一交付事务：
 
