@@ -27,8 +27,10 @@
 | In-flight | 尚未提交阶段的当前状态、是否已集中验证、预期 changed paths；没有则写 `none` |
 | Live evidence | 仍有效的假设、最新区分证据、禁止重试的已否定路线 |
 | Referenced sources | 外部 task / thread / issue / research 的 locator、revision / cursor、已提取事实和重读条件 |
+| Loaded rules | 已加载 focused skill / JetLinks rule 的 locator、revision / digest、已提取义务和重读条件 |
 | Anchors | 恢复下一步所需的 3–7 个精确文件 / symbol / test / 规范路径；可附已确认的 graph flow / edge ID、index revision 及读取原因 |
-| Next | 一个唯一下一步和它要产生的验收信号 |
+| Next | 一个执行级唯一下一步：精确 owner / file / symbol 或工具动作、有界 changed paths / read scope、验收信号 |
+| Resume | 对 task/source/reference/route/anchors/Next 的 `audit fingerprint`、连续匹配次数、最新新证据和 `first allowed action` |
 | Blockers | 尚需用户 / 外部环境决定的事项；没有则写 `none` |
 
 胶囊应能在约 60 行内表达；字段变化时原位替换。不要写命令流水、全部已完成步骤、长 diff、原始日志、会话总结或重复的设计正文。
@@ -52,10 +54,10 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 
 ## 恢复算法
 
-1. **进入审计**：压缩、恢复、暂停后继续或交接后先置为 `RESUME_AUDIT`；读取 active task / task contract 与 Recovery Capsule，确认 task ID、revision、目标和唯一下一步。
+1. **进入审计**：压缩、恢复、暂停后继续或交接后先置为 `RESUME_AUDIT`；读取 active task / task contract 与 Recovery Capsule，确认 task ID、revision、目标和执行级唯一下一步。
 2. **对 Git 指纹**：只运行轻量只读检查，比较 branch、HEAD、tracked diff digest、untracked manifest digest、相关 nested source 状态和 expected changed paths；干净 checkpoint 可直接比较 commit / tree。不要仅用 `git diff --stat` 或文件数声明匹配。
 3. **选择恢复范围**：
-   - 指纹匹配：先用保存的 revision / cursor 对外部引用做增量检查；未变化时复用 `extracted facts`。只读取胶囊列出的当前 focused skill / reference 和 3–7 个 anchors；若记录了匹配 revision 的 graph flow / edge，从该节点做有界查询。Route、Live evidence / Attempt、Anchors 与 `Next` 一致后转 `READY` 并直接继续 `Next`。
+   - 指纹匹配：先用保存的 revision / cursor 对外部引用和 loaded rules 做增量检查；未变化时复用 `extracted facts / obligations`。只读取宿主强制的当前 skill body、`Next` 新需要的 rule 和少量 anchors；若记录了匹配 revision 的 graph flow / edge，直接复用或从该节点做一跳查询。Route、Live evidence / Attempt、Anchors 与 `Next` 一致后显式执行 `RESUME_AUDIT -> READY` 并直接执行 `first allowed action`。
    - 引用变化但 Git 指纹匹配：转 `SNAPSHOT_REQUIRED`，优先读取 cursor 之后的增量或紧凑状态，更新引用账本，不重新读取整个引用任务或扫描源码。
    - 指纹部分失配：转 `SNAPSHOT_REQUIRED`，先查看失配 changed paths、最近提交或 task revision，做有界对账并重写两个区块。
    - task 身份、已确认契约或主分支状态无法建立：停止执行，向用户确认任务归属；不要猜路线。
@@ -63,6 +65,14 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 5. **继续工作**：从唯一 `Next` 开始。不要先重新读取整个 README、全仓目录、所有相邻模块、所有历史文档或已经列为已否定的路线。
 
 默认恢复读取预算为：用户最新指令、active task / contract、Recovery Capsule、复合 Git 指纹、引用 revision / cursor、当前阶段强制规则、3–7 个 anchors。超出预算前必须指出哪个失配需要扩大、要读取的最小范围以及可观察的结束条件。
+
+对 task revision、Git Source Snapshot、引用 revisions、Route / hypothesis、Anchors 与执行级 `Next` 计算稳定 audit fingerprint；状态名、次数和时间戳不参与计算。每次指纹匹配且其间没有生产修改、区分检查结果、新证据或真实阻塞时递增连续匹配次数，压缩不能清零：
+
+- 第一次恢复允许执行正常有界审计。
+- 第二次相同恢复只比较轻量身份，禁止重读完整 router / focused skills / PRD / research、全仓概览或重建同一系统图；匹配后立即执行 `first allowed action`。
+- 第三次仍只有分析即为空转；只能实施精确 `Next`、运行一个能区分假设的检查，或报告具体阻塞。
+
+用户改变目标，或相关 source / reference / contract / Route / Next 因新事实改变时，转 `SNAPSHOT_REQUIRED` 并刷新指纹；重复复述、重复读取或上下文压缩不构成新证据。`Next` 只有“继续实现 / 继续分析 / 熟悉代码”时不得转 `READY`，必须先补成 production mutation、discriminating check 或 blocker，并写清精确范围和观察信号。
 
 ## 允许扩大重读的门槛
 
@@ -78,6 +88,7 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 ## 偏航门禁
 
 - 恢复后的第一项生产改动必须服务于胶囊的 `Next` 和对应验收信号。
+- 连续匹配恢复后的第一项允许动作必须等于 `first allowed action`；重新加载相同 skills、PRD、系统图或再次宣布“准备实现”不算进展。
 - `SNAPSHOT_REQUIRED` 和尚未完成的 `RESUME_AUDIT` 只允许有界读取、指纹计算和运行态覆盖写，不允许修改生产代码、配置或公共契约。
 - 恢复后需要补充调用方或影响面时，从 capsule 的 symbol / flow / edge anchor 扩一跳；不得因为索引工具可用就重新生成或读取整张图。
 - 若新发现与主任务无关，记录到任务运行态的候选后续项，不顺手实现、不写入权威 docs。
@@ -97,9 +108,11 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 - In-flight: `none` / `<stage>`; validation: `<pending / passed>`; expected paths: `<paths>`
 - Live evidence: keep `<hypothesis>` because `<evidence>`; do not retry `<rejected route>`
 - Referenced sources: `<locator>@<revision/cursor>`; facts: `<bounded facts>`; reread when: `<condition>`
+- Loaded rules: `<locator>@<revision/digest>`; obligations: `<bounded obligations>`; reread when: `<condition>`
 - Anchors:
   - `<file-or-symbol>` — `<why needed next>`
-- Next: `<single action>` → `<observable signal>`
+- Next: `<mutation / discriminating check / blocker>`; owner/action: `<exact locator>`; scope: `<changed paths / read boundary>` → `<observable signal>`
+- Resume: fingerprint `<digest>`; matching audits `<count>`; last new evidence `<locator / none>`; first allowed action `<exact action>`
 - Blockers: `none` / `<decision needed>`
 
 ## Git Source Snapshot

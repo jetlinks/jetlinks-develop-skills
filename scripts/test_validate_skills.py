@@ -85,7 +85,35 @@ class ValidateSkillsTest(unittest.TestCase):
             continuity = self.create_skill(root, "task-continuity")
             (continuity / "SKILL.md").write_text(
                 "---\nname: task-continuity\ndescription: Example.\n---\n\n"
+                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot "
+                "consecutive_matching_audits first_allowed_action\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
+                "LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
+                "生产修改 区分检查 真实阻塞\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "evaluation-cases.md").write_text(
+                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
+                "空泛 Next 规则 revision 未变化 陈旧胶囊下修改 用户禁止提交\n",
+                encoding="utf-8",
+            )
+            result = VALIDATOR.validate_repository(root)
+            self.assertEqual([], result["errors"])
+
+    def test_rejects_missing_anti_idle_resume_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            continuity = self.create_skill(root, "task-continuity")
+            (continuity / "SKILL.md").write_text(
+                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
                 "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
+                "LoadedRules\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "evaluation-cases.md").write_text(
@@ -93,7 +121,10 @@ class ValidateSkillsTest(unittest.TestCase):
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
-            self.assertEqual([], result["errors"])
+            joined = "\n".join(result["errors"])
+            self.assertIn("missing required behavioral contract marker: consecutive_matching_audits", joined)
+            self.assertIn("missing required behavioral contract marker: audit_fingerprint", joined)
+            self.assertIn("missing required behavioral contract marker: 同一恢复切片连续五次压缩", joined)
 
 
 if __name__ == "__main__":

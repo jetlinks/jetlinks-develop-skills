@@ -54,8 +54,10 @@ Recovery Capsule 是可覆盖写的当前状态索引：
 | In-flight | 未完成阶段、是否已集中验证、预期 changed items；没有则 `none` |
 | Live evidence | 仍有效的假设、最新区分证据、禁止重试的已否定路线 |
 | Referenced sources | 当前路线依赖的外部 task / thread / issue / research locator、revision / cursor、已提取事实与重读条件 |
+| LoadedRules | 已加载 skill / rule 的 locator、revision / digest、已提取义务和需要重读的条件 |
 | Anchors | 恢复下一步所需的 3–7 个精确 file / symbol / resource / test / rule locator |
-| Next | 一个唯一下一步及其应产生的验收信号 |
+| Next | 一个执行级唯一下一步：类型、精确 owner / locator 或工具动作、有界 changed items / read scope、验收信号 |
+| Resume | `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence` 与 `first_allowed_action` |
 | Blockers | 需要用户、权限或外部状态决定的事项；没有则 `none` |
 
 Source Snapshot 至少记录：source / workspace identity、复合 `source_fingerprint`、指纹强度与缺失层、expected changed items、计算该快照的边界或 locator。`source_fingerprint` 使用环境能提供的稳定身份，例如 VCS revision / tree、change-set ID、构建快照、内容摘要、artifact digest 或任务 revision。不能强制某一种实现。若工作区存在未提交或未版本化内容，指纹必须尽可能覆盖内容而不只覆盖名称或数量：
@@ -82,6 +84,37 @@ ReferencedSources:
 
 恢复时先用最轻量能力比较 revision / cursor。未变化且 `extracted_facts` 足够支撑 `Next` 时直接复用；优先使用增量 wait、delta、page cursor、change feed 或条件读取，而不是重新完整读取。来源发生变化时只读取 revision 之后的增量；只有增量无法解释冲突或定位关键事实时才扩大到历史页面。账本不保存整份外部正文或无关历史。
 
+### 技能加载账本与执行级 Next
+
+为当前路线确实依赖的 skill / rule 维护 `LoadedRules`：
+
+```yaml
+LoadedRules:
+  - locator: <skill or rule resource>
+    revision: <version / digest / updated-at>
+    extracted_obligations: [<only obligations required by Route or Next>]
+    reread_when: <revision changed / route now needs another section / host explicitly requires it>
+```
+
+宿主明确要求本轮完整读取某个 skill body 时必须遵守；该要求不等于重新读取它的全部 references、所有协作 skills、research basis 或项目材料。revision 未变化且已提取义务足够时，复用账本；只加载宿主强制正文、当前 `Next` 新需要的规则，或能解释已记录失配的最小片段。
+
+`Next` 与 `first_allowed_action` 必须可直接执行，并且只能属于以下一种：
+
+1. **生产修改**：指出 owner / file / symbol / resource、限定 expected changed items，并写出完成信号。
+2. **区分检查**：指出精确工具动作或读取范围、它区分的候选，以及不同结果如何改变决策。
+3. **真实阻塞**：指出缺失的权限、用户决定或外部状态，以及解除阻塞所需信号。
+
+“继续实现某阶段”“继续分析”“熟悉代码”“再看看相关材料”不包含边界和可观察信号，不能从 `RESUME_AUDIT` 进入 `READY`。先在 `SNAPSHOT_REQUIRED` 中把它改写为执行级动作。
+
+### 跨压缩恢复指纹
+
+`Resume.audit_fingerprint` 对当前 task / contract revision、Source Snapshot、ReferencedSources revisions、Route / hypothesis、Anchors 和执行级 `Next` 做稳定摘要；不要把状态名、审计计数或时间戳纳入摘要。它用于识别“仍是同一个恢复切片”，不是替代各组成事实。
+
+- 每次恢复审计与上次 `audit_fingerprint` 匹配，且其间没有生产修改、产生区分结果的检查、相关新证据或真实阻塞报告时，递增 `consecutive_matching_audits`。
+- 相关 source / reference / contract、Route、hypothesis、Anchors 或 `Next` 因新事实改变时，刷新指纹并把计数重置为 `1`；仅发生上下文压缩、重新表述或重复读取不能清零。
+- `last_new_evidence` 只记录最近改变决策或验收状态的 locator；没有则写 `none`。普通恢复核对不冒充新证据。
+- `first_allowed_action` 必须是 `Next` 的可执行实例；它可以是一次有界 mutation、discriminating check 或 blocker report，不能是再次恢复审计或材料重读。
+
 胶囊只保存路线索引，不复制任务全文、整张关系图、长 diff、日志、命令流水或所有已完成步骤。它应小到能在一次恢复中完整读取；引用账本与 anchors 合计仍应保持有界。
 
 ## 5. 连续性状态门禁与刷新边界
@@ -90,7 +123,7 @@ ReferencedSources:
 
 | 状态 | 含义 | 允许动作 |
 | --- | --- | --- |
-| `READY` | Task、Route、Live evidence、Source Snapshot、引用账本和唯一 `Next` 对应同一当前事实 | 执行 `Next` 定义的有界读取、实现或验证切片 |
+| `READY` | Task、Route、Live evidence、Source Snapshot、引用 / 规则账本和执行级 `Next` 对应同一当前事实 | 执行 `first_allowed_action` 定义的有界实现、区分检查或阻塞报告 |
 | `SNAPSHOT_REQUIRED` | 新事实已经使胶囊或 Source Snapshot 不足以安全决定下一生产动作 | 只做有界只读对账、计算指纹和覆盖写运行态；禁止继续生产修改 |
 | `RESUME_AUDIT` | 刚发生压缩、恢复、暂停后继续或交接，尚未证明保存状态仍对应当前事实 | 按恢复预算核验身份、引用、Route、Anchors 与 `Next`；匹配后转 `READY`，失配则转 `SNAPSHOT_REQUIRED` |
 
@@ -119,17 +152,23 @@ ReferencedSources:
 
 ## 6. 恢复算法与读取预算
 
-1. 压缩、恢复、暂停后继续或交接后先把状态视为 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule，确认任务身份、目标和唯一下一步。
+1. 压缩、恢复、暂停后继续或交接后先把状态视为 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule，确认任务身份、目标和执行级唯一下一步。
 2. 使用当前环境最轻量的只读能力比较 Source Snapshot、预期 changed items，以及引用账本中的 revision / cursor。
-3. 核对 Route、最新 evidence / Attempt、3–7 个 Anchors 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
-4. 指纹、引用和语义状态均匹配时转为 `READY`，只加载宿主要求的当前 skill body、当前阶段确实需要的 rules 和 anchors，直接执行 `Next`；不重读 research basis、已提取外部历史、整个任务树或仓库总览。
+3. 计算当前 `audit_fingerprint`，核对 Route、最新 evidence / Attempt、3–7 个 Anchors、LoadedRules 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
+4. 指纹、引用和语义状态均匹配时递增或初始化 `consecutive_matching_audits`，显式执行 `RESUME_AUDIT -> READY`，只加载宿主要求的当前 skill body 和 `Next` 新需要的规则，然后立即执行 `first_allowed_action`；不重读 research basis、已提取外部历史、整个任务树或仓库总览。
 5. 引用 revision 变化但 source 匹配时转为 `SNAPSHOT_REQUIRED`，先读取引用增量并更新 `extracted_facts`；不因此重新扫描源码。
 6. source 部分失配时转为 `SNAPSHOT_REQUIRED`，先检查失配 changed items 或 artifact，只扩大到解释失配所需的生产者、消费者或所有权边界，并重写两个逻辑视图。
 7. 任务身份、契约或 source state 无法建立时停止实施，向用户请求一个聚焦的决定；不要猜路线。
 
-默认恢复读取预算只包含：最新指令、任务契约、胶囊、复合指纹检查、引用 revision 检查、当前阶段规则、3–7 个 anchors。任何超出预算的读取必须对应一个明确的身份 / 指纹 / 引用 / 锚点失配，并说明它将消除哪项不确定性。恢复后的第一项生产性动作必须直接服务于 `Next`；“继续读取以熟悉项目”不是生产性动作。
+默认恢复读取预算只包含：最新指令、任务契约、胶囊、复合指纹检查、引用 revision 检查、宿主强制规则和 `Next` 必需的少量 anchors。任何超出预算的读取必须对应一个明确的身份 / 指纹 / 引用 / 锚点失配，并说明它将消除哪项不确定性。恢复后的第一项生产性动作必须直接服务于 `Next`；“继续读取以熟悉项目”不是生产性动作。
 
-恢复审计通过后的第一项生产性动作必须服务于胶囊的 `Next` 和验收信号。相邻 TODO、旧方案或新可用工具都不能自动扩大范围。连续发生第二次压缩时仍重新进入 `RESUME_AUDIT`，但若所有 revision 与指纹未变化，只重复有界审计，不完整重读材料。
+恢复审计通过后的第一项生产性动作必须服务于胶囊的 `Next` 和验收信号。相邻 TODO、旧方案或新可用工具都不能自动扩大范围。连续匹配恢复按以下止空转门禁处理：
+
+- 第一次允许在默认预算内完成正常审计，随后必须转 `READY`。
+- 第二次且没有 `last_new_evidence` 或生产性动作时，只比较保存的组成事实与当前轻量 identity；禁止完整重读 skills / PRD / research、仓库总览或重建同一系统图，匹配后立即执行 `first_allowed_action`。
+- 第三次及以后仍只有分析时，判定为空转；不能再提出“先恢复 / 再熟悉 / 下一步将实现”。本轮只能执行精确 `Next`、运行一项能区分假设的检查，或明确报告真实阻塞。
+
+生产性动作是限定范围内的生产修改、实际产生并记录区分结果的检查，或使任务进入可处理等待状态的真实阻塞报告。重复核对相同 revision、复述设计、重建相同系统图、重新加载相同规则、更新计数或声称“准备实施”都不算。只有用户改变目标、相关 source / reference / contract 漂移、新证据改变路线，或生产性动作已经发生，才按新边界刷新 / 重置停滞状态；压缩本身不能清零。
 
 ## 7. 验证证据生命周期
 
@@ -162,8 +201,8 @@ ReferencedSources:
 若宿主提供 lifecycle hooks、checkpoint callbacks 或 equivalent automation，可选择：
 
 - 在压缩前保存有界胶囊与当前 Source Snapshot；保存失败时显式留下 `SNAPSHOT_REQUIRED`，不能伪装成功。
-- 在压缩 / 恢复后将状态置为 `RESUME_AUDIT`，只注入胶囊摘要、source strength、唯一 `Next` 和 locator。
-- 在停止时检查是否存在唯一下一步、未映射验收项或未说明的失败。
+- 在压缩 / 恢复后将状态置为 `RESUME_AUDIT`，只注入胶囊摘要、source strength、`audit_fingerprint`、匹配计数、唯一 `Next` 和 locator。
+- 在停止时检查是否存在执行级唯一下一步、未映射验收项、未说明的失败，或连续匹配恢复后仍只有分析动作。
 - 在工具调用后只采集证据 locator，不把完整输出持续注入上下文。
 - 用外部来源 revision / cursor 自动维护增量引用账本，未变化时不再次注入完整历史。
 - 在保存前计算宿主可提供的复合 source fingerprint，并对缺失层标记 `partial`。

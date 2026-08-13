@@ -20,7 +20,7 @@
     - 计划只描述怎么推进，不能替代问题模型。复杂 / 高不确定任务还必须切通用 `$systematic-solving` 并加载 [`systematic-solving-jetlinks-rules.md`](systematic-solving-jetlinks-rules.md)，明确可观察目标、不变量、变化轴、竞争假设、区分证据、局部修补预算和验证矩阵，再映射到 JetLinks 制品与交付。
     - 同一根因假设的一次实现仍未通过验收、失败转移到同类场景，或下一步准备新增场景判断 / fallback / retry / mock / 兼容分支时，立即停止编辑并重构假设；下一次生产修改前先写前置 `Attempt`，并把失败分为生产契约、陈旧 oracle、无效 fixture、机械装配或 unresolved，不把整批失败都转成生产补丁。
     - 实时计划与长任务连续性切通用 [`$task-continuity`](../../task-continuity/SKILL.md)，把计划维护成当前状态投影：阶段切换时替换已失效步骤并压缩为当前阶段、剩余事项、有效假设、下一步和阻塞，不逐轮追加完成项或阶段总结。
-    - JetLinks 工作区再按 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用 Recovery Capsule 与 Source Snapshot 映射到 task ID / revision、branch / HEAD、tracked / untracked / nested 内容指纹和 expected paths。验证或证据改变 failure signature、acceptance、source identity 或唯一 `Next` 时先进入 `SNAPSHOT_REQUIRED` 并覆盖刷新；上下文压缩或恢复后进入 `RESUME_AUDIT`，匹配后只读 3–7 个锚点并直接执行 `Next`，禁止重新全仓扫描。
+    - JetLinks 工作区再按 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用 Recovery Capsule 与 Source Snapshot 映射到 task ID / revision、branch / HEAD、tracked / untracked / nested 内容指纹和 expected paths。验证或证据改变 failure signature、acceptance、source identity 或唯一 `Next` 时先进入 `SNAPSHOT_REQUIRED` 并覆盖刷新；上下文压缩或恢复后进入 `RESUME_AUDIT`，匹配后显式转 `READY` 并执行 `first_allowed_action`。跨压缩保留审计指纹、连续匹配计数和规则账本；第二次相同恢复不得重读完整技能集 / PRD 或重建同一系统图，空泛 `Next` 不得进入实施。
 
 3. 后端大改先设计与测试目标，再开发
     - 对较大的后端改动或新功能，必须遵循 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md)。
@@ -108,7 +108,7 @@
     - 先冻结任务契约，建立完整执行路径、竞争假设、区分检查、解法层级和验证矩阵，再允许生产代码编辑。
 
 4. 检索当前工作区
-    - 若已有 Recovery Capsule 或精确 symbol / changed path，先用 `$task-continuity` 核对身份和指纹，再从锚点开始，不重新全仓扫描。
+    - 若已有 Recovery Capsule 或精确 symbol / changed path，先用 `$task-continuity` 核对身份和指纹，再从锚点开始，不重新全仓扫描；若是连续匹配恢复，先执行胶囊中的 mutation / discriminating check / blocker，不再次做相同结构检索。
     - 否则先查看当前工作区实际存在的根目录、构建 / 包配置、聚合模块、资源目录和链接边界，再使用 [`$code-navigation`](../../code-navigation/SKILL.md) 定向查 ownership、引用 / 调用和影响面；涉及 JetLinks 领域流时再读 [`code-navigation-jetlinks-rules.md`](code-navigation-jetlinks-rules.md)。
     - 结构图只返回有界路径、文件 / symbol 锚点、revision、证据来源和置信度；高影响推断边必须回到源码、构建或运行时证据确认。
 

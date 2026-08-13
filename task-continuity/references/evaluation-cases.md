@@ -18,7 +18,12 @@
 | --- | --- | --- | --- |
 | 压缩后无变化恢复 | 有 task、胶囊、强指纹、未变化的外部引用和 3–7 个 anchors | 比较身份与 revision 后直接执行 `Next`；不重扫 workspace | 重读完整 thread / research / README / 任务树，或先做相邻 TODO |
 | 验证失败后立即压缩 | 阶段验证产生新失败签名，改变验收状态与 `Next`，随后立刻压缩 | 验证观察后先进入 `SNAPSHOT_REQUIRED` 并刷新 evidence / Next；恢复进入 `RESUME_AUDIT` 后沿新 Next 继续 | 胶囊仍写旧通过数或旧 Next，恢复后继续旧补丁 |
-| 同阶段连续两次压缩 | 第一次恢复后尚未完成阶段又发生压缩，期间 task/source/reference 未变化 | 两次都做有界 `RESUME_AUDIT`；第二次不扩大到完整重读，首个生产动作仍服务同一 Next | 第二次把压缩当新任务，重读全部 skills / 项目材料 |
+| 同阶段连续两次压缩 | 第一次恢复后尚未完成阶段又发生压缩，期间 task/source/reference/Route/Next 未变化 | 两次都做有界 `RESUME_AUDIT -> READY`；跨压缩递增匹配计数，第二次不扩大读取并立即执行 `first_allowed_action` | 第二次把压缩当新任务，重读全部 skills / 项目材料，或再次只说“下一步将实现” |
+| 同一恢复切片连续五次压缩 | 同一 Slice 连续 3–5 次压缩，期间 source、引用、系统图和 `Next` 均不变且没有生产性动作 | 首次允许有界审计；第二次禁止完整重读；第三次必须执行精确 Next、区分检查或报告真实阻塞，后续分析空转为 0 | 每次重新加载规则 / PRD、重建同一系统图、复述根因并再次承诺下一步 |
+| 空泛 Next | 胶囊的 Next 只有“继续实现 lane / 继续分析 / 熟悉代码” | 拒绝进入 `READY`，先补成 mutation / discriminating check / blocker，包含精确 owner / action、范围与信号 | 把方向性措辞当作可执行动作并允许继续 |
+| 规则 revision 未变化 | 连续恢复依赖相同版本的多个 skill / rules，账本已保存 extracted obligations | 只加载宿主强制 skill body 与 Next 新需要的规则；其他义务直接复用 | 完整重读全部协作技能、references 或 research basis |
+| 新证据重置恢复切片 | 区分检查、source mismatch 或引用增量改变 Route / Anchors / Next | 进入 `SNAPSHOT_REQUIRED`，刷新 `audit_fingerprint`、证据与 Next，新切片计数从 1 开始 | 沿旧 Next 继续，或仅靠重新表述 / 压缩把计数清零 |
+| 用户改变目标 | 连续恢复期间用户实质改变任务目标或验收标准 | 最新指令优先，刷新任务契约与恢复切片，不强制执行旧 `first_allowed_action` | 以防空转为由忽略用户新指令，机械执行旧 Next |
 | 同 HEAD 脏树漂移 | base revision 不变，但 tracked 内容或 untracked 内容改变 | 复合指纹报告失配并只检查失配 items | 仅因 HEAD 和文件数相同就声称匹配 |
 | 同 HEAD 未跟踪内容漂移 | HEAD、untracked 路径与数量均不变，但其中一个文件内容改变 | untracked manifest digest 失配，转 `SNAPSHOT_REQUIRED` 并只对账相关 item | 只比较路径清单或数量，继续使用旧胶囊 |
 | 外部引用增量 | 源码不变，引用 task / thread revision 增加 | 读取 revision / cursor 之后的增量并更新 extracted facts | 完整重读外部历史，或因引用变化重扫源码 |
@@ -40,6 +45,7 @@
 - 复合指纹对 tracked、untracked 或 nested 任一任务相关漂移的识别率为 100%；能力缺失时必须降级为 `partial`。
 - current plan 不保存完成流水；anchors 保持 3–7 个；第一项生产性动作服务于唯一 `Next`。
 - `SNAPSHOT_REQUIRED` 或未完成 `RESUME_AUDIT` 时的生产修改为 0；验证改变路线后未刷新的陈旧胶囊为 0。
-- 匹配恢复后的全 workspace 扫描、外部 revision 未变化时的完整重读均为 0；连续压缩不增加读取范围。
+- 匹配恢复后的全 workspace 扫描、外部 revision 未变化时的完整重读均为 0；连续压缩不增加读取范围；匹配恢复后的完整技能集重读最多首次 1 次、后续为 0。
+- 连续两次相同恢复后仍无生产性动作、相同系统图重建、第三次分析空转和空泛 `Next` 获准实施均为 0；`RESUME_AUDIT -> READY` 后首个允许动作命中精确 `Next` 为 100%。
 - 每个连贯阶段最多一个本地 checkpoint；每个任务最多一个远程 review。
 - 有效证据重复执行、运行态泄漏到权威来源、伪造 `Validated` 均为 0。
