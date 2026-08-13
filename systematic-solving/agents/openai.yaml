@@ -1,4 +1,4 @@
 interface:
   display_name: "Systematic Solving"
-  short_description: "复杂任务根因建模、停滞止损、解法分层与完整验证闭环"
-  default_prompt: "使用 $systematic-solving 对复杂或反复失败的任务建立可证伪的问题模型，并约束实现和验证闭环。"
+  short_description: "复杂任务根因建模、失败分区、停滞止损与验证闭环"
+  default_prompt: "使用 $systematic-solving 对复杂或反复失败的任务建立可证伪的问题模型，分区生产缺陷、陈旧 oracle 与无效 fixture，并约束下一次实现和验证闭环。"

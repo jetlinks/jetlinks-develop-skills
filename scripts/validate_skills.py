@@ -14,6 +14,33 @@ from pathlib import Path
 NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 GENERIC_SKILLS = {"systematic-solving", "task-continuity", "code-navigation"}
+REQUIRED_SKILL_CONTRACTS = {
+    "task-continuity": {
+        "SKILL.md": (
+            "READY",
+            "SNAPSHOT_REQUIRED",
+            "RESUME_AUDIT",
+            "Source Snapshot",
+        ),
+        "references/evaluation-cases.md": (
+            "验证失败后立即压缩",
+            "同阶段连续两次压缩",
+            "陈旧胶囊下修改",
+            "用户禁止提交",
+        ),
+    },
+    "systematic-solving": {
+        "SKILL.md": (
+            "stale consumer / oracle",
+            "invalid fixture / input",
+            "mechanical assembly defect",
+        ),
+        "references/evaluation-cases.md": (
+            "停滞后再次实施",
+            "混合失败批次",
+        ),
+    },
+}
 AUTHOR_LOCAL_PATTERNS = {
     "/Users/": "macOS user absolute path",
     "/home/": "Linux user absolute path",
@@ -99,6 +126,24 @@ def validate_generic_portability(skill_root: Path) -> list[str]:
     return errors
 
 
+def validate_required_contracts(skill_root: Path) -> list[str]:
+    """Keep cross-file behavioral contracts from silently regressing."""
+    required_files = REQUIRED_SKILL_CONTRACTS.get(skill_root.name)
+    if required_files is None:
+        return []
+    errors: list[str] = []
+    for relative, markers in required_files.items():
+        path = skill_root / relative
+        if not path.is_file():
+            errors.append(f"{path}: required behavioral contract file missing")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for marker in markers:
+            if marker not in text:
+                errors.append(f"{path}: missing required behavioral contract marker: {marker}")
+    return errors
+
+
 def iter_files(root: Path) -> dict[str, Path]:
     return {
         str(path.relative_to(root)): path
@@ -147,6 +192,7 @@ def validate_repository(repository_root: Path, mirror_root: Path | None = None) 
         for markdown in sorted(skill_root.rglob("*.md")):
             errors.extend(validate_links(markdown, repository_root))
         errors.extend(validate_generic_portability(skill_root))
+        errors.extend(validate_required_contracts(skill_root))
         if mirror_root is not None:
             errors.extend(validate_mirror(skill_root, mirror_root))
 

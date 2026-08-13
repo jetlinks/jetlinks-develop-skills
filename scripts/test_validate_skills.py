@@ -68,6 +68,33 @@ class ValidateSkillsTest(unittest.TestCase):
             result = VALIDATOR.validate_repository(root)
             self.assertTrue(any("macOS user absolute path" in error for error in result["errors"]))
 
+    def test_rejects_missing_continuity_state_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            self.create_skill(root, "task-continuity")
+            result = VALIDATOR.validate_repository(root)
+            joined = "\n".join(result["errors"])
+            self.assertIn("missing required behavioral contract marker: READY", joined)
+            self.assertIn("required behavioral contract file missing", joined)
+
+    def test_accepts_required_behavioral_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            continuity = self.create_skill(root, "task-continuity")
+            (continuity / "SKILL.md").write_text(
+                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
+                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot\n",
+                encoding="utf-8",
+            )
+            (continuity / "references" / "evaluation-cases.md").write_text(
+                "验证失败后立即压缩 同阶段连续两次压缩 陈旧胶囊下修改 用户禁止提交\n",
+                encoding="utf-8",
+            )
+            result = VALIDATOR.validate_repository(root)
+            self.assertEqual([], result["errors"])
+
 
 if __name__ == "__main__":
     unittest.main()

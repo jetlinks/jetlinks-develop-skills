@@ -6,7 +6,7 @@
 
 - 先由 `$task-continuity` 建立环境无关状态协议；检测到 `.trellis/` 时，再按 [`trellis-integration-rules.md`](trellis-integration-rules.md) 发现本地 workflow、task、research、runtime 和跟踪策略，不能把某个项目的 Trellis 布局当成全局约定。
 - 没有 Trellis 时，按 [`document-placement-rules.md`](document-placement-rules.md) 复用已有 task / agent runtime；确实没有时才使用经 Git 忽略验证的单一 sidecar。
-- JetLinks Recovery Capsule 使用 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用 `Source` 映射为 branch、HEAD、tree / diff 和 changed paths；Git 是本仓库交付适配，不是通用技能依赖。
+- JetLinks Recovery Capsule 与 Source Snapshot 使用 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用语义状态和源码身份分别映射为 route / evidence / Next 与 branch / HEAD / tracked / untracked / nested digest / expected paths；Git 是本仓库交付适配，不是通用技能依赖。
 - 实时计划、假设、失败和胶囊不进入权威 docs；任务契约和稳定设计是否受跟踪按本地 workflow 与文档归属决定。
 
 ## 2. 领域系统图
@@ -27,6 +27,7 @@
 
 - 由相应 JetLinks focused skill 负责 CRUD、响应式、边界、事件、协议、权限、前端和编码规范；`$systematic-solving` 只负责问题模型、停滞止损、解法层级和验证矩阵。
 - 共享能力变化至少验证原场景、一个同类代表、一个反例 / 边界和主要回归；局部缺陷不为凑矩阵而扩成公共框架。
+- 同一验证批次中的失败先分为生产契约缺陷、陈旧 consumer / oracle、无效 fixture、机械装配或 unresolved；只有违反同一 JetLinks 不变量的生产失败进入同一实现切片。
 - 在连贯阶段完成并集中验证后，交给 `$jetlinks-delivery` 创建一个本地 commit，并把实际 commit 与 Git 指纹写入非版本化 Recovery Capsule。
 - 所有阶段与总体验收完成前不 push、不创建或更新 PR；用户明确要求共享中间状态时只更新同一个 draft，不创建步骤 PR。
 - 交付前先映射已有测试证据；tree / diff、相关测试、配置、依赖、base、环境和检查语义未失效的证据直接复用，只补跑缺失、失效或有时效性的范围。

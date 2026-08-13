@@ -4,16 +4,18 @@
 
 ## 先发现本地契约
 
-1. 检查 `.trellis/workflow.md`、`.trellis/config.yaml`、`.trellis/.gitignore` 和相关脚本；本地 Trellis 版本与仓库规则优先。
+1. 检查 `.trellis/workflow.md`、`.trellis/config.yaml`、`.trellis/.gitignore`、`.trellis/.version` 和相关脚本；本地 Trellis 版本与仓库规则优先。若项目使用官方 CLI，先查看 `trellis --version` / 项目更新策略，不未经用户授权直接执行会覆盖模板的 `trellis update`。
 2. 使用项目提供的 current-task 命令识别 active task；没有 active task 时，不猜任务目录、不擅自切换或归档任务。
 3. 用 `git ls-files .trellis`、`git check-ignore -v <artifact>` 和本地配置确认跟踪策略。`.trellis` 可能整体忽略、部分强制跟踪或由 finish 流程提交，不能统一假设。
 
 ## 职责边界
 
 - Trellis task / PRD：当前任务的目标、范围、非目标、验收标准和待确认方案。
-- Trellis task log / implement / check / runtime：当前阶段、执行上下文、步骤、假设、失败与恢复状态；具体文件名以本地 workflow 为准。智能体滚动维护的当前计划与含 commit hash 的 Recovery Capsule 必须放不受 Git 管理的 runtime / checkpoint；若本地同名 artifact 受跟踪，则改用 Git-ignored sidecar。
+- Trellis task 的 `prd.md` / `design.md` / `implement.md`：分别承载需求契约、技术设计和有界执行方案；文件是否存在以及命名以本地 workflow 为准。它们可以被审查和归档，但不是逐轮运行态。
+- Trellis `.runtime/sessions/` 或本地等价 runtime：官方当前版本用于按 session 隔离 active-task pointer；可以扩展保存有界 Recovery Capsule / Source Snapshot locator，但不要假设 task pointer 本身已经包含复合源码指纹或最新证据。
+- Trellis task log / implement / check runtime：当前阶段、执行上下文、步骤、假设、失败与恢复状态；具体文件名以本地 workflow 为准。智能体滚动维护的当前计划、Recovery Capsule 与 Source Snapshot 必须放不受 Git 管理的 runtime / checkpoint；若本地同名 artifact 受跟踪，则改用 Git-ignored sidecar。
 - Trellis research：区分假设所需的来源、关键事实和调研结论。
-- Trellis journal / finish / archive：会话与任务生命周期记录，由 Trellis 流程维护。
+- Trellis workspace journal / finish / archive：官方提供跨会话工作日志与生命周期记录，由 Trellis 流程维护；journal 是审计 / 交接记录，不作为每次恢复的首读状态，也不能替代唯一 `Next`。
 - `.trellis/spec/`：稳定、跨任务的项目规范；是否受 Git 管理由本地策略决定。
 - 仓库 `docs/` / ADR / API 文档：已接受且当前有效的产品与架构事实，不承担 Trellis 运行态。
 
@@ -36,9 +38,26 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 
 - 优先使用本地 workflow 已声明且不受 Git 管理的 runtime / checkpoint artifact；若其定义的 `info.md` 受 Git 管理，只在其中保留任务契约或稳定技术事实，胶囊改用 Git-ignored sidecar。
 - 在用户确认契约、路线变化、阶段验证并本地提交、暂停 / 交接 / 压缩前更新；阶段提交后写入实际 commit hash，提交前暂停则只标记 in-flight，不在每个命令后写 journal。
+- 验证一旦改变 failure signature、acceptance status 或 `Next`，立即将状态置为 `SNAPSHOT_REQUIRED` 并覆盖更新语义胶囊与 Git Source Snapshot；同一已声明切片内不逐命令更新。
 - 恢复时先读 active task、任务契约、胶囊和复合 Git 指纹；外部任务 / 会话 / research 先比较 revision / cursor，未变化时复用胶囊中的已提取事实，只加载少量 anchors；不要因对话被压缩就重新扫描全仓或重读完整历史。
 - 胶囊只保存当前路线索引，不复制 PRD、research、diff 或阶段流水。
 - 胶囊刷新后用 `git status --short` 和必要的 `git check-ignore -v` 确认它不会出现在阶段提交或最终 PR 中。
+
+## 官方 Trellis 与 Codex Hooks 组合
+
+按官方 Trellis `0.6.14`（官方仓库截至 2026-08-11）的文档与实现，Trellis 已提供：task artifacts（`task.json`、PRD / design / implement、research、context manifests）、按 session 隔离的 active-task runtime、workspace journal、从 `workflow.md` 注入状态 breadcrumb，以及多平台 hook / pull 适配。这些能力适合承载任务身份、契约和 locator，但官方 active-task / session context 默认只提供 Git 状态摘要，不等价于本技能要求的 tracked / untracked / nested 内容指纹，也没有内建 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 语义。该版本的 Codex `hooks.json` 当前只注册 `UserPromptSubmit` 与 `SubagentStart`；虽然仓库含 `session-start.py`，但没有开箱注册 `PreCompact`、`PostCompact` 或 `SessionStart`，因此下面的压缩恢复门禁属于明确的可选增强，不能写成 Trellis 现成功能。
+
+在支持 OpenAI Codex Hooks 的项目中可以增加可选适配；安装或修改 hooks 前先按官方信任模型审查配置：
+
+- `PreCompact`：覆盖保存 Recovery Capsule 与 Git Source Snapshot；失败时显式保持 `SNAPSHOT_REQUIRED`。
+- `PostCompact` 或 `SessionStart(source=compact)`：注入短小的 task、state、Next、anchors locator 与 source strength，并进入 `RESUME_AUDIT`；不要注入 journal、长 diff 或完整日志。
+- `PostToolUse`：只在观察改变 failure signature / acceptance / source identity / Next 时标记 `SNAPSHOT_REQUIRED`，不为每次只读命令写流水。
+- `PreToolUse`：在目标是 `apply_patch` 或可识别的生产写命令且状态不为 `READY` 时阻断；专用 / 托管工具可能绕过本地 hooks，因此技能语义门禁仍是主约束。
+- `Stop`：检查唯一 Next、未映射验收项和 capsule freshness，不自动归档任务或制造 commit。
+
+Hook 输出必须有严格大小上限。官方文档说明过大的输出可能溢写到磁盘并降低上下文质量，因此自动化只注入恢复索引与 locator。没有 hooks 的平台继续通过 `$task-continuity` 语义协议和 Trellis 现有 workflow-state / session-start 机制恢复，不降级为完整重读。
+
+官方依据：[`Trellis README / docs`](https://docs.trytrellis.app/zh)、[`Trellis 官方仓库`](https://github.com/mindfold-ai/Trellis)、[`OpenAI Codex Hooks`](https://learn.chatgpt.com/docs/hooks)。
 
 ## 避免双写
 

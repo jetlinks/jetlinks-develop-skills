@@ -44,11 +44,11 @@ jetlinks-develop-skills/
 
 ### `systematic-solving`
 
-用于任意领域复杂、高难度、高不确定性、跨边界或反复失败任务的环境无关系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设。
+用于任意领域复杂、高难度、高不确定性、跨边界或反复失败任务的环境无关系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设。批量验证中的失败会先分为生产契约、陈旧 oracle、无效 fixture、机械装配或 unresolved，避免为了整批变绿把测试 / fixture 问题吸收到生产代码。
 
 ### `task-continuity`
 
-用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。它维护有界 current-state 与 Recovery Capsule，不要求 Trellis、Git、GitHub、本地文件或 hooks；环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
+用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。它分别维护语义 Recovery Capsule 与机器 Source Snapshot，并用 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 门禁阻止陈旧状态下继续修改；不要求 Trellis、Git、GitHub、本地文件或 hooks。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
 
 ### `code-navigation`
 
@@ -208,7 +208,7 @@ Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
 - 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
-- 使用 `$task-continuity` 原位压缩实时计划，维护有界 Recovery Capsule，从 source fingerprint 与少量锚点恢复，并复用仍覆盖当前验收矩阵的验证证据；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
+- 使用 `$task-continuity` 原位压缩实时计划，分别维护语义 Recovery Capsule 与 Source Snapshot；验证改变路线时先刷新，压缩恢复时完成 `RESUME_AUDIT` 后从少量锚点和唯一 `Next` 继续，并复用仍覆盖当前验收矩阵的验证证据；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
 - 使用 `$code-navigation` 先发现当前环境可用的检索能力，再从精确 symbol 或 changed items 出发，有界查询定义、引用、调用、组件 / 领域关系和候选测试；保留关系来源与置信度，不把语义相似度或作者机器上的工具当成精确事实或必需依赖。
 - 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。
 - 使用 `$jetlinks-crud` 为设备管理模块新增一个查询接口，并在自定义接口、复杂校验、权限边界或复杂查询处补必要代码注释。
@@ -436,7 +436,7 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 - 测试命令、覆盖率、集成测试结果等证据优先放 PR 描述或 CI 报告，不为每次运行新增测试报告文档。
 - 经验沉淀先判断是否跨任务稳定；优先更新已有 canonical 来源，不把单次总结转换成 `worklog`，稳定通用后再考虑 knowledge、playbook、prompt 或 skill。
 - 同一主题只维护一个权威来源，避免拆出多个 plan、summary、test-report、worklog 碎片。
-- 上下文压缩、暂停或交接前，在非版本化 Trellis runtime / checkpoint 或本地 Git-ignored 运行态中原位维护有界 Recovery Capsule：task ID / revision、当前路线、已验证阶段 commit、branch / HEAD / changed paths、3–7 个锚点和唯一下一步。恢复时指纹一致则直接继续，不重读全仓。
+- 在非版本化 Trellis runtime / checkpoint 或本地 Git-ignored 运行态中分别维护有界 Recovery Capsule 与 Source Snapshot：task ID / revision、当前路线、证据、已验证阶段 commit、branch / HEAD、tracked / untracked / nested 指纹、expected paths、3–7 个锚点和唯一下一步。验证改变路线时先进入 `SNAPSHOT_REQUIRED` 并刷新；上下文压缩、暂停后继续或交接后进入 `RESUME_AUDIT`，指纹与语义状态一致则直接执行 `Next`，不重读全仓。
 
 PR 中至少应提供这些数据：
 

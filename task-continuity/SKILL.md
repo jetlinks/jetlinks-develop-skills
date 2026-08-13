@@ -13,17 +13,20 @@ Read [`references/task-state-and-recovery-rules.md`](references/task-state-and-r
 2. Discover the active environment's task, checkpoint, workspace-state, source-identity, validation, VCS, and review capabilities. Reuse an existing workflow; do not assume a product, file layout, command, writable artifact, or remote platform.
 3. Separate authoritative sources, the task contract, live runtime state, validation evidence, and reusable knowledge by lifecycle. Never select a destination merely by filename or directory name.
 4. Maintain the plan as a bounded current-state projection: current phase, active hypothesis or decision, remaining stages and their acceptance signals, one next action, and blockers. Replace stale content; do not append completed steps or round summaries.
-5. Maintain a bounded Recovery Capsule with task identity, a source fingerprint that covers in-flight changes, the latest validated boundary, live evidence, an incremental external-reference ledger, 3–7 stable anchors, and one next action. Refresh only at stable boundaries.
-6. After compaction, resume, pause, or handoff, enforce a recovery read budget: verify task and source identity, check referenced-source revisions, then load only the capsule, the current rules, and its anchors. Reuse extracted facts when their reference revision is unchanged; expand outward only to explain a recorded mismatch.
-7. Validate at coherent stage boundaries rather than after every operation. Map prior evidence to the current acceptance matrix and reuse it when source, inputs, semantics, environment, and freshness remain valid.
-8. When the environment provides versioned delivery, keep each validated coherent-stage checkpoint local. Publish once and create or update one task-level review only after the whole task passes; use one draft only when the user explicitly requests intermediate sharing.
+5. Maintain two bounded logical views: a semantic Recovery Capsule for route, evidence, anchors, and one next action; and a machine Source Snapshot for source identity, expected changes, fingerprint strength, and missing layers. They may share one physical artifact, but neither may substitute for the other.
+6. Gate continuation with `READY`, `SNAPSHOT_REQUIRED`, and `RESUME_AUDIT`. Any observation that changes the active hypothesis, failure signature, acceptance state, source identity outside the declared in-flight slice, referenced facts, or unique next action enters `SNAPSHOT_REQUIRED`; refresh bounded state before further production mutation. Do not refresh after every command inside one unchanged, declared slice.
+7. After compaction, resume, pause, or handoff, enter `RESUME_AUDIT`: verify task and source identity, referenced-source revisions, route, anchors, and `Next`, then execute that unique next action. Reuse extracted facts when their revision is unchanged; expand outward only to explain a recorded mismatch.
+8. Validate at coherent stage boundaries rather than after every operation. Map prior evidence to the current acceptance matrix and reuse it when source, inputs, semantics, environment, and freshness remain valid.
+9. When the environment provides versioned delivery, keep each validated coherent-stage checkpoint local. Publish once and create or update one task-level review only after the whole task passes; use one draft only when the user explicitly requests intermediate sharing.
 
 ## Required Constraints
 
 - Do not put live plans, attempts, discarded hypotheses, logs, Recovery Capsules, test reports, review text, or completion timelines into authoritative product, architecture, API, or repository documentation.
 - Do not let the current plan become an audit log. Remove completed checklists, stale alternatives, duplicated summaries, and historical step counts.
 - Do not reconstruct an entire workspace merely because conversation context was compressed. Recover from task identity, source fingerprint, bounded state, and exact anchors first.
+- Do not mutate production state while continuity state is `SNAPSHOT_REQUIRED` or an unresolved `RESUME_AUDIT`. Bounded read-only reconciliation and runtime-state refresh are allowed.
 - Do not treat a base revision plus a dirty-file count as a sufficient fingerprint when uncommitted content exists. Include the strongest available digests for tracked changes, untracked content, nested sources, and expected changed items, or mark the identity as partial.
+- A partial fingerprint permits bounded diagnosis. Before production mutation, reconcile task-relevant missing layers or explicitly record the residual identity risk and the exact mutation scope; never present partial identity as a match.
 - Do not reread a complete external task, thread, issue, research source, or long reference when its saved revision / cursor is unchanged and the facts needed for the next action are already in the reference ledger.
 - Do not claim an in-flight or unverified stage is validated. A validated boundary must point to evidence and the source fingerprint it covers.
 - Do not rerun checks merely because work reached commit, delivery, or review. Run only missing, invalidated, failed, or explicitly time-sensitive checks.
@@ -40,5 +43,6 @@ Read [`references/task-state-and-recovery-rules.md`](references/task-state-and-r
 3. Runtime and authoritative artifact placement
 4. Validated boundary, in-flight state, and evidence reuse decisions
 5. Recovery anchors and fingerprint status
-6. Local checkpoint versus remote delivery status
-7. Blockers or residual risk
+6. Continuity gate: `READY`, `SNAPSHOT_REQUIRED`, or `RESUME_AUDIT`
+7. Local checkpoint versus remote delivery status
+8. Blockers or residual risk

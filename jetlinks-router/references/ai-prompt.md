@@ -18,9 +18,9 @@
     - 计划至少包含目标、范围、不做什么、实施步骤、风险 / 待确认点和验证方式。
     - 简单低风险小任务可在给出简短计划后直接实施。
     - 计划只描述怎么推进，不能替代问题模型。复杂 / 高不确定任务还必须切通用 `$systematic-solving` 并加载 [`systematic-solving-jetlinks-rules.md`](systematic-solving-jetlinks-rules.md)，明确可观察目标、不变量、变化轴、竞争假设、区分证据、局部修补预算和验证矩阵，再映射到 JetLinks 制品与交付。
-    - 同一根因假设的一次实现仍未通过验收、失败转移到同类场景，或下一步准备新增场景判断 / fallback / retry / mock / 兼容分支时，立即停止编辑并重构假设；不要在原计划下面继续追加微补丁。
+    - 同一根因假设的一次实现仍未通过验收、失败转移到同类场景，或下一步准备新增场景判断 / fallback / retry / mock / 兼容分支时，立即停止编辑并重构假设；下一次生产修改前先写前置 `Attempt`，并把失败分为生产契约、陈旧 oracle、无效 fixture、机械装配或 unresolved，不把整批失败都转成生产补丁。
     - 实时计划与长任务连续性切通用 [`$task-continuity`](../../task-continuity/SKILL.md)，把计划维护成当前状态投影：阶段切换时替换已失效步骤并压缩为当前阶段、剩余事项、有效假设、下一步和阻塞，不逐轮追加完成项或阶段总结。
-    - JetLinks 工作区再按 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用 Recovery Capsule 映射到 task ID / revision、branch / HEAD、changed paths。上下文压缩或恢复后只读胶囊列出的 3–7 个锚点；指纹一致时禁止重新全仓扫描。
+    - JetLinks 工作区再按 [`context-recovery-rules.md`](context-recovery-rules.md) 将通用 Recovery Capsule 与 Source Snapshot 映射到 task ID / revision、branch / HEAD、tracked / untracked / nested 内容指纹和 expected paths。验证或证据改变 failure signature、acceptance、source identity 或唯一 `Next` 时先进入 `SNAPSHOT_REQUIRED` 并覆盖刷新；上下文压缩或恢复后进入 `RESUME_AUDIT`，匹配后只读 3–7 个锚点并直接执行 `Next`，禁止重新全仓扫描。
 
 3. 后端大改先设计与测试目标，再开发
     - 对较大的后端改动或新功能，必须遵循 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md)。
@@ -133,7 +133,7 @@
     - 较大后端改动或新功能的交付说明必须引用任务契约路径、用户确认状态、权威文档同步结论和测试目标达成情况。
     - 运行改单涉及的单元测试；涉及数据库、消息、协议、跨模块边界、外部依赖、启动装配或事件链路时再跑集成测试，未触发时写明不适用原因。
     - 输出测试命令、通过数、失败数、跳过数和覆盖率数据。
-    - 每个有独立验收信号的连贯阶段完成并验证后，先创建一个本地 commit，再用实际 commit hash 和下一步刷新恢复胶囊；不要为每个操作、文件或小步骤提交。
+    - 每个有独立验收信号的连贯阶段完成并验证后，若用户允许 checkpoint，再创建一个本地 commit，并用实际 commit hash 和下一步刷新恢复胶囊 / Source Snapshot；用户禁止提交时保留 `In-flight(validation=passed)`，不要伪造 `Validated`。不要为每个操作、文件或小步骤提交。
     - 所有阶段和总体验收矩阵完成后，才统一 push 分支并创建或更新一次 PR。未获用户明确要求时，不为中间步骤创建 draft PR，也不把 PR 描述 / 评论当进度流水。
 
 10. 沉淀

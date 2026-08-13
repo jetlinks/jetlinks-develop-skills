@@ -53,7 +53,7 @@
 ## 5. 资料
 
 - [OpenAI：Build skills](https://developers.openai.com/codex/build-skills)：focused skills、渐进披露、明确触发边界和真实 prompt 测试。
-- [OpenAI：Hooks](https://developers.openai.com/codex/hooks)：生命周期 hook 可用于可选的索引刷新、恢复状态和轨迹采集；这不意味着任何运行时都必须提供 hook。
+- [OpenAI：Hooks](https://learn.chatgpt.com/docs/hooks)：生命周期 hook 可用于可选的索引刷新、恢复状态和轨迹采集；这不意味着任何运行时都必须提供 hook。
 - [SWE-agent / Agent-Computer Interface](https://arxiv.org/abs/2405.15793)：工具接口和高信息密度反馈会直接影响代码代理表现。
 - [AutoCodeRover](https://arxiv.org/abs/2404.05427)：AST 级 class / method 搜索与测试定位可缩小代码搜索空间。
 - [Agentless](https://arxiv.org/abs/2407.01489)：定位—修复—验证的简单分阶段流程可作为强基线。

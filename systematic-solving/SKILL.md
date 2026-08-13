@@ -13,10 +13,11 @@ Read [`references/systematic-solving-rules.md`](references/systematic-solving-ru
 2. Freeze a bounded task contract before implementation: observable outcome, current failure, invariants, variation axes, scope, non-goals, constraints, and acceptance signals. Separate verified facts from assumptions.
 3. Build the smallest sufficient system map across the real path: entry, ownership boundary, data and state transitions, extension points, side effects, and consumers. For code tasks whose path is not already bounded, use `$code-navigation` when available. Inspect the variants relevant to the hypothesis, not only the failing sample.
 4. Maintain competing, falsifiable hypotheses. For each, state the evidence it explains, its prediction, and the cheapest discriminating check. Gather new evidence before choosing a solution level.
-5. Choose the solution level: local correction for a local contract violation; shared abstraction or boundary repair for a shared cause; explicit policy / strategy / capability / configuration for a legitimate variation; user decision for a material scope, architecture, release, or external-contract choice.
-6. Allow at most one unverified local implementation attempt under the same root-cause hypothesis. If its acceptance signal still fails, a sibling fails, or another special branch would be required, stop editing. Replace the current attempt record with expected result, actual failure signature, new evidence, falsified assumption, and one next discriminating check; rebuild the bounded hypotheses and system map before choosing again.
-7. Implement the smallest complete change that restores the invariant for the demonstrated scenario class. Remove obsolete fallback, duplicate compatibility, temporary switches, weakened assertions, and intermediate forms made unnecessary by the canonical solution.
-8. Validate at coherent stage boundaries rather than after every operation. Cover the original trigger, a representative sibling when shared behavior changed, a counterexample or boundary, and relevant regressions. If a check fails, compare its failure signature with the previous one before editing again.
+5. Partition observed failures before combining them: production contract defect, stale consumer / oracle, invalid fixture / input, mechanical assembly defect, or unresolved. Put failures in one implementation slice only when evidence shows they violate the same invariant; a stale expectation or invalid fixture is not evidence for another production workaround.
+6. Choose the solution level: local correction for a local contract violation; shared abstraction or boundary repair for a shared cause; explicit policy / strategy / capability / configuration for a legitimate variation; user decision for a material scope, architecture, release, or external-contract choice.
+7. Allow at most one unverified local implementation attempt under the same root-cause hypothesis. When entering because of stagnation, write the bounded `Attempt` and its falsifiable prediction before the next production behavior change. If its acceptance signal still fails, a sibling fails, or another special branch would be required, stop editing. Replace the attempt with expected result, partitioned actual failure signature, new evidence, falsified assumption, and one next discriminating check; rebuild the bounded hypotheses and system map before choosing again.
+8. Implement the smallest complete change that restores the invariant for the demonstrated scenario class. Remove obsolete fallback, duplicate compatibility, temporary switches, weakened assertions, and intermediate forms made unnecessary by the canonical solution.
+9. Validate at coherent stage boundaries rather than after every operation. Cover the original trigger, a representative sibling when shared behavior changed, a counterexample or boundary, and relevant regressions. If a check fails, partition and compare its failure signature with the previous one before editing again.
 
 ## Required Constraints
 
@@ -24,6 +25,7 @@ Read [`references/systematic-solving-rules.md`](references/systematic-solving-ru
 - Do not make a second patch under an unchanged hypothesis merely because the first was insufficient.
 - Do not let conditionals, fallbacks, mocks, retries, compatibility aliases, hidden switches, or copied implementations substitute for a revised problem model.
 - Do not modify production behavior until the chosen hypothesis has a falsifiable prediction and supporting evidence.
+- Do not make production code absorb a stale test oracle, obsolete consumer assumption, malformed fixture, or mechanical assembly error. Correct each at its owning boundary and retain evidence for any unresolved item.
 - Do not repeatedly run the same failing action or inspect the same surface without stating what new information it can produce.
 - Do not rerun the same check with the same relevant source, inputs, environment, and failure signature. First record which hypothesis the rerun can distinguish or which changed input invalidated the earlier result.
 - Preserve provenance and uncertainty. Do not use a syntactic, inferred, similarity-based, or runtime-scoped relation as stronger evidence than it provides.
@@ -37,9 +39,10 @@ For analysis or replanning:
 1. Task contract and complexity / stagnation trigger
 2. Verified facts, assumptions, and minimal system map
 3. Competing hypotheses and discriminating evidence
-4. Chosen solution level and rejected local patches
-5. Implementation slice and validation matrix
-6. User decision needed, if any
+4. Failure partitions and shared-invariant grouping
+5. Chosen solution level and rejected local patches
+6. Implementation slice and validation matrix
+7. User decision needed, if any
 
 For delivery:
 
