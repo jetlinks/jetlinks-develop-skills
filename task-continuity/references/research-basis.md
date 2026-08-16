@@ -7,6 +7,10 @@
 - [Context as a Tool / Cat](https://arxiv.org/abs/2512.22087) 将长程软件代理上下文分为稳定任务语义、可演化长期记忆和近期高保真交互，并在阶段边界主动折叠历史；其 SWE-bench Verified 实验支持“稳定契约 + 可演化决策状态 + 近期关键观察”的模型主视图，而不是 append-only 历史或固定阈值通用摘要。
 - [ACON](https://arxiv.org/abs/2510.00615) 用完整上下文成功而压缩上下文失败的成对轨迹优化压缩指南，指出长任务摘要必须保留因果关系、环境状态、前置条件和未来决策线索。这支持用 continuation 成功率和遗漏约束评测恢复胶囊，而不只检查长度或字段存在。
 - [HORIZON](https://arxiv.org/abs/2604.11978) 在跨领域长程轨迹中区分 planning error、history error accumulation、catastrophic forgetting 与 memory limitation，并指出长程难度不能只按动作数定义。这支持保存长期约束、最新转折证据和可执行 next，同时对恢复后偏航做轨迹级诊断。
+- [ReAct](https://arxiv.org/abs/2210.03629) 与 [CRITIC](https://arxiv.org/abs/2305.11738) 支持用外部观察更新行动；[Large Language Models Cannot Self-Correct Reasoning Yet](https://arxiv.org/abs/2310.01798) 则说明缺少外部反馈的内在纠正可能退化。这支持在 `DecisionState` 保存观察结果和证据 locator，而不是把模型反思当作恢复事实。
+- [Lost in the Middle](https://arxiv.org/abs/2307.03172)、[MemGPT](https://arxiv.org/abs/2310.08560) 与 [ReSum](https://arxiv.org/abs/2509.13313) 分别支持长上下文关键信息利用会退化、分层记忆和周期摘要；ReSum 同时指出普通 agent 未必天然适配压缩上下文。这支持通过 continuation 与 ablation 评测恢复胶囊，不把摘要存在本身视为成功。
+- [Diagnosis Before Recovery](https://arxiv.org/abs/2608.11772) 主张先诊断失败、再选择恢复接口；[AgentLens](https://arxiv.org/abs/2607.06624) 和 [ATOBench](https://arxiv.org/abs/2608.12996) 强调轨迹中的验证、恢复、停止和报告链。它们均为 2026 预印本，这里只据此增加观察有效性与轨迹因果评测，不采用领域特定 taxonomy 或固定阈值。
+- [When and How Context Rot Appears in Coding Agents](https://arxiv.org/abs/2607.17937) 的单项白盒研究发现详细外部 checklist 优于泛化自检，并同时警告不存在普适上下文长度阈值。这支持把关键观察门禁交给可选确定性校验器，同时保持阈值由跨领域轨迹调优。
 - [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) 区分 thread-scoped checkpoint 与 cross-thread store；[Temporal Workflows](https://docs.temporal.io/workflows) 以事件历史重建执行状态并在 replay 时复用已记录的 activity 结果。这些成熟系统实践支持把实时 checkpoint、长期知识与验证证据分层，并按 identity 复用已有结果。
 - [Google Engineering Practices：Small CLs](https://google.github.io/eng-practices/review/developer/small-cls.html) 强调小而自包含的逻辑变更，支持“连贯阶段验证后本地 checkpoint”，而不是每个操作提交。
 - Rothermel 与 Harrold 的 [安全回归测试选择](https://doi.org/10.1145/248233.248262) 以变更影响关系选择可能受影响的测试，支持先映射验收矩阵再补跑失效范围。

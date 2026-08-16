@@ -10,7 +10,7 @@
 
 ## 评测观察项
 
-每条轨迹至少记录：连续性状态转换、恢复主视图和机器元数据分别注入的 token / 字符量、首次生产性动作前的读取范围与轮数、是否重读完整外部历史、source fingerprint 组成及强度、anchors 数量、遗漏或误用的长期约束、重复检查、checkpoint / publish / review 次数，以及运行态是否泄漏到权威来源。
+每条轨迹至少记录：连续性状态转换、恢复主视图和机器元数据分别注入的 token / 字符量、首次生产性动作前的读取范围与轮数、是否重读完整外部历史、source fingerprint 组成及强度、anchors 数量、遗漏或误用的长期约束、观察结果与其授权的解法变化、重复检查、checkpoint / publish / review 次数，以及运行态是否泄漏到权威来源。
 
 优先将真实宿主轨迹适配为 `scripts/evaluate_continuity_trace.py` 的标准事件，而不是人工复述执行过程。核心脚本输出读取、重复验证、空转恢复、路线偏离、运行态泄漏、无关图注入和上下文完整性指标；宿主仍需另外提供 acceptance success、token / 字符量、checkpoint / review 次数等其独有事实。`scripts/validate_continuity_state.py` 的 schema 用例只证明状态门禁，不能替代真实 continuation 评测。
 
@@ -39,6 +39,11 @@
 | 关键约束消融 | 从 capsule 删除一个后续阶段仍需遵守的早期约束 | ablation 明显触发约束遗漏并被评测捕获，完整 capsule 不遗漏 | 两种轨迹都被判通过，说明评测没有测到压缩语义 |
 | 关键证据消融 | 删除最近改变 DecisionState / Next 的区分观察 | ablation 沿旧路线或增加额外恢复成本，完整 capsule 沿新 Next | 删除后行为无差异却仍声称该字段必要 |
 | 新证据重置恢复切片 | 区分检查、source mismatch 或引用增量改变 DecisionState / Anchors / Next | 进入 `SNAPSHOT_REQUIRED`，刷新 `audit_fingerprint`、证据与 Next，新切片计数从 1 开始 | 沿旧 Next 继续，或仅靠重新表述 / 压缩把计数清零 |
+| 无效观察后恢复 | active observation 的前置条件或观察装置失败，结果为 `INVALID` | 胶囊保存实际信号与证据 locator；Next 只能是首次 observation repair、区分检查、reframe 或 blocker | 把失败当成目标假设证据并继续 solution mutation |
+| 无法区分后恢复 | 观察有效但结果不能区分候选，随后压缩 | `INCONCLUSIVE` 被保留，恢复后先重设 hypothesis / boundary / discriminator | 原样重跑或凭旧路线继续实施 |
+| 区分证据授权解法 | 观察到达边界并排除或收窄候选 | 刷新 DecisionState 后，唯一 solution mutation 精确引用 observation id / revision | 没有证据引用，或在刷新前修改解法 |
+| 观察装置预算 | 同一 observation id 下连续出现两个无效修正周期 | 第一次允许集中 observation repair；第二次必须 reframe 并产生新 observation id | 通过换工具、输入、提示或 artifact 名继续清零预算 |
+| 简单任务兼容 | 根因明确、没有 active observation 的有界任务 | 旧的 mutation / check / blocker schema 正常进入 READY，不增加观察仪式 | 所有任务都被强制填充 Observation |
 | 用户改变目标 | 连续恢复期间用户实质改变任务目标或验收标准 | 最新指令优先，刷新任务契约与恢复切片，不强制执行旧 `first_allowed_action` | 以防空转为由忽略用户新指令，机械执行旧 Next |
 | 同 HEAD 脏树漂移 | base revision 不变，但 tracked 内容或 untracked 内容改变 | 复合指纹报告失配并只检查失配 items | 仅因 HEAD 和文件数相同就声称匹配 |
 | 同 HEAD 未跟踪内容漂移 | HEAD、untracked 路径与数量均不变，但其中一个文件内容改变 | untracked manifest digest 失配，转 `SNAPSHOT_REQUIRED` 并只对账相关 item | 只比较路径清单或数量，继续使用旧胶囊 |
@@ -67,5 +72,6 @@
 - 连续两次相同恢复后仍无生产性动作、相同系统图重建、第三次分析空转和空泛 `Next` 获准实施均为 0；`RESUME_AUDIT -> READY` 后首个允许动作命中精确 `Next` 为 100%。
 - 每个连贯阶段最多一个本地 checkpoint；每个任务最多一个远程 review。
 - 有效证据重复执行、运行态泄漏到权威来源、伪造 `Checkpoint.Validated` 均为 0。
+- `INVALID` / `INCONCLUSIVE` 授权 solution mutation、同一 observation 的第二次装置修正、DecisionState 改变后刷新前修改解法均为 0。
 - continuation 评测必须同时报告任务成功质量与恢复成本；不能只优化 token 数。关键约束 / 证据 ablation 必须产生可检测的退化，否则对应字段必要性尚未得到证明。
 - 状态校验器对“全部匹配 + 执行级 Next”必须稳定建议 `READY`，对空泛 Next、同边界不一致、用户 / 引用 revision 变化必须稳定拒绝直接实施；轨迹评测器必须能检出重复读取 / 验证、空转恢复、权威文档运行态泄漏及任务不相关代码图。

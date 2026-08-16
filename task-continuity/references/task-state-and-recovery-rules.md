@@ -57,7 +57,7 @@ Recovery Capsule 只保留四个区块：
 | --- | --- |
 | `Contract` | task identity / revision、契约 locator、一句话 observable objective、仍生效的不变量 / 约束、当前 acceptance signals |
 | `Checkpoint` | 当前 phase、最近一个 validated boundary 及 evidence pointer、当前 in-flight slice、expected changed items |
-| `DecisionState` | active hypothesis / chosen decision、最新能区分路线的观察、只保留足以阻止重试的 falsified route、仍需持续 resurfacing 的关键约束 |
+| `DecisionState` | active hypothesis / chosen decision、最新能区分路线的观察、只保留足以阻止重试的 falsified route、仍需持续 resurfacing 的关键约束；系统性求解存在 active observation 时再保存其紧凑状态 |
 | `Resume` | continuity gate、少量精确 anchors、一个执行级 `Next` / `first_allowed_action`、observable signal、blocker 或 residual risk |
 
 默认只向模型注入这个主视图。它必须一次完整可读，不复制任务全文、整张关系图、长 diff、日志、命令流水、所有已完成阶段、引用正文或全部规则。anchors 默认保持少量且足够定位；`3–7` 是常用预算，不是不能调整的固定常数。
@@ -118,6 +118,26 @@ LoadedRules:
 2. **区分检查**：指出精确工具动作或读取范围、它区分的候选，以及不同结果如何改变决策。
 3. **真实阻塞**：指出缺失的权限、用户决定或外部状态，以及解除阻塞所需信号。
 
+系统性求解已经声明 active observation 时，`DecisionState.active_observation` 使用宿主无关的紧凑结构：
+
+```yaml
+active_observation:
+  id: <同一 hypothesis / boundary / discriminator 的稳定身份>
+  revision: <观察契约或装置变化后的 revision>
+  decision: <要决定什么>
+  boundary: <真实观察边界>
+  preconditions: [<必要前提>]
+  prediction: <可证伪预测>
+  discriminator: <区分规则>
+  invalidators: [<无效条件>]
+  result: PLANNED | DISCRIMINATING | INVALID | INCONCLUSIVE
+  repair_cycles: <同一观察契约已使用的装置修正周期>
+  actual_signal: <非 PLANNED 时的稳定摘要>
+  evidence_locator: <非 PLANNED 时的证据指针>
+```
+
+这不是新的 Capsule 区块，也不为根因明确的简单任务强制启用。细长输入、日志和完整假设表仍留在 evidence locator 后。active observation 存在时，mutation action 额外声明 `purpose`：`solution`、`observation_setup` 或 `observation_repair`；check 和 blocker 不需要伪装成 mutation。
+
 “继续实现某阶段”“继续分析”“熟悉代码”“再看看相关材料”不包含边界和可观察信号，不能从 `RESUME_AUDIT` 进入 `READY`。先在 `SNAPSHOT_REQUIRED` 中把它改写为执行级动作。
 
 ### 跨压缩恢复指纹
@@ -144,13 +164,14 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 以下任一事件发生时立即进入 `SNAPSHOT_REQUIRED`，不能等到下一个“成功阶段”再补：
 
 - 新证据改变 active hypothesis、失败签名、解法层级、验收通过 / 失败状态或唯一 `Next`。
+- 观察从 `PLANNED` 变成完成态、实际信号命中 invalidator、观察 revision / result 改变，或结果要求重设 boundary / discriminator。
 - 用户、外部引用或权威契约的新 revision 改变当前路线依赖的事实。
 - source identity 出现未声明的 changed item、nested source 漂移或预期切片之外的内容变化。
 - 一个声明的 in-flight 实现切片完成、被放弃或需要换成另一切片。
 
 同一 `READY` 状态可以授权一个预先声明、范围有界的 in-flight 实现切片；切片内 expected changed items 的连续编辑不要求每条命令刷新。若编辑暴露新根因、改变验收语义、越出 expected items 或决定改走另一条路线，则例外地立即进入 `SNAPSHOT_REQUIRED`。这使门禁约束语义变化，而不是制造新的逐操作流水账。
 
-`SNAPSHOT_REQUIRED` 期间允许读取直接失配项、计算复合指纹、更新 Attempt / evidence、压缩计划和覆盖写胶囊；不允许继续修改生产代码、生产配置、对外契约或持久状态。刷新完成并确认 `Next` 唯一后才能回到 `READY`。
+`SNAPSHOT_REQUIRED` 期间允许读取直接失配项、计算复合指纹、更新 Attempt / evidence、压缩计划和覆盖写胶囊；不允许继续修改生产代码、生产配置、对外契约、持久状态，或继续调整将决定解法方向的观察装置。刷新完成并确认 `Next` 唯一后才能回到 `READY`。
 
 指纹为 `partial` 时可以继续只读诊断。生产修改前必须做到二选一：补齐与当前任务相关的缺失层；或明确记录无法核验的层、残余身份风险、expected changed items 和严格限定的修改范围。后者是带风险的 `READY`，不是“完整匹配”。
 
@@ -192,6 +213,7 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 - `Checkpoint.Validated` 是否同时有 evidence locator 与真实 checkpoint identity；只通过测试但未 checkpoint 的阶段不能伪装成 validated。
 - partial fingerprint 是否列出 missing layers、expected changed items 与 residual identity risk。
 - source / contract / referenced sources / loaded rules 的轻量 observation 是否匹配；缺 observation 时保持 `RESUME_AUDIT`，失配或 schema 无效时建议 `SNAPSHOT_REQUIRED`。
+- active observation 存在时，其 revision / result 是否与轻量 observed state 匹配，以及 mutation purpose 是否受结果门禁允许：`DISCRIMINATING -> solution`、`PLANNED -> observation_setup`、首次 `INVALID -> observation_repair`；`INCONCLUSIVE` 或已用完修正预算不能直接 mutation。
 
 该脚本只返回 diagnostics、comparisons 和 suggested gate，不写运行态、不修改源码、不阻断工具、不提交或发布。宿主 adapter 负责安全采集 observation、解释 locator，并按授权应用状态转换；不能因为脚本可用就在每条命令后调用。
 
@@ -259,5 +281,9 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 - 权威 artifact 写入：`content_classes`，由 adapter 标记 progress、test counts、todo、attempt history 等运行态类别。
 - 代码图注入：decision question、task anchor、task / graph source fingerprint、目标 / 图语言与范围。
 - 约束与证据消费：稳定 `constraint_ids` / `evidence_ids`，用于 full-context / capsule / ablation 检测真正有害的上下文丢失。
+- 观察声明 / 结果：`observation_id`、`observation_revision`、boundary / discriminator 的宿主映射、`result` 和 `changes_decision_state`；同一 hypothesis / boundary / discriminator 即使换工具也保持同一 id。
+- 观察装置修正：每个语义修正批次记录一个 `observation_apparatus_changed`，不按文件或命令拆分；更换 hypothesis、boundary 或 discriminator 后使用新的 observation id。
+- 解法变化：mutation / action 标记 `purpose=solution` 并引用授权它的 observation id / revision；观察 setup / repair 使用对应 purpose。若复杂路径要求区分证据，轨迹或事件标记 `requires_discriminating_evidence=true`。
+- 状态刷新：改变 DecisionState 的观察后记录 `snapshot_refreshed`；评测器据此识别陈旧胶囊下的解法变化。
 
 标准化时保留真实发生顺序和来源，不能把事后总结伪造成当时已注入的约束或证据。核心评测器不读取 agent 私有思维，不判定业务代码正确性，也不绑定具体 trace API；adapter 仅做可审计的字段映射。评测在一个阶段或一组 continuation 轨迹完成后集中运行，不在每次工具调用后制造新的验证循环。

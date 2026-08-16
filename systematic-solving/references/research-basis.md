@@ -4,13 +4,15 @@
 
 ## 1. 技能与工具接口
 
-- [OpenAI：Build skills](https://developers.openai.com/codex/build-skills) 将 skill 定义为可复用工作流，并明确 focused skill、渐进披露、命令式输入 / 输出、触发边界测试以及“优先指令，确定性步骤才用脚本”。因此通用核心不声明某台机器的工具，宿主与领域细节按需扩展。
+- [OpenAI：Build skills](https://learn.chatgpt.com/docs/build-skills) 将 skill 定义为可复用工作流，并明确 focused skill、渐进披露、命令式输入 / 输出、触发边界测试以及“优先指令，确定性步骤才用脚本”。因此通用核心不声明某台机器的工具，宿主与领域细节按需扩展。
 - [SWE-agent / Agent-Computer Interface](https://arxiv.org/abs/2405.15793) 强调工具接口及高信息密度反馈会显著影响代码代理表现。这支持把检索与验证表达成稳定能力契约，而不是绑定命令名。
 
 ## 2. 证据驱动迭代与停滞止损
 
 - [ReAct](https://arxiv.org/abs/2210.03629) 将推理、行动与观察交替，使计划能随环境证据更新并减少错误传播。对应规则是“假设 → 区分检查 → 观察 → 更新假设”。
 - [Reflexion](https://arxiv.org/abs/2303.11366) 与 [Self-Refine](https://arxiv.org/abs/2303.17651) 都要求反馈先于下一轮改进。失败尝试必须说明否定或收窄了什么，否则不能在原模型下继续修改。
+- [CRITIC](https://arxiv.org/abs/2305.11738) 说明工具提供的外部反馈能帮助模型纠错；[Large Language Models Cannot Self-Correct Reasoning Yet](https://arxiv.org/abs/2310.01798) 则表明缺少外部反馈的内在自我纠正可能退化。这支持把“反思”与“区分证据”分开，只有绑定真实观察的反馈才能授权下一轮解法。
+- [Diagnosis Before Recovery](https://arxiv.org/abs/2608.11772) 提出先诊断失败类型、再选择有界恢复接口，而不是失败后统一扩展上下文或恢复动作。该 2026 预印本支持观察结果分型与选择性干预，但具体阈值仍需本技能自己的跨领域轨迹评测确定。
 - [SWE-agent](https://github.com/SWE-agent/SWE-agent) 对格式、命令和工具错误采用有界反馈循环，并保留 trajectory；本技能进一步区分机械修正与根因假设失效，防止把有界重试误用成业务补丁预算。
 - [Aider architect mode](https://github.com/Aider-AI/aider/blob/main/aider/coders/architect_coder.py) 将方案形成与编辑分阶段；其 [lint / test workflow](https://aider.chat/docs/usage/lint-test.html) 把真实输出反馈给下一轮。这支持先形成问题模型和解法层级，再实施并接受外部验收信号。
 
@@ -18,6 +20,7 @@
 
 - [SWE-bench](https://arxiv.org/abs/2310.06770) 表明真实 issue 通常需要协调多个函数、类和文件并与执行环境交互，复杂任务不能只盯失败文件。
 - [HORIZON](https://arxiv.org/abs/2604.11978) 将长程失败区分为 planning error、history error accumulation、catastrophic forgetting、memory limitation 等机制，并观察到错误会沿依赖步骤累积；这支持按失败机制选择共享根因、执行期计划核验或约束 resurfacing，而不是对所有长任务统一追加反思 / 重试。
+- [AgentLens](https://arxiv.org/abs/2607.06624) 与 [ATOBench](https://arxiv.org/abs/2608.12996) 强调从完整轨迹检查动作、证据恢复、停止和报告链路，而不是只看最终成功位。它们是 2026 预印本，因此这里只采用“过程证据必须可观察”的方法方向，不把其领域分类写入通用规则。
 - [AutoCodeRover](https://arxiv.org/abs/2404.05427) 用 AST 级 class / method 搜索与测试定位缩小检索空间；[Agentless](https://arxiv.org/abs/2407.01489) 表明清晰的定位—修复—验证分阶段流程是强基线。
 - [Deterministic Anchoring](https://arxiv.org/abs/2606.26979) 的 2026 研究表明，轻量结构锚点能缩短轨迹、降低跨运行方差，但收益依赖仓库规模和边方向；这支持有界、按需和置信过滤，而不是默认注入整张代码图。
 - [LARGER](https://arxiv.org/abs/2605.16352) 将代码定位表达为 lexical anchor 到高置信局部结构邻域的扩展，并说明这种能力不必依赖外部图数据库或专用图界面。
@@ -32,7 +35,9 @@
 | 依据 | 落地规则 |
 | --- | --- |
 | OpenAI skills | focused 通用核心、渐进披露、真实触发测试 |
-| ReAct / Reflexion / Self-Refine | 每轮由新证据更新假设；失败后先止损重构 |
+| ReAct / Reflexion / Self-Refine / CRITIC | 每轮由外部可核验的新证据更新假设；失败后先止损重构 |
+| Cannot Self-Correct / Diagnosis Before Recovery | 内在反思不冒充证据；先诊断观察有效性，再选择恢复干预 |
+| AgentLens / ATOBench | 同时评测最终结果与观察—决策—停止轨迹 |
 | HORIZON | 对失败机制分区；规划、记忆、环境和指令问题采用不同干预 |
 | SWE-bench / AutoCodeRover / Agentless | 有界定位完整路径，不全仓重读 |
 | ACI | 用稳定能力和高密度 locator，避免命令与本机耦合 |
