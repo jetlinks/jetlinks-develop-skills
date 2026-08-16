@@ -94,7 +94,7 @@
 - 关键响应式业务阶段使用 `MonoTracer.create(...)` / `FluxTracer.create(...)` 或当前模块已有领域 tracer，不用 `doOnNext` / `doOnSuccess` 伪装成埋点。
 - span 放在真实异步边界或关键业务阶段上，例如命令发送、状态流转、事件发布、批处理、外部调用、协议解析。
 - trace context 跨 HTTP、RSocket、消息、事件、RuleData 等边界时，使用 `TraceHolder.readToContext(...)` / `TraceHolder.writeContextTo(...)`，不要用 `ThreadLocal` 自己传递。
-- span 名称和属性、敏感信息、批量粒度等规则见 [`../jetlinks-conventions/references/tracing.md`](../jetlinks-conventions/references/tracing.md)。
+- span 名称和属性、敏感信息、批量粒度等规则见 [`../../jetlinks-conventions/references/tracing.md`](../../jetlinks-conventions/references/tracing.md)。
 
 ### 函数式组合示例
 

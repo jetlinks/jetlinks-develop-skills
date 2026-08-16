@@ -12,6 +12,10 @@ jetlinks-develop-skills/
 ├── .github/
 │   └── pull_request_template.md
 ├── jetlinks-router/
+├── systematic-solving/
+├── task-continuity/
+├── code-navigation/
+├── scripts/
 ├── jetlinks-protocol/
 ├── jetlinks-conventions/
 ├── jetlinks-reactive/
@@ -21,6 +25,7 @@ jetlinks-develop-skills/
 ├── jetlinks-boundary/
 ├── jetlinks-events/
 ├── jetlinks-web/
+├── jetlinks-web-style/
 ├── jetlinks-capture/
 └── jetlinks-delivery/
 ```
@@ -36,6 +41,18 @@ jetlinks-develop-skills/
 ### `jetlinks-router`
 
 总入口 skill，用于 JetLinks 二开场景下的任务分类与路由。
+
+### `systematic-solving`
+
+用于任意领域复杂、高难度、高不确定性、跨边界或反复失败任务的环境无关系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设。批量验证中的失败会先分为生产契约、陈旧 oracle、无效 fixture、机械装配或 unresolved，避免为了整批变绿把测试 / fixture 问题吸收到生产代码。
+
+### `task-continuity`
+
+用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`，源码指纹、引用 / 规则 revisions 和完整证据 locator 留在机器 Continuity Metadata / Source Snapshot；并用 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 门禁阻止陈旧状态下继续修改。跨压缩拒绝空泛 `Next`，连续匹配恢复时直接进入精确动作而不反复重读；真实 continuation 对比和关键字段消融用于检验压缩是否丢失约束或决策证据。不要求 Trellis、Git、GitHub、本地文件或 hooks。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
+
+### `code-navigation`
+
+用于任意语言、构建系统和代码仓库的环境无关代码导航。它先发现当前环境实际提供的路径 / 文本搜索、构建元数据、符号语义、结构索引和运行时证据能力，再按“精确锚点 → 已解析符号 → 高置信局部关系 → 必要动态证据”逐层扩展；默认不构建或注入完整依赖图，并按 source fingerprint 增量复用局部视图。不要求 Git、`rg`、特定 LSP、图数据库、MCP 或本机安装工具。JetLinks 的 Command / Event / Topic / AssetsHolder / Protocol 等领域关系由 router reference 按需扩展。
 
 ### `jetlinks-protocol`
 
@@ -83,13 +100,16 @@ jetlinks-develop-skills/
 
 ### `jetlinks-delivery`
 
-用于提交信息、提交命令、分支策略、后端设计与测试驱动门禁、测试证据和 PR 描述整理。
+用于提交信息、提交命令、分支策略、后端设计与测试驱动门禁、验证证据有效性判定和 PR 描述整理；阶段证据仍覆盖最终代码且相关输入未变化时直接复用，不因进入交付阶段机械重跑整套测试。
 
 ## Scenario Routing
 
 推荐按场景直接使用 focused skill，不确定时再走总入口：
 
 - 不确定该用哪个 skill：`$jetlinks-router`
+- 复杂、高难度、跨边界或已开始反复修补：`$systematic-solving` + `$jetlinks-router` 领域扩展 + 对应领域 skill；长任务再加 `$task-continuity`
+- 只想压缩计划、恢复上下文、复用测试证据或约束阶段 / PR 生命周期：`$task-continuity`
+- 只想检索定义 / 引用 / 调用链、组件依赖、领域流、变更影响或候选测试：`$code-navigation`
 - 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
 - 只想确认代码规范、导入、注释、i18n 判断、国际化实现、TraceHolder 埋点边界或 MBean 运维可观测性：`$jetlinks-conventions`
 - 只想处理响应式链路：`$jetlinks-reactive`
@@ -150,14 +170,31 @@ python /path/to/install-skill-from-github.py \
 
 ### Option 3: Manual install
 
-将目标 skill 目录复制到本地 Codex skills 目录：
+Codex 当前官方用户级目录为 `$HOME/.agents/skills`。若当前宿主已通过 `CODEX_HOME`、插件管理器或既有安装流程使用其他 skills root，沿用该已发现位置，不要同时复制同名 skill 到多个 root：
 
 ```bash
-mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-cp -R jetlinks-router "${CODEX_HOME:-$HOME/.codex}/skills/"
+mkdir -p "$HOME/.agents/skills"
+cp -R jetlinks-router "$HOME/.agents/skills/"
 ```
 
-安装完成后重启 Codex，使新 skill 被重新发现。
+Codex 通常会自动发现 skill 变更；若未出现，再重启 Codex。
+
+## Validate
+
+仓库维护者在一个连贯修改阶段结束后统一运行：
+
+```bash
+python3 scripts/validate_skills.py
+python3 -m unittest scripts/test_validate_skills.py
+```
+
+校验已安装镜像是否与仓库源完全一致时，显式传入宿主的镜像根目录：
+
+```bash
+python3 scripts/validate_skills.py --mirror-root /path/to/installed/skills
+```
+
+校验器只检查技能包结构、frontmatter、UI metadata、本地引用、三个通用技能的作者环境泄漏，以及可选镜像同步；它不假定 CC Switch、Codex、Git 或某个固定安装位置，也不替代真实 prompt 的前向评测。
 
 ## Usage
 
@@ -170,6 +207,9 @@ Use $jetlinks-router to classify this JetLinks scaffold task, choose the right f
 Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
+- 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
+- 使用 `$task-continuity` 原位压缩实时计划，将模型恢复视图收敛为 `Contract / Checkpoint / DecisionState / Resume`，把完整 digest / revision / evidence ledger 留在机器元数据；验证改变路线时先刷新，压缩恢复时完成 `RESUME_AUDIT -> READY` 后从少量锚点和执行级 `Next` 继续，连续匹配恢复不重读完整技能集或重建同一系统图，并复用仍覆盖当前验收矩阵的验证证据；维护技能时用 full-context / capsule / ablation continuation 评测实际恢复质量；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
+- 使用 `$code-navigation` 先发现当前环境可用的检索能力，再从精确 symbol 或 changed items 出发，有界查询定义、引用、调用、组件 / 领域关系和候选测试；保留关系来源与置信度，不把语义相似度或作者机器上的工具当成精确事实或必需依赖。
 - 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。
 - 使用 `$jetlinks-crud` 为设备管理模块新增一个查询接口，并在自定义接口、复杂校验、权限边界或复杂查询处补必要代码注释。
 - 使用 `$jetlinks-assets-permission` 判断一个 CRUD 或自定义查询接口是否需要 `AssetsHolder` 数据权限控制，并选择 `@AssetsController`、`AssetsHolderCrudController`、`CorrelatesAssetsHolderCrudController` 或 `AssetsHolder.injectQueryParam`；自定义权限边界必须在代码旁边说明。
@@ -205,7 +245,7 @@ Focused skill 示例：
 
 ```text
 我需要实现 <后端能力>。
-先分析现有代码和影响范围；需要设计稿或测试目标时，先落档并等我确认，再开发。
+先分析现有代码和影响范围；需要待确认设计或测试目标时，先写入 Trellis / 本地忽略运行态并等我确认，再开发。确认后的长期结论再原位同步权威文档。
 ```
 
 ### CRUD 管理能力
@@ -234,6 +274,19 @@ Focused skill 示例：
 ```text
 我正在做一个业务流程：<描述流程和目标>。
 先分析涉及的模块、边界、事件、订阅和链路风险，给出方案和任务拆分。
+```
+
+### 反复失败止损
+
+```text
+这个问题已经尝试修过一次，但验收仍失败或失败转移到了同类场景。
+请停止继续加条件、fallback、retry、mock 或兼容分支，重新列出已验证事实、被否定假设、竞争根因和最小区分检查；确认共同不变量和完整验证矩阵后再实现。
+```
+
+### 代码结构与影响面
+
+```text
+从 <入口 symbol / endpoint / changed paths> 出发，先用精确符号与构建事实确认 ownership，再只展开 1–2 跳调用 / 领域关系，区分确认边与推断边，给出影响消费者和候选测试；不要加载整张依赖图。
 ```
 
 ### 链路追踪
@@ -285,7 +338,7 @@ Focused skill 示例：
 - <调整点 1>
 - <调整点 2>
 
-请先更新设计稿和测试目标，再继续开发。
+请先更新任务契约和测试目标，再继续开发；不要把实时进度或失败流水追加到权威设计稿。
 ```
 
 ### 代码审查
@@ -351,14 +404,15 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 
 1. 从目标基线分支同步最新代码。
 2. 创建临时分支实现需求或修复。
-3. 完成测试后 push 临时分支。
-4. 创建 PR 前先确认任务是否已完成：未完成用 draft，已完成再进入 review。
-5. 通过 PR 合入目标版本分支。
+3. 按少量连贯阶段推进；每个阶段完成并集中验证后创建一个本地 commit，不按步骤、文件或单个小修提交。
+4. 阶段提交后更新任务运行态中的 Recovery Capsule；上下文压缩或恢复时先校验 task、Git 指纹和少量锚点，不重新全仓扫描。
+5. 所有阶段和总体验收完成后，统一 push 临时分支并创建或更新一次 PR；PR 只写当前最终事实，不记阶段流水。
+6. 通过 PR 合入目标版本分支。
 
 ### Testing Requirement
 
-- 较大的后端改动或新功能必须先形成设计稿、任务拆分和测试目标，并落到当前工作区对应文档目录。
-- 设计稿必须经过用户明确确认后才能进入开发；若实现过程中发现设计假设不成立，先更新设计稿并重新确认。
+- 较大的后端改动或新功能必须先形成任务契约和测试目标：有 Trellis 时写 active task；否则写经 Git 忽略验证的单一本地运行态文件。
+- 待确认设计不先写入权威 `docs`。用户明确确认后，只把长期需求、稳定契约、架构 / API / 模块设计、验收语义和长期风险提升到权威来源；若实现证据要求这些结论变化，先更新任务契约并重新确认。
 - 测试目标必须先于实现制定，映射真实使用场景和真实数据形态，而不是为了让测试通过而补形式化用例。
 - 复杂业务、公共契约、SPI 扩展点、兼容逻辑、并发 / 生命周期保护、安全边界、TraceHolder 和 MBean 决策必须有合理注释；类注释和 SPI 接口方法注释必须完整，SPI 必要时补真实 `@since` 和指向订阅相关类型 / 参考实现的 `@see`。
 - 注释门禁必须在实现技能中执行：编码前识别注释点，编码时把注释放到类、方法、关键分支或边界调用旁边；只有简单赋值、DTO 搬运、直观委托或模板展示可以明确说明不需要注释。
@@ -377,15 +431,17 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 
 - README 只作为仓库或模块的长期总览，放定位、能力索引、入口说明和长期链接。
 - 不要把单次任务过程、测试报告、PR 描述、临时计划、排查流水或总结放进 README。
-- 较大功能的设计、方案取舍、任务拆分和测试目标，优先更新既有 design / plans / adr；没有归属时再新增一个主设计稿。
+- 权威 `docs` / ADR / API / 模块文档只保留当前已接受的设计与契约；更新时原位替换过时结论，不追加阶段总结、完成清单、验证摘要或时间线。
+- 实时任务拆分、checkbox、假设账本、尝试、失败、临时下一步和会话恢复信息放 Trellis 的非版本化 runtime / checkpoint；没有这种载体或无 Trellis 时放单一 Git-ignored runtime file，不默认修改共享 `.gitignore`。
 - 测试命令、覆盖率、集成测试结果等证据优先放 PR 描述或 CI 报告，不为每次运行新增测试报告文档。
-- 经验沉淀先判断是否值得写；单次经验走 `.ai/`，稳定通用后再考虑回写 prompt 或 skill。
-- 同一主题优先维护一个主文档，避免拆出多个 plan、summary、test-report、worklog 碎片。
+- 经验沉淀先判断是否跨任务稳定；优先更新已有 canonical 来源，不把单次总结转换成 `worklog`，稳定通用后再考虑 knowledge、playbook、prompt 或 skill。
+- 同一主题只维护一个权威来源，避免拆出多个 plan、summary、test-report、worklog 碎片。
+- 在非版本化 Trellis runtime / checkpoint 或本地 Git-ignored 运行态中维护模型主视图 `Contract / Checkpoint / DecisionState / Resume`、机器 Continuity Metadata 与 Source Snapshot：task ID / revision、当前路线、关键约束、证据 / 规则 locator、跨压缩审计指纹、已验证阶段 commit、branch / HEAD、tracked / untracked / nested 指纹、expected paths、少量锚点和执行级下一步。正常恢复只注入主视图和 identity match summary；验证改变路线时先进入 `SNAPSHOT_REQUIRED` 并刷新；上下文压缩、暂停后继续或交接后进入 `RESUME_AUDIT`，指纹与语义状态一致则显式转 `READY` 并执行 `first_allowed_action`，不重读全仓。
 
 PR 中至少应提供这些数据：
 
 - 执行过的测试命令
-- 较大后端改动或新功能的设计稿路径、用户确认状态和测试目标达成情况
+- 较大后端改动或新功能的任务契约路径、用户确认状态、权威文档同步结论和测试目标达成情况
 - 新增或更新的测试类和核心覆盖点
 - 测试类型：单元测试、集成测试、端到端测试中的哪些
 - 通过数量、失败数量、跳过数量
@@ -398,7 +454,7 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 - 目的：为什么要做这次改动
 - 核心变动：改了哪些模块、行为和边界
-- 设计与测试目标：较大后端改动或新功能需列出设计稿路径、确认状态、测试目标达成情况、CRUD / AssetsHolder 数据权限分析结论、注释 / 公共契约结论、链路追踪结论和 MBean 运维可观测性结论
+- 设计与测试目标：较大后端改动或新功能需列出任务契约路径、确认状态、权威文档同步结论、测试目标达成情况、CRUD / AssetsHolder 数据权限分析结论、注释 / 公共契约结论、链路追踪结论和 MBean 运维可观测性结论
 - 测试结果：命令、新增或更新的测试类、通过数、失败数、跳过数、覆盖率数据、集成测试结果或不适用原因
 - 文档同步情况：已同步哪些原始文档，或说明无需同步的原因
 - 兼容性与发布边界：说明是否为 PR 内未发布逻辑收敛；已发布、持久化或外部依赖的变更需写清兼容或迁移策略
@@ -417,10 +473,12 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 - 模块 A：做了什么调整
 - 模块 B：新增了什么约束或行为
+- 阶段提交：列出已验证的本地阶段 commit；不写步骤流水
 
 ## 设计与测试目标
 
-- 设计稿：`docs/plans/yyyy-mm-dd-xxx.md`
+- 任务契约：`.trellis/tasks/<task>/...` / 本地忽略运行态文件
+- 权威文档：已原位同步 `<path>` / 不适用：长期契约未变
 - 用户确认：已确认 / 未确认，当前为 draft
 - 测试目标：真实场景、真实数据、正常路径、异常路径、回归路径和边界路径均已覆盖 / 列出未覆盖原因
 - 注释 / 公共契约：适用 / 不适用；适用时说明类注释、SPI 方法注释、必要 `@since` / `@see` 和复杂逻辑注释已补齐
@@ -428,10 +486,12 @@ PR 描述必须聚焦事实和结果，至少包含：
 - 数据库兼容与性能：适用 / 不适用；适用时说明标准 SQL / 方言范围、索引与分页风险、压测结果或替代验证
 - 链路追踪：适用 / 不适用；适用时说明 TraceHolder / MonoTracer / FluxTracer 埋点位置、关键属性、上下文传播和敏感信息排除
 - MBean 运维可观测性：适用 / 不适用；适用时说明 MBean 名称、统计指标、运维操作、生命周期和敏感信息排除
+- 系统性求解：适用 / 不适用；适用时说明违反的不变量、共同根因或显式变化轴、已清理 / 保留的特殊处理，以及原场景 / 同类代表 / 反例边界 / 回归证据
 
 ## 测试结果
 
 - 命令：`mvn -pl xxx -am test`
+- 证据来源与复用判断：阶段验证 / CI；对应 `<commit / tree / diff fingerprint>`；相关输入未变化，直接复用 / 因 `<变化>` 定向补跑 `<范围>`
 - 新增/更新测试：`XxxServiceTest` 覆盖新增规则、异常分支和回归场景
 - 单元测试：42 passed, 0 failed, 1 skipped
 - 集成测试：8 passed, 0 failed / 不适用：未涉及数据库、消息、事件、协议、跨模块边界、外部依赖或启动装配
@@ -440,9 +500,9 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 ## 文档同步情况
 
-- 已同步：模块 README / API 文档 / 设计稿 / ADR / AGENTS 等长期归属文档
+- 已同步：模块 README / API 文档 / ADR / AGENTS 等权威来源
 - 未同步：无 / 说明原因
-- 说明：README 仅在长期总览需要变化时更新；测试证据放 PR / CI
+- 说明：权威文档只保留当前已接受状态；任务流水留在 Trellis / 本地运行态，测试证据放 PR / CI
 
 ## 风险与说明
 
@@ -459,9 +519,12 @@ PR 描述必须聚焦事实和结果，至少包含：
 结论要求：
 
 - 用数据说话，不要只写“测试通过”
+- 交付前先把已有证据映射到验收矩阵；代码 / Git 指纹和相关输入仍有效时直接复用，只定向补跑缺失、失效或有时效性的检查
 - 没有覆盖率数据时，至少说明为什么缺失，以及提供了哪些替代证据
-- 创建 PR 前先确认任务是否已完成：未完成使用 draft PR，已完成且用户确认后再 ready for review
-- 默认不要在一个 PR 中提交大量代码，优先按清晰主题拆分
+- 创建 PR 前先确认任务是否已完成：未完成默认继续本地开发，已完成且用户确认后再统一远程交付
+- 未完成任务默认继续本地开发，不主动 push 或创建 draft；只有用户明确要求共享中间分支、远端 CI 或提前评审时才维护一个 draft PR
+- 每个连贯阶段验证后允许一个本地 commit；整个任务完成后统一 push 并创建或更新一次 PR，禁止每个步骤推送、开 PR 或追加 PR 进度流水
+- 一个任务对应一个 PR；若需求含多个独立主题，先拆成多个任务，各任务完成后分别交付，不按执行阶段拆 PR
 - 如果仓库远端是 GitHub，默认优先使用 `gh pr create` 创建 PR
 - 如果当前工具支持非沙箱审批或提权机制，`gh` 命令应申请非沙箱执行；不支持时说明限制并降级处理
 - 没有 PR 的直推提交流程，视为不符合规范

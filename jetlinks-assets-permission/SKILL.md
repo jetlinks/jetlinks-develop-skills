@@ -15,6 +15,7 @@ Read [`references/assets-holder-rules.md`](references/assets-holder-rules.md) fi
 4. Choose the unified AssetsHolder integration pattern that matches the local codebase; do not create ad hoc tenant, user, department, organization, or creator filters.
 5. Before implementing asset permission code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): asset ownership, correlated asset mapping, `ignore = true` equivalent checks, admin / platform exceptions, batch mixed-permission behavior, custom query injection, command or subscription permission propagation.
 6. Pair with `$jetlinks-crud`, `$jetlinks-boundary`, `$jetlinks-events`, or `$jetlinks-reactive` when the asset permission decision belongs to those flows.
+7. Pair with `$systematic-solving` when permission behavior spans several asset types / associations / callers, has competing ownership hypotheses, or a fix shifts the leak / denial to a sibling scenario. Do not accumulate exception branches for individual roles, assets, or callers.
 
 ## Required Constraints
 
