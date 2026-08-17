@@ -19,8 +19,9 @@ READ_TYPES = {
     "history_read",
     "graph_read",
 }
-PRODUCTIVE_TYPES = {"mutation", "action", "check", "verification", "blocker"}
+PRODUCTIVE_TYPES = {"mutation", "solution_mutation", "action", "check", "verification", "blocker"}
 VERIFICATION_TYPES = {"check", "verification"}
+OBSERVATION_RESULTS = {"DISCRIMINATING", "INVALID", "INCONCLUSIVE"}
 FULL_HISTORY_SCOPES = {"full_history", "full_task_history", "full_thread", "full_prd", "full_research"}
 REPOSITORY_WIDE_SCOPES = {"repository_wide", "workspace_wide", "full_repository", "full_workspace"}
 RUNTIME_CONTENT_CLASSES = {
@@ -52,6 +53,16 @@ def _event_action_id(event: dict[str, Any]) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _observation_key(event: dict[str, Any]) -> tuple[str, str] | None:
+    observation_id = event.get("observation_id")
+    revision = event.get("observation_revision")
+    if not isinstance(observation_id, str) or not observation_id:
+        return None
+    if not isinstance(revision, str) or not revision:
+        return None
+    return observation_id, revision
+
+
 def _graph_relevance(event: dict[str, Any], expected_fingerprint: str | None) -> list[str]:
     reasons: list[str] = []
     for field in ("decision_question", "task_anchor"):
@@ -81,6 +92,10 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     expected_fingerprint = trace.get("source_fingerprint", inherited.get("source_fingerprint"))
     required_constraints = _strings(trace.get("required_constraint_ids", inherited.get("required_constraint_ids", [])))
     required_evidence = _strings(trace.get("required_evidence_ids", inherited.get("required_evidence_ids", [])))
+    requires_observation_evidence = trace.get(
+        "requires_discriminating_evidence",
+        inherited.get("requires_discriminating_evidence", False),
+    ) is True
 
     read_keys: list[tuple[str, str, str]] = []
     productive: list[tuple[int, dict[str, Any]]] = []
@@ -93,6 +108,18 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     observed_constraints: set[str] = set()
     observed_evidence: set[str] = set()
     recovery_cycles: dict[str, dict[str, Any]] = {}
+    observation_results: dict[tuple[str, str], str] = {}
+    latest_observation_revision: dict[str, str] = {}
+    nondiscriminating_results: dict[str, int] = {}
+    observation_repairs: dict[str, int] = {}
+    observation_counts = {result: 0 for result in OBSERVATION_RESULTS}
+    solution_change_count = 0
+    solution_without_evidence: list[int] = []
+    invalid_observation_used: list[int] = []
+    repeated_nondiscriminating: list[int] = []
+    observation_repair_budget_exceeded: list[int] = []
+    solution_change_before_snapshot: list[int] = []
+    snapshot_refresh_pending = False
 
     for index, raw_event in enumerate(events):
         if not isinstance(raw_event, dict):
@@ -138,6 +165,60 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
                 )
             )
 
+        if event_type == "observation_result":
+            key = _observation_key(event)
+            result = str(event.get("result", "")).upper()
+            if key is not None and result in OBSERVATION_RESULTS:
+                observation_results[key] = result
+                latest_observation_revision[key[0]] = key[1]
+                observation_counts[result] += 1
+                if result in {"INVALID", "INCONCLUSIVE"}:
+                    nondiscriminating_results[key[0]] = nondiscriminating_results.get(key[0], 0) + 1
+                    if nondiscriminating_results[key[0]] > 1:
+                        repeated_nondiscriminating.append(index)
+                else:
+                    nondiscriminating_results[key[0]] = 0
+            if event.get("changes_decision_state") is True:
+                snapshot_refresh_pending = True
+
+        if event_type == "observation_apparatus_changed":
+            observation_id = event.get("observation_id")
+            if isinstance(observation_id, str) and observation_id:
+                observation_repairs[observation_id] = observation_repairs.get(observation_id, 0) + 1
+                if observation_repairs[observation_id] > 1:
+                    observation_repair_budget_exceeded.append(index)
+
+        if event_type == "snapshot_refreshed":
+            snapshot_refresh_pending = False
+
+        purpose = event.get("purpose")
+        is_solution_change = (
+            event_type == "solution_mutation"
+            or event.get("solution_change") is True
+            or purpose == "solution"
+            or (
+                requires_observation_evidence
+                and event_type in {"mutation", "action"}
+                and purpose not in {"observation_setup", "observation_repair"}
+            )
+        )
+        if is_solution_change:
+            solution_change_count += 1
+            if snapshot_refresh_pending:
+                solution_change_before_snapshot.append(index)
+            requires_evidence = event.get("requires_discriminating_evidence", requires_observation_evidence) is True
+            if requires_evidence:
+                key = _observation_key(event)
+                if key is None:
+                    observation_id = event.get("observation_id")
+                    revision = latest_observation_revision.get(observation_id) if isinstance(observation_id, str) else None
+                    key = (observation_id, revision) if observation_id and revision else None
+                result = observation_results.get(key) if key is not None else None
+                if result != "DISCRIMINATING":
+                    solution_without_evidence.append(index)
+                if result == "INVALID":
+                    invalid_observation_used.append(index)
+
         if event_type in {"authoritative_doc_write", "prd_write"}:
             leaked = sorted(_strings(event.get("content_classes")) & RUNTIME_CONTENT_CLASSES)
             if leaked:
@@ -160,6 +241,10 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     idle_cycles = sorted(key for key, value in recovery_cycles.items() if not value["productive"])
     missing_constraints = sorted(required_constraints - observed_constraints)
     missing_evidence = sorted(required_evidence - observed_evidence)
+    discriminating_count = observation_counts["DISCRIMINATING"]
+    actions_per_discriminating_observation = (
+        len(productive) / discriminating_count if discriminating_count else None
+    )
 
     return {
         "event_count": len(events),
@@ -187,6 +272,22 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "observed_evidence_ids": sorted(observed_evidence),
         "missing_evidence_ids": missing_evidence,
         "required_context_complete": not missing_constraints and not missing_evidence,
+        "observation_result_count": sum(observation_counts.values()),
+        "discriminating_observation_count": discriminating_count,
+        "invalid_observation_count": observation_counts["INVALID"],
+        "inconclusive_observation_count": observation_counts["INCONCLUSIVE"],
+        "solution_change_count": solution_change_count,
+        "solution_change_without_discriminating_evidence_count": len(solution_without_evidence),
+        "solution_change_without_discriminating_evidence_events": solution_without_evidence,
+        "invalid_observation_used_as_evidence_count": len(invalid_observation_used),
+        "invalid_observation_used_as_evidence_events": invalid_observation_used,
+        "repeated_nondiscriminating_observation_count": len(repeated_nondiscriminating),
+        "repeated_nondiscriminating_observation_events": repeated_nondiscriminating,
+        "observation_repair_budget_exceeded_count": len(observation_repair_budget_exceeded),
+        "observation_repair_budget_exceeded_events": observation_repair_budget_exceeded,
+        "solution_change_before_snapshot_refresh_count": len(solution_change_before_snapshot),
+        "solution_change_before_snapshot_refresh_events": solution_change_before_snapshot,
+        "productive_actions_per_discriminating_observation": actions_per_discriminating_observation,
     }
 
 
@@ -200,7 +301,13 @@ def evaluate_document(document: Any) -> dict[str, Any]:
         raise ValueError("runs must be a non-empty object")
     inherited = {
         key: document[key]
-        for key in ("expected_action_id", "source_fingerprint", "required_constraint_ids", "required_evidence_ids")
+        for key in (
+            "expected_action_id",
+            "source_fingerprint",
+            "required_constraint_ids",
+            "required_evidence_ids",
+            "requires_discriminating_evidence",
+        )
         if key in document
     }
     runs = {
@@ -220,6 +327,14 @@ def evaluate_document(document: Any) -> dict[str, Any]:
                 ),
                 "read_event_count_delta": capsule["read_event_count"] - metrics["read_event_count"],
                 "repeated_read_count_delta": capsule["repeated_read_count"] - metrics["repeated_read_count"],
+                "solution_change_without_discriminating_evidence_delta": (
+                    capsule["solution_change_without_discriminating_evidence_count"]
+                    - metrics["solution_change_without_discriminating_evidence_count"]
+                ),
+                "solution_change_before_snapshot_refresh_delta": (
+                    capsule["solution_change_before_snapshot_refresh_count"]
+                    - metrics["solution_change_before_snapshot_refresh_count"]
+                ),
                 "required_context_complete": capsule["required_context_complete"],
                 "other_required_context_complete": metrics["required_context_complete"],
             }
@@ -230,6 +345,12 @@ def evaluate_document(document: Any) -> dict[str, Any]:
         )
         assessment["capsule_not_slower_to_first_action"] = _not_slower(
             runs["capsule"]["first_productive_action_turn"], runs["full_context"]["first_productive_action_turn"]
+        )
+        assessment["capsule_preserves_observation_integrity"] = (
+            runs["capsule"]["solution_change_without_discriminating_evidence_count"]
+            <= runs["full_context"]["solution_change_without_discriminating_evidence_count"]
+            and runs["capsule"]["solution_change_before_snapshot_refresh_count"]
+            <= runs["full_context"]["solution_change_before_snapshot_refresh_count"]
         )
     if "ablation" in runs:
         assessment["ablation_exposes_context_loss"] = not runs["ablation"]["required_context_complete"]

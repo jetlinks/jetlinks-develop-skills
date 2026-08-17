@@ -18,7 +18,9 @@ from typing import Any
 
 GATES = {"READY", "SNAPSHOT_REQUIRED", "RESUME_AUDIT"}
 ACTION_TYPES = {"mutation", "check", "blocker"}
+ACTION_PURPOSES = {"solution", "observation_setup", "observation_repair"}
 MATCH_VALUES = {"match", "mismatch", "unknown"}
+OBSERVATION_RESULTS = {"PLANNED", "DISCRIMINATING", "INVALID", "INCONCLUSIVE"}
 VAGUE_ACTION = re.compile(
     r"^(?:continue|resume|proceed|start|do)\s+(?:the\s+)?(?:work|implementation|analysis|task|investigation)$"
     r"|^(?:继续|开始|恢复|推进)(?:实现|开发|分析|调查|任务|工作|处理)(?:阶段|任务|工作)?$",
@@ -46,6 +48,7 @@ def _stable_action_identity(action: dict[str, Any]) -> str:
         return f"id:{explicit.strip()}"
     normalized = {
         "type": action.get("type"),
+        "purpose": action.get("purpose"),
         "owner": action.get("owner"),
         "scope": action.get("scope"),
         "observable_signal": action.get("observable_signal"),
@@ -62,6 +65,15 @@ def _validate_action(action: Any, path: str, errors: list[dict[str, str]]) -> No
     if action_type not in ACTION_TYPES:
         errors.append(
             _diagnostic("action.invalid_type", f"{path}.type", "type must be mutation, check, or blocker")
+        )
+    purpose = action.get("purpose")
+    if purpose is not None and purpose not in ACTION_PURPOSES:
+        errors.append(
+            _diagnostic(
+                "action.invalid_purpose",
+                f"{path}.purpose",
+                "purpose must be solution, observation_setup, or observation_repair when present",
+            )
         )
     for field in ("owner", "observable_signal"):
         if not _nonempty_string(action.get(field)):
@@ -86,6 +98,105 @@ def _validate_action(action: Any, path: str, errors: list[dict[str, str]]) -> No
         )
 
 
+def _validate_active_observation(value: Any, path: str, errors: list[dict[str, str]]) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        errors.append(_diagnostic("observation.not_object", path, "active_observation must be an object"))
+        return None
+    for field in ("id", "revision", "decision", "boundary", "prediction", "discriminator"):
+        if not _nonempty_string(value.get(field)):
+            errors.append(
+                _diagnostic("observation.missing_field", f"{path}.{field}", "field must be non-empty")
+            )
+    for field in ("preconditions", "invalidators"):
+        items = value.get(field)
+        if not isinstance(items, list) or not items or not all(_nonempty_string(item) for item in items):
+            errors.append(
+                _diagnostic(
+                    "observation.invalid_list",
+                    f"{path}.{field}",
+                    "field must be a non-empty list of bounded statements",
+                )
+            )
+    result = value.get("result")
+    if result not in OBSERVATION_RESULTS:
+        errors.append(
+            _diagnostic(
+                "observation.invalid_result",
+                f"{path}.result",
+                "result must be PLANNED, DISCRIMINATING, INVALID, or INCONCLUSIVE",
+            )
+        )
+    repair_cycles = value.get("repair_cycles")
+    if not isinstance(repair_cycles, int) or isinstance(repair_cycles, bool) or repair_cycles < 0:
+        errors.append(
+            _diagnostic(
+                "observation.invalid_repair_cycles",
+                f"{path}.repair_cycles",
+                "repair_cycles must be a non-negative integer",
+            )
+        )
+    if result in OBSERVATION_RESULTS - {"PLANNED"}:
+        for field in ("actual_signal", "evidence_locator"):
+            if not _nonempty_string(value.get(field)):
+                errors.append(
+                    _diagnostic(
+                        "observation.missing_result_evidence",
+                        f"{path}.{field}",
+                        "a completed observation must record its actual signal and evidence locator",
+                    )
+                )
+    return value
+
+
+def _validate_observation_action(
+    action: Any,
+    path: str,
+    observation: dict[str, Any] | None,
+    errors: list[dict[str, str]],
+) -> None:
+    if observation is None or not isinstance(action, dict) or action.get("type") != "mutation":
+        return
+    result = observation.get("result")
+    purpose = action.get("purpose")
+    repair_cycles = observation.get("repair_cycles")
+    if result == "DISCRIMINATING":
+        if purpose != "solution":
+            errors.append(
+                _diagnostic(
+                    "observation.discriminating_requires_solution_purpose",
+                    f"{path}.purpose",
+                    "a mutation selected by a discriminating observation must declare purpose=solution",
+                )
+            )
+    elif result == "PLANNED":
+        if purpose != "observation_setup":
+            errors.append(
+                _diagnostic(
+                    "observation.planned_blocks_solution",
+                    path,
+                    "a planned observation permits only purpose=observation_setup mutations or a bounded check",
+                )
+            )
+    elif result == "INVALID":
+        if repair_cycles == 0 and purpose == "observation_repair":
+            return
+        errors.append(
+            _diagnostic(
+                "observation.invalid_blocks_mutation",
+                path,
+                "an invalid observation permits at most one declared observation_repair cycle",
+            )
+        )
+    elif result == "INCONCLUSIVE":
+        errors.append(
+            _diagnostic(
+                "observation.inconclusive_blocks_mutation",
+                path,
+                "an inconclusive observation requires a check, reframe, or blocker before mutation",
+            )
+        )
 def _revision_map(items: Any, path: str, errors: list[dict[str, str]]) -> dict[str, str]:
     if not isinstance(items, list):
         errors.append(_diagnostic("ledger.not_list", path, "revision ledger must be a list"))
@@ -211,6 +322,13 @@ def validate_state(document: Any) -> dict[str, Any]:
             errors.append(
                 _diagnostic("decision.missing_field", f"recovery_capsule.decision_state.{field}", "field must be non-empty")
             )
+    active_observation = _validate_active_observation(
+        decision.get("active_observation"),
+        "recovery_capsule.decision_state.active_observation",
+        errors,
+    )
+    if active_observation is not None:
+        comparisons["observation"] = "unknown"
 
     boundary_values: dict[str, str] = {}
     boundary_objects = {
@@ -244,6 +362,18 @@ def validate_state(document: Any) -> dict[str, Any]:
     first_action = resume.get("first_allowed_action")
     _validate_action(next_action, "recovery_capsule.resume.next", errors)
     _validate_action(first_action, "recovery_capsule.resume.first_allowed_action", errors)
+    _validate_observation_action(
+        next_action,
+        "recovery_capsule.resume.next",
+        active_observation,
+        errors,
+    )
+    _validate_observation_action(
+        first_action,
+        "recovery_capsule.resume.first_allowed_action",
+        active_observation,
+        errors,
+    )
     if isinstance(next_action, dict) and isinstance(first_action, dict):
         if _stable_action_identity(next_action) != _stable_action_identity(first_action):
             errors.append(
@@ -298,6 +428,24 @@ def validate_state(document: Any) -> dict[str, Any]:
             references, observed.get("referenced_sources"), "referenced_sources", mismatches
         )
         comparisons["rules"] = _compare_ledger(rules, observed.get("loaded_rules"), "loaded_rules", mismatches)
+        if active_observation is not None:
+            observed_observation_revision = observed.get("observation_revision")
+            observed_observation_result = observed.get("observation_result")
+            if _nonempty_string(observed_observation_revision) and _nonempty_string(observed_observation_result):
+                comparisons["observation"] = (
+                    "match"
+                    if observed_observation_revision == active_observation.get("revision")
+                    and observed_observation_result == active_observation.get("result")
+                    else "mismatch"
+                )
+                if comparisons["observation"] == "mismatch":
+                    mismatches.append(
+                        _diagnostic(
+                            "observation.state_mismatch",
+                            "observed.observation_revision",
+                            "observed observation revision or result differs from DecisionState",
+                        )
+                    )
 
     all_matched = all(value == "match" for value in comparisons.values())
     any_mismatch = any(value == "mismatch" for value in comparisons.values())
