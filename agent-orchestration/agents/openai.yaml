@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Orchestration"
+  short_description: "Route and verify bounded multi-agent work"
+  default_prompt: "Use $agent-orchestration to route this task across the smallest useful set of agents and verify the integrated result."

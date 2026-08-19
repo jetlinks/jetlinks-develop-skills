@@ -1,6 +1,6 @@
 ---
 name: jetlinks-router
-description: 将 JetLinks 开发请求路由到当前工作区中最合适的 focused skill。适用于尚不确定应使用哪个 JetLinks 技能，或任务同时涉及复杂高难度问题的系统性求解、代码结构与依赖检索、模块落点、通用编码规范、响应式实践、CRUD、跨边界调用、事件与订阅流程、前端页面改造以及交付准备的场景。
+description: 将 JetLinks 开发请求路由到当前工作区中最合适的 focused skill。适用于尚不确定应使用哪个 JetLinks 技能，或任务同时涉及复杂高难度问题的系统性求解、多 Agent / 大小模型编排、代码结构与依赖检索、模块落点、通用编码规范、响应式实践、CRUD、跨边界调用、事件与订阅流程、前端页面改造以及交付准备的场景。
 ---
 
 # JetLinks Router
@@ -17,18 +17,20 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 6. When plan-first is required but the backend design gate does not apply, output a concise plan that covers goal, scope, non-goals, steps, risks or pending confirmations, and validation, then wait for user confirmation before implementation.
 7. For long-running work, plan-state maintenance, evidence reuse, versioned stage delivery, or a recovery mismatch, combine [`../task-continuity/SKILL.md`](../task-continuity/SKILL.md) with [`references/context-recovery-rules.md`](references/context-recovery-rules.md). Map only the necessary generic state to Trellis and Git facts; do not restart workspace discovery unless saved identity or anchors conflict.
 8. When ownership, callers / consumers, domain flows, or change impact are not already bounded by valid anchors, load [`../code-navigation/SKILL.md`](../code-navigation/SKILL.md). For JetLinks-specific Command / Event / Topic / AssetsHolder / protocol / frontend relations, also read [`references/code-navigation-jetlinks-rules.md`](references/code-navigation-jetlinks-rules.md). Pass only confirmed anchors and uncertain relations onward. Reuse or inject a graph only when its decision question, anchor, source fingerprint, target language, and scope match the current task.
-9. Switch to the most relevant domain-focused JetLinks skill.
-10. Combine multiple focused skills when the task crosses boundaries.
-11. Read adjacent production code before changing anything, except when a valid Recovery Capsule or confirmed code-navigation result already narrows the next step to verified anchors.
-12. Implement complete changes, not pseudo-code.
-13. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
-14. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
-15. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
+9. When the task has independent read-heavy slices, a stable disjoint implementation slice, or a material review boundary, load [`../agent-orchestration/SKILL.md`](../agent-orchestration/SKILL.md). Route by uncertainty, impact, coupling and verifiability; keep unresolved shared causes and shared contracts with one owner, and do not delegate when coordination cost exceeds the benefit.
+10. Switch to the most relevant domain-focused JetLinks skill.
+11. Combine multiple focused skills when the task crosses boundaries.
+12. Read adjacent production code before changing anything, except when a valid Recovery Capsule or confirmed code-navigation result already narrows the next step to verified anchors.
+13. Implement complete changes, not pseudo-code.
+14. Verify the final solution against the focused skills you used, and when code changes are involved run the relevant validation or state the exact pending command and residual risk.
+15. If the finished task produced reusable knowledge, route to `jetlinks-capture`, give the recommendation first, and only write the document after user confirmation.
+16. If the captured result is generic enough to become a shared JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare an upstream PR.
 
 ## Routing
 
 - Protocol package registration, transport codecs, and binary packet handling: [`../jetlinks-protocol/SKILL.md`](../jetlinks-protocol/SKILL.md)
 - Complex, high-uncertainty, cross-boundary, or repeatedly failing tasks that need problem-model reconstruction and stagnation control: [`../systematic-solving/SKILL.md`](../systematic-solving/SKILL.md) plus [`references/systematic-solving-jetlinks-rules.md`](references/systematic-solving-jetlinks-rules.md)
+- Environment-neutral single-Agent / multi-Agent routing, capability tiers, bounded delegation, escalation and result integration: [`../agent-orchestration/SKILL.md`](../agent-orchestration/SKILL.md)
 - Long-running plans, non-ledger runtime state, context compaction / resume, evidence reuse, validated stage checkpoints, and task-level remote delivery: [`../task-continuity/SKILL.md`](../task-continuity/SKILL.md) plus [`references/context-recovery-rules.md`](references/context-recovery-rules.md)
 - Environment-neutral code structure retrieval, exact symbol navigation, dependency / call relations, change impact, and candidate-test discovery: [`../code-navigation/SKILL.md`](../code-navigation/SKILL.md); add [`references/code-navigation-jetlinks-rules.md`](references/code-navigation-jetlinks-rules.md) only for JetLinks domain relations
 - Shared coding conventions, comments, imports, i18n habits, tracing, and MBean observability: [`../jetlinks-conventions/SKILL.md`](../jetlinks-conventions/SKILL.md)
@@ -53,6 +55,7 @@ Read [`ai-prompt.md`](references/ai-prompt.md) first. Treat it as the routing in
 - When local examples are missing, clearly separate defaults from verified workspace facts.
 - Do not directly implement complex or unstable requirements before clarifying scope, exclusions, risks, and validation with the user.
 - Do not treat plan-first as sufficient protection against iterative patching. For complex tasks, establish falsifiable hypotheses and a validation matrix through `$systematic-solving`; after one failed implementation under the same root-cause hypothesis, stop adding local branches or fallbacks and rebuild the problem model before editing again.
+- Do not equate a complex task with mandatory multi-Agent execution. Use `$agent-orchestration` only after recording a concrete quality, critical-path, or context-isolation benefit; default to bounded read-only parallelism, one write owner per shared artifact, delegation depth one, compact evidence-bearing Result Packets, and fresh escalation after one informative low-capability failure.
 - Treat any new scenario-specific condition, fallback, retry, mock, compatibility alias, hidden switch, copied implementation, failure migration to a sibling scenario, or repeated action without new discriminating evidence as a stagnation signal. Route through `$systematic-solving` plus the JetLinks extension even when the task originally appeared small.
 - Do not implement large backend changes or new backend features before a task contract and test goals have been recorded in the workspace's task artifact and explicitly confirmed by the user.
 - Treat authoritative docs as the current accepted state, not drafts or execution logs. Rewrite stale requirements and decisions in place; do not append progress checkboxes, scan notes, debug attempts, raw test output, PR text, completion summaries, or timelines.
@@ -83,15 +86,16 @@ When analyzing first:
 3. Whether backend design-test gate applies, plus the task-contract/runtime artifact and any authoritative doc that needs promotion
 4. Focused JetLinks skill or skills to use
 5. Systematic-solving trigger, current hypotheses, and local-patch budget when applicable
-6. Code-navigation question, confirmed anchors, inferred edges, and remaining uncertainty when structure retrieval applies
-7. Workspace facts to confirm
-8. Proposed code and document locations
-9. Release-boundary decision when compatibility is in question
-10. Comment decision when complex or non-obvious code is involved
-11. Database portability and performance test decision when SQL is involved
-12. TraceHolder tracing decision when critical backend flows are involved
-13. MBean observability decision when long-lived in-memory or cache behavior is involved
-14. Plan summary, test goals, or direct-execution rationale
+6. Agent-orchestration RouteDecision, assignments, write ownership, capability tiers and escalation boundary when delegation applies
+7. Code-navigation question, confirmed anchors, inferred edges, and remaining uncertainty when structure retrieval applies
+8. Workspace facts to confirm
+9. Proposed code and document locations
+10. Release-boundary decision when compatibility is in question
+11. Comment decision when complex or non-obvious code is involved
+12. Database portability and performance test decision when SQL is involved
+13. TraceHolder tracing decision when critical backend flows are involved
+14. MBean observability decision when long-lived in-memory or cache behavior is involved
+15. Plan summary, test goals, or direct-execution rationale
 
 When implementing:
 
@@ -101,7 +105,8 @@ When implementing:
 4. If plan-first applies without backend design gate, output the plan and wait for confirmation
 5. If systematic solving applies, build the evidence-backed problem model and validation matrix before production edits; if stagnation occurs later, stop and rebuild it
 6. Use `$code-navigation` to establish the smallest confirmed producer-boundary-consumer map when the route still lacks ownership, consumers, variants, or test impact; add the JetLinks domain extension only for relevant framework relations. Reuse or inject a graph only when its decision question, task anchor, source fingerprint, language coverage, and scope match the task
-7. Edit the code with the smallest complete change that restores the demonstrated invariant
-8. Run validation at the coherent stage boundary; if it changes acceptance or the next route, enter `SNAPSHOT_REQUIRED` immediately. When the coherent stage passes, create one local stage commit when authorized and then refresh the Recovery Capsule and Git Source Snapshot with its actual hash and next route
-9. Push and create or update the PR only after the entire task meets its acceptance matrix; do not use PR updates as per-step progress records
-10. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository
+7. If delegation has concrete value, use `$agent-orchestration` to issue bounded Assignment Capsules only after the task model and dependencies are stable; otherwise retain `SINGLE_OWNER`
+8. Edit the code with the smallest complete change that restores the demonstrated invariant
+9. Run validation at the coherent stage boundary; if it changes acceptance or the next route, enter `SNAPSHOT_REQUIRED` immediately. When the coherent stage passes, create one local stage commit when authorized and then refresh the Recovery Capsule and Git Source Snapshot with its actual hash and next route
+10. Push and create or update the PR only after the entire task meets its acceptance matrix; do not use PR updates as per-step progress records
+11. Summarize what changed, which focused skills were used, what was verified, whether knowledge capture is recommended, and whether it is worth promoting into the official skills repository

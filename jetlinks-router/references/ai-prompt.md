@@ -114,22 +114,27 @@
     - 否则先查看当前工作区实际存在的根目录、构建 / 包配置、聚合模块、资源目录和链接边界，再使用 [`$code-navigation`](../../code-navigation/SKILL.md) 定向查 ownership、引用 / 调用和影响面；涉及 JetLinks 领域流时再读 [`code-navigation-jetlinks-rules.md`](code-navigation-jetlinks-rules.md)。
     - 结构图只返回有界路径、文件 / symbol 锚点、revision、证据来源和置信度；高影响推断边必须回到源码、构建或运行时证据确认。
 
-5. 切换最少 skill
+5. 选择单 Agent / 多 Agent 执行拓扑
+    - 只有独立读密集切片、稳定且写集互斥的实现切片、或高风险阶段审查能带来明确质量 / 关键路径 / 上下文隔离收益时，才加载 [`$agent-orchestration`](../../agent-orchestration/SKILL.md)。
+    - 未知根因、公共契约、迁移、安全、并发与共享状态由主智能体保留所有权；弱模型在同一切片一次有效失败后升级或重构 Assignment Capsule，不用换措辞继续同级重试。
+    - 默认委派深度 1、同时 1–2 个有界切片、只读并行优先、共享写串行；宿主不支持 subagent 时按相同角色契约串行执行。
+
+6. 切换最少 skill
     - 只切到覆盖当前任务的 focused skill。
 
-6. 找相邻示例
+7. 找相邻示例
     - 在目标模块或相似模块中定位同类实现。
     - 如果示例位于软链接模块中，允许沿链接读取其真实内容。
     - 如果没有相邻示例，切换到模板仓库模式，按通用规则生成最小实现。
 
-7. 实现
+8. 实现
     - 复用现有抽象，保持命名、分层、注解和返回类型一致。
 
-8. 校验
+9. 校验
     - 检查依赖、注解、导入、编程模型、权限、i18n、事件或 Topic 是否与当前工作区一致。
     - 如果当前环境无法直接执行验证，也要明确给出待执行命令、预期验证点和剩余风险边界。
 
-9. 交付
+10. 交付
     - 如果任务包含提交、推送或发 PR，切换到 `$jetlinks-delivery`。
     - 后端新增功能或既有功能变动必须先补或更新对应单元测试。
     - 较大后端改动或新功能的交付说明必须引用任务契约路径、用户确认状态、权威文档同步结论和测试目标达成情况。
@@ -138,7 +143,7 @@
     - 每个有独立验收信号的连贯阶段完成并验证后，若用户允许 checkpoint，再创建一个本地 commit，并用实际 commit hash 和下一步刷新 Recovery Capsule、Continuity Metadata 与 Source Snapshot；用户禁止提交时保留 `Checkpoint.In-flight(validation=passed)`，不要伪造 `Checkpoint.Validated`。不要为每个操作、文件或小步骤提交。
     - 所有阶段和总体验收矩阵完成后，才统一 push 分支并创建或更新一次 PR。未获用户明确要求时，不为中间步骤创建 draft PR，也不把 PR 描述 / 评论当进度流水。
 
-10. 沉淀
+11. 沉淀
     - 如果任务已经完成，且产出了稳定经验，切换到 `$jetlinks-capture`。
     - 先判断值不值得沉淀；默认不把单次任务总结写成 worklog，优先回写已有 canonical knowledge / playbook / skill。
     - 先给出沉淀建议、推荐路径和摘要草稿；用户确认后再生成正式文档。
@@ -163,6 +168,24 @@
 边界：
 - 该 skill 管问题模型、停滞门禁、解法层级和验证矩阵；CRUD、协议、响应式、前端等细节仍由对应领域 skill 管理。
 - 根因明确且不影响共享契约的导入、语法、格式或单点机械修复不强制进入。
+
+### 多 Agent / 大小模型协作
+
+切换：
+- [`$agent-orchestration`](../../agent-orchestration/SKILL.md)
+- 根因或契约尚未稳定时先组合 [`$systematic-solving`](../../systematic-solving/SKILL.md)
+- 长任务或跨压缩执行再组合 [`$task-continuity`](../../task-continuity/SKILL.md)
+
+适用：
+- 多个模块、文档、日志或风险面可以独立只读检索，再由一个主智能体集成
+- 共享契约已稳定，可把一个写集互斥且直接可验证的实现切片交给有界 worker
+- 公共契约、安全、并发、迁移或高影响变更需要独立阶段审查
+- 需要按任务风险动态使用经济型 / 均衡型 / 强能力模型，并限制重复调用成本
+
+边界：
+- 单智能体能低风险快速完成、任务强耦合、切片依赖同一上下文或协调成本大于收益时，明确选择 `SINGLE_OWNER`。
+- 不把一个未知公共根因分给多个 Agent 各自试补丁；只并行收集区分证据。
+- 主智能体保留共享契约、用户决策、外部副作用、集成、验收和交付所有权。
 
 ### 先看哪些模块、能力和目录
 
@@ -363,6 +386,7 @@
 - 复杂任务或一次修复后仍失败
     - `$systematic-solving`
     - 任务较长、需要恢复或分阶段交付时加 `$task-continuity`
+    - 问题模型稳定且存在独立切片时再加 `$agent-orchestration`
     - 加入与真实执行路径匹配的 `$jetlinks-crud` / `$jetlinks-boundary` / `$jetlinks-events` / `$jetlinks-reactive` / `$jetlinks-protocol` / `$jetlinks-web`
     - 公共能力和 no-hack 红线再加 `$jetlinks-conventions`
 
@@ -427,6 +451,7 @@
 - 复杂问题需要先建立调用链和影响面
     - `$code-navigation`
     - `$systematic-solving`
+    - 可独立检索多个边界时加 `$agent-orchestration`，用只读 scouts 收集证据，由主智能体整合
     - 长任务再加 `$task-continuity`
     - 再按 owning module 加对应领域 skill
 
@@ -443,10 +468,11 @@
 1. 任务分类
 2. 需要切换的 focused skill
 3. 系统性求解触发、竞争假设与局部修补预算（如适用）
-4. 代码检索问题、确认锚点、推断边和剩余不确定性（如适用）
-5. 需要先确认的工作区事实
-6. 建议落点和实现边界
-7. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
+4. 多 Agent RouteDecision、切片依赖、写所有权、能力层级与升级条件（如适用）
+5. 代码检索问题、确认锚点、推断边和剩余不确定性（如适用）
+6. 需要先确认的工作区事实
+7. 建议落点和实现边界
+8. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
 
 ### 当用户要求直接实现
 
@@ -454,10 +480,11 @@
 1. 静默完成分类
 2. 复杂或停滞任务先用 `$systematic-solving` 建立问题模型，并加载 JetLinks 扩展；同一假设下一次实现失败后停止编辑并重构。长任务同时用 `$task-continuity` 管理计划、恢复与阶段性交付
 3. 没有精确 ownership / consumer / impact 锚点时，用 `$code-navigation` 按当前环境可用能力建立有界且带置信度的最小执行路径；需要时加载 JetLinks 领域扩展
-4. 切换最少 domain-focused skill
-5. 查看路径锚点和必要相邻代码
-6. 实现最小完整闭环
-7. 如果任务要求交付，再补原场景 / 同类代表 / 反例边界 / 回归证据、测试、提交与 PR 规范检查
-8. 如果任务产出了跨任务稳定经验，再建议应更新的 canonical 来源或合理的新知识路径；单次完成总结不落档
-9. 如果结论已成熟到可抽成通用 skill，再询问是否并入 `jetlinks-develop-skills` 并准备官方 PR
-10. 只汇报最终规则结论、验证结果和风险，不输出操作流水
+4. 只有问题模型和依赖稳定且委派有明确收益时，用 `$agent-orchestration` 分配有界读切片、互斥写切片或独立审查；否则保持 `SINGLE_OWNER`
+5. 切换最少 domain-focused skill
+6. 查看路径锚点和必要相邻代码
+7. 实现最小完整闭环
+8. 如果任务要求交付，再补原场景 / 同类代表 / 反例边界 / 回归证据、测试、提交与 PR 规范检查
+9. 如果任务产出了跨任务稳定经验，再建议应更新的 canonical 来源或合理的新知识路径；单次完成总结不落档
+10. 如果结论已成熟到可抽成通用 skill，再询问是否并入 `jetlinks-develop-skills` 并准备官方 PR
+11. 只汇报最终规则结论、验证结果和风险，不输出操作流水
