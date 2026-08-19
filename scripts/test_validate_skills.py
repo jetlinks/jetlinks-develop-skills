@@ -193,6 +193,43 @@ class ValidateSkillsTest(unittest.TestCase):
             self.assertIn("superseded behavioral contract marker: Resume.audit_fingerprint", joined)
             self.assertIn("superseded behavioral contract marker: 维护两个有界逻辑视图", joined)
 
+    def test_validates_codex_agent_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "agent-orchestration"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: agent-orchestration\ndescription: Test.\n---\n", encoding="utf-8")
+            agents = root / ".codex" / "agents"
+            agents.mkdir(parents=True)
+            (root / ".codex" / "config.toml").write_text(
+                "[agents]\nenabled = true\nmax_concurrent_threads_per_session = 2\n"
+                'default_subagent_model = "balanced"\n'
+                'default_subagent_reasoning_effort = "medium"\n',
+                encoding="utf-8",
+            )
+            profiles = {
+                "bounded-explorer.toml": ("bounded_explorer", True),
+                "bounded-worker.toml": ("bounded_worker", False),
+                "stage-reviewer.toml": ("stage_reviewer", True),
+            }
+            for filename, (name, read_only) in profiles.items():
+                sandbox = 'sandbox_mode = "read-only"\n' if read_only else ""
+                (agents / filename).write_text(
+                    f'name = "{name}"\ndescription = "Test profile"\n{sandbox}'
+                    'developer_instructions = "Do not spawn further agents."\n',
+                    encoding="utf-8",
+                )
+            self.assertEqual([], VALIDATOR.validate_codex_adapter(root))
+
+            (agents / "bounded-explorer.toml").write_text(
+                'name = "bounded_explorer"\ndescription = "Test profile"\n'
+                'sandbox_mode = "workspace-write"\n'
+                'developer_instructions = "Do not spawn further agents."\n',
+                encoding="utf-8",
+            )
+            errors = VALIDATOR.validate_codex_adapter(root)
+            self.assertTrue(any("read-only profile" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

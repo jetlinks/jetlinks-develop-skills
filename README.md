@@ -13,6 +13,7 @@ jetlinks-develop-skills/
 │   └── pull_request_template.md
 ├── jetlinks-router/
 ├── systematic-solving/
+├── agent-orchestration/
 ├── task-continuity/
 ├── code-navigation/
 ├── scripts/
@@ -45,6 +46,10 @@ jetlinks-develop-skills/
 ### `systematic-solving`
 
 用于任意领域复杂、高难度、高不确定性、跨边界或反复失败任务的环境无关系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设。批量验证中的失败会先分为生产契约、陈旧 oracle、无效 fixture、机械装配或 unresolved，避免为了整批变绿把测试 / fixture 问题吸收到生产代码。
+
+### `agent-orchestration`
+
+用于任意执行环境中的单 Agent / 多 Agent 动态路由、能力分层、并行边界、Assignment Capsule、失败升级、Result Packet 集成和阶段验证。默认只有明确质量、关键路径或上下文隔离收益时才委派：经济型 Agent 处理范围窄、影响低、证据可核验的工作；主智能体保留未知根因、共享契约、安全、迁移、并发、外部副作用、集成和最终验收。默认委派深度 1、同时 1–2 个切片、读并行优先、共享写串行；一次有效失败后升级或重构任务，不让弱模型通过换提示词反复重试。核心技能不依赖 Codex、具体模型、Trellis、Git 或本地路径。
 
 ### `task-continuity`
 
@@ -108,6 +113,7 @@ jetlinks-develop-skills/
 
 - 不确定该用哪个 skill：`$jetlinks-router`
 - 复杂、高难度、跨边界或已开始反复修补：`$systematic-solving` + `$jetlinks-router` 领域扩展 + 对应领域 skill；长任务再加 `$task-continuity`
+- 只想设计或执行多 Agent / 大小模型协作：`$agent-orchestration`；未知根因先加 `$systematic-solving`，长任务再加 `$task-continuity`
 - 只想压缩计划、恢复上下文、复用测试证据或约束阶段 / PR 生命周期：`$task-continuity`
 - 只想检索定义 / 引用 / 调用链、组件依赖、领域流、变更影响或候选测试：`$code-navigation`
 - 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
@@ -122,6 +128,17 @@ jetlinks-develop-skills/
 - 只想先选择或复用前端页面风格/页面壳层：`$jetlinks-web-style`
 - 只想判断是否值得沉淀知识：`$jetlinks-capture`
 - 只想整理提交、设计门禁、测试和 PR：`$jetlinks-delivery`
+
+## Codex Multi-Agent Adapter
+
+通用 `$agent-orchestration` 不要求 subagent。仓库同时提供可选的 Codex 项目适配：
+
+- [`.codex/config.toml`](.codex/config.toml) 将项目级 subagent 并发上限设为 3，默认子 Agent 使用均衡型配置。
+- [`.codex/agents/bounded-explorer.toml`](.codex/agents/bounded-explorer.toml) 用于低成本只读证据检索。
+- [`.codex/agents/bounded-worker.toml`](.codex/agents/bounded-worker.toml) 用于契约稳定、写集互斥的有界实现。
+- [`.codex/agents/stage-reviewer.toml`](.codex/agents/stage-reviewer.toml) 用于高影响阶段的只读审查。
+
+这些 `.codex/` 文件只配置当前项目；仅安装 skill 不会修改其他项目或个人 Codex 配置。需要跨项目复用时，再显式复制到目标项目 `.codex/agents/` 或个人 `~/.codex/agents/`，并按 [OpenAI 官方 Codex subagents 文档](https://learn.chatgpt.com/docs/agent-configuration/subagents) 核对当前模型和配置字段。
 
 ## Install
 
@@ -194,7 +211,7 @@ python3 -m unittest scripts/test_validate_skills.py
 python3 scripts/validate_skills.py --mirror-root /path/to/installed/skills
 ```
 
-校验器只检查技能包结构、frontmatter、UI metadata、本地引用、三个通用技能的作者环境泄漏，以及可选镜像同步；它不假定 CC Switch、Codex、Git 或某个固定安装位置，也不替代真实 prompt 的前向评测。
+校验器只检查技能包结构、frontmatter、UI metadata、本地引用、四个通用技能的作者环境泄漏、可选 Codex 项目适配，以及镜像同步；它不假定 CC Switch、Trellis、Git 或某个固定安装位置，也不替代真实 prompt 的前向评测。
 
 ## Usage
 
@@ -208,6 +225,7 @@ Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
 - 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
+- 使用 `$agent-orchestration` 先判断是否值得委派，再按不确定性、影响面、耦合度和可验证性选择 `SINGLE_OWNER`、只读 scouts、有界 worker、顺序 handoff 或独立 reviewer；每个切片使用 Assignment Capsule，弱模型一次有效失败后升级而不是反复换提示词重试。
 - 使用 `$task-continuity` 原位压缩实时计划，将模型恢复视图收敛为 `Contract / Checkpoint / DecisionState / Resume`，把完整 digest / revision / evidence ledger 留在机器元数据；验证改变路线时先刷新，压缩恢复时完成 `RESUME_AUDIT -> READY` 后从少量锚点和执行级 `Next` 继续，连续匹配恢复不重读完整技能集或重建同一系统图，并复用仍覆盖当前验收矩阵的验证证据；维护技能时用 full-context / capsule / ablation continuation 评测实际恢复质量；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
 - 使用 `$code-navigation` 先发现当前环境可用的检索能力，再从精确 symbol 或 changed items 出发，有界查询定义、引用、调用、组件 / 领域关系和候选测试；保留关系来源与置信度，不把语义相似度或作者机器上的工具当成精确事实或必需依赖。
 - 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。

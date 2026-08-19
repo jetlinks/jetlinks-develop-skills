@@ -13,8 +13,44 @@ from pathlib import Path
 
 NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
-GENERIC_SKILLS = {"systematic-solving", "task-continuity", "code-navigation"}
+GENERIC_SKILLS = {"systematic-solving", "task-continuity", "code-navigation", "agent-orchestration"}
 REQUIRED_SKILL_CONTRACTS = {
+    "agent-orchestration": {
+        "SKILL.md": (
+            "RouteDecision",
+            "SINGLE_OWNER",
+            "Assignment Capsule",
+            "Result Packet",
+            "at most two active delegated slices",
+            "After one failed attempt",
+            "overlapping files",
+        ),
+        "references/orchestration-and-routing-rules.md": (
+            "CAPABILITY_MISMATCH",
+            "CAPSULE_DEFECT",
+            "SOURCE_DRIFT",
+            "INVALID_OBSERVATION",
+            "CONTRACT_DEFECT",
+            "IMPLEMENTATION_DEFECT",
+            "Default delegation depth: one",
+            "one or two",
+            "same capability tier",
+        ),
+        "references/evaluation-cases.md": (
+            "Short mechanical change",
+            "Host without subagents",
+            "same-slice retry",
+            "overlapping writes",
+            "scripts/evaluate_orchestration_trace.py",
+        ),
+        "scripts/evaluate_orchestration_trace.py": (
+            "def evaluate_trace",
+            "weak_retry_count",
+            "overlapping active writes",
+            "below escalated tier",
+            "max_observed_active",
+        ),
+    },
     "task-continuity": {
         "SKILL.md": (
             "READY",
@@ -260,6 +296,83 @@ def validate_mirror(skill_root: Path, mirror_root: Path) -> list[str]:
     return errors
 
 
+def validate_codex_adapter(repository_root: Path) -> list[str]:
+    """Validate the optional project adapter when agent-orchestration is present."""
+    if not (repository_root / "agent-orchestration" / "SKILL.md").is_file():
+        return []
+
+    errors: list[str] = []
+    config_path = repository_root / ".codex" / "config.toml"
+    if not config_path.is_file():
+        return [f"{config_path}: Codex adapter config missing"]
+    try:
+        config_text = config_path.read_text(encoding="utf-8")
+    except OSError as error:
+        return [f"{config_path}: cannot read config: {error}"]
+    agents_match = re.search(r"(?ms)^\[agents\]\s*$\n(.*?)(?=^\[|\Z)", config_text)
+    if agents_match is None:
+        errors.append(f"{config_path}: missing [agents] table")
+    else:
+        agents_text = agents_match.group(1)
+        if not re.search(r"(?m)^enabled\s*=\s*true\s*$", agents_text):
+            errors.append(f"{config_path}: agents.enabled must be true")
+        max_match = re.search(r"(?m)^max_concurrent_threads_per_session\s*=\s*([0-9]+)\s*$", agents_text)
+        if max_match is None or int(max_match.group(1)) < 1:
+            errors.append(f"{config_path}: max_concurrent_threads_per_session must be a positive integer")
+        for field in ("default_subagent_model", "default_subagent_reasoning_effort"):
+            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]+)"\s*$', agents_text)
+            if value is None or not value.group(1).strip():
+                errors.append(f"{config_path}: agents.{field} must be a non-empty string")
+
+    required_profiles = {
+        "bounded-explorer.toml": ("bounded_explorer", True),
+        "bounded-worker.toml": ("bounded_worker", False),
+        "stage-reviewer.toml": ("stage_reviewer", True),
+    }
+    seen_names: set[str] = set()
+    for filename, (expected_name, read_only) in required_profiles.items():
+        path = repository_root / ".codex" / "agents" / filename
+        if not path.is_file():
+            errors.append(f"{path}: required Codex Agent profile missing")
+            continue
+        try:
+            profile_text = path.read_text(encoding="utf-8")
+        except OSError as error:
+            errors.append(f"{path}: cannot read profile: {error}")
+            continue
+        profile: dict[str, str] = {}
+        for field in ("name", "description"):
+            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+            if value is None or not value.group(1).strip():
+                errors.append(f"{path}: {field} must be a non-empty string")
+            else:
+                profile[field] = value.group(1)
+        instructions_match = re.search(
+            r'(?ms)^developer_instructions\s*=\s*"""\s*\n(.*?)^"""\s*$',
+            profile_text,
+        ) or re.search(r'(?m)^developer_instructions\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+        if instructions_match is None or not instructions_match.group(1).strip():
+            errors.append(f"{path}: developer_instructions must be a non-empty string")
+            instructions = ""
+        else:
+            instructions = instructions_match.group(1)
+            profile["developer_instructions"] = instructions
+        name = profile.get("name")
+        if name != expected_name:
+            errors.append(f"{path}: name must be {expected_name!r}")
+        if isinstance(name, str) and name in seen_names:
+            errors.append(f"{path}: duplicate Codex Agent name {name!r}")
+        if isinstance(name, str):
+            seen_names.add(name)
+        sandbox_match = re.search(r'(?m)^sandbox_mode\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+        sandbox_mode = sandbox_match.group(1) if sandbox_match else None
+        if read_only and sandbox_mode != "read-only":
+            errors.append(f"{path}: read-only profile must set sandbox_mode = 'read-only'")
+        if "spawn further agents" not in instructions:
+            errors.append(f"{path}: profile must prohibit recursive Agent fan-out")
+    return errors
+
+
 def discover_skills(repository_root: Path) -> list[Path]:
     return sorted(path.parent for path in repository_root.glob("*/SKILL.md"))
 
@@ -290,6 +403,7 @@ def validate_repository(repository_root: Path, mirror_root: Path | None = None) 
 
     if not skills:
         errors.append(f"{repository_root}: no root-level skill packages found")
+    errors.extend(validate_codex_adapter(repository_root))
     return {
         "repository": str(repository_root),
         "skill_count": len(skills),
