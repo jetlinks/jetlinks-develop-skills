@@ -69,6 +69,7 @@ Continuity Metadata 保存：
 - `source_fingerprint`、strength、missing layers 与 expected changed items。
 - `ReferencedSources` 的 locator、revision / cursor、extracted facts 与重读条件。
 - `LoadedRules` 的 locator、revision / digest、extracted obligations 与重读条件。
+- 多 Agent 路线存在时的 `OrchestrationProgram` revision / current stage、冻结的 shared-contract revisions、当前 `RouteDecision` revision、assignment state 与 Result Packet locator。
 - 验证证据的 locator、输入 / 环境 identity、适用 acceptance 和 freshness。
 - `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence` 与最近 productive action。
 
@@ -81,6 +82,23 @@ Source Snapshot 至少记录：source / workspace identity、复合 `source_fing
 - untracked / unmanaged items 的相对 locator、类型与内容摘要所形成的 manifest 摘要。
 - nested workspace、submodule、generated source 或外部挂载中实际参与任务的状态摘要。
 - 胶囊声明的 expected changed items，用来区分本任务变化与外部漂移。
+
+适配器对复合指纹做机器交换时，优先使用下列稳定逻辑层；字段名可映射，不能因某宿主没有 Git 术语而降级通用协议：
+
+```yaml
+source_fingerprint:
+  algorithm: <name + schema version>
+  workspace_identity: <stable workspace / source identity>
+  base_revision: <VCS / artifact / source baseline>
+  managed_change_digest: <tracked / managed content digest>
+  unmanaged_manifest_digest: <untracked / unmanaged locator + type + content digest>
+  nested_source_digest: <participating nested / generated / mounted source digest>
+  expected_changed_items: [<task-owned locators>]
+  strength: strong | partial
+  missing_layers: [<unavailable logical layers>]
+```
+
+算法名和 schema version 是指纹契约的一部分；不同算法的摘要不能直接声称匹配。适配器可以把 `managed_change_digest` 映射成 tracked patch digest，把 `unmanaged_manifest_digest` 映射成 untracked manifest digest，但不得只比较 dirty count、路径数量或 HEAD。`expected_changed_items` 是任务语义范围，不得由当前脏文件清单反推。
 
 某层不可获得时标记 `partial` 和缺失项，不能笼统声称“指纹匹配”。干净且不可变的 version / artifact identity 可以单独构成强指纹；固定 base revision 加 dirty item 数量不能。
 
@@ -96,7 +114,7 @@ ReferencedSources:
     reread_when: <revision changed / fact conflicts / missing decision detail>
 ```
 
-恢复时先用最轻量能力比较 revision / cursor。未变化且 `extracted_facts` 足够支撑 `Next` 时直接复用；优先使用增量 wait、delta、page cursor、change feed 或条件读取，而不是重新完整读取。来源发生变化时只读取 revision 之后的增量；只有增量无法解释冲突或定位关键事实时才扩大到历史页面。账本不保存整份外部正文或无关历史。
+恢复时先用最轻量能力比较 revision / cursor。对 thread / task 类来源优先使用非阻塞 wait / delta（例如 `timeout=0` 和保存的 `afterCursor`），cursor 未变化时禁止再次调用完整 read；cursor 前进时只读取最新增量。只有增量无法解释已记录冲突或缺少唯一决策事实时才扩大到历史页面。未变化且 `extracted_facts` 足够支撑 `Next` 时直接复用；账本不保存整份外部正文或无关历史。
 
 ### 技能加载账本与执行级 Next
 
@@ -139,6 +157,30 @@ active_observation:
 这不是新的 Capsule 区块，也不为根因明确的简单任务强制启用。细长输入、日志和完整假设表仍留在 evidence locator 后。active observation 存在时，mutation action 额外声明 `purpose`：`solution`、`observation_setup` 或 `observation_repair`；check 和 blocker 不需要伪装成 mutation。
 
 “继续实现某阶段”“继续分析”“熟悉代码”“再看看相关材料”不包含边界和可观察信号，不能从 `RESUME_AUDIT` 进入 `READY`。先在 `SNAPSHOT_REQUIRED` 中把它改写为执行级动作。
+
+### 多 Agent 程序运行态
+
+当编排能力建立阶段化程序时，只保存恢复和集成需要的控制面，不保存子 Agent 的过程日志或完整上下文：
+
+```yaml
+OrchestrationState:
+  program_id: <stable id>
+  program_revision: <revision>
+  current_stage: <stage id>
+  shared_contract_revisions: {<contract id>: <frozen revision>}
+  route_revision: <current RouteDecision revision>
+  assignments:
+    - assignment_id: <stable id>
+      status: routed | active | collected | accepted | rejected | blocked | stale
+      source_fingerprint: <assigned source identity>
+      dispatch_receipt: <opaque host receipt when dispatched>
+      result_locator: <terminal Result Packet locator when available>
+      write_set: [<exclusive task-owned locators>]
+  integration_owner: <primary owner>
+  critical_path_next: <wait, accept, integrate, dispatch next stage, or blocker>
+```
+
+恢复时先用宿主最轻量的 agent-status / wait / result-delta 能力对账这些身份。`active` assignment 继续等待或 steer，`collected` assignment 进入接受检查，已有 terminal locator 的 assignment 不重新读取完整子线程；只有 program、stage、shared contract、source identity 或 result 发生失配时才扩大。不得因上下文压缩重建相同分工、重复 dispatch，或让新 Agent 接管仍有活跃 owner 的 write set。阶段完成后覆盖 `current_stage` 与 assignment 集合，只保留最近 accepted boundary 的 evidence locator，不把每轮调度历史累积进主视图。
 
 ### 跨压缩恢复指纹
 
@@ -185,7 +227,17 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 刷新时覆盖旧状态，并使 Recovery Capsule、Continuity Metadata 与 Source Snapshot 指向同一边界。尚未验证的工作只能进入 `Checkpoint.In-flight`，不能写成 `Checkpoint.Validated`。若宿主有阶段 commit、build、snapshot 或 review ID，可作为证据 locator；通用协议不要求其中任何一种。
 
-## 6. 恢复算法与读取预算
+## 6. 恢复类型、算法与读取预算
+
+先按触发原因区分三种恢复，不能把所有暂停都升级成完整接管审计：
+
+| 类型 | 适用触发 | 默认预算 | 必须结果 |
+| --- | --- | --- | --- |
+| `COMPACT_CONTINUATION` | 同一任务 / 会话刚发生自动或手动上下文压缩 | 读取最新指令与胶囊；最多一个并行工具批次比较 source、contract、reference cursor 和 rules revision | 匹配时在恢复当轮执行 `first_allowed_action`；失配时只对账失配项 |
+| `COLD_HANDOFF` | 新 owner 首次接管、没有可信胶囊，或任务 / source identity 无法关联 | 一次有界 takeover audit，可读取任务契约、最近有效 checkpoint、source identity 和建立精确 anchors 所需的最小范围 | 建立新的有界状态和执行级 `Next`，或报告一个真实阻塞 |
+| `EXTERNAL_RETRY` | 503、超时、连接中断、审批等待后重试等外部失败 | 比较外部 operation / request identity 与相关 revision；源码和契约未变时不审计 workspace | 查询幂等状态或重试同一 `Next`；只有外部结果改变任务事实时刷新快照 |
+
+`EXTERNAL_RETRY` 若无法判断上一次有副作用操作是否成功，先用 operation id、幂等键、远端状态或等价只读能力消除不确定性，不能盲目重复；这仍是外部结果核验，不是完整上下文恢复。
 
 恢复快速路径先于普通任务分类与 focused-skill 路由：
 
@@ -198,10 +250,10 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 匹配恢复默认不加载 `$systematic-solving`、`$code-navigation`、交付 skill、完整 PRD / research / task history 或仓库概览。只有新失败或假设变化需要重建问题模型，anchor / owner / impact 失效需要重新导航，阶段 checkpoint 或最终交付需要交付 skill。技能可用不构成加载理由。
 
-1. 压缩、恢复、暂停后继续或交接后先把状态视为 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束和执行级唯一下一步。
+1. `COMPACT_CONTINUATION` 与已有可信状态的 resume 先进入 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束和执行级唯一下一步。`COLD_HANDOFF` 先建立这些状态，`EXTERNAL_RETRY` 则保留原 gate 和 `Next`。
 2. 使用当前环境最轻量的只读能力比较 Source Snapshot、预期 changed items，以及机器元数据中的引用 / 规则 revisions；匹配时不读取完整 metadata、原始证据或外部正文。
 3. 计算当前 `audit_fingerprint`，核对 Contract、Checkpoint、DecisionState、少量 Anchors 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
-4. 指纹、引用和语义状态均匹配时递增或初始化 `consecutive_matching_audits`，显式执行 `RESUME_AUDIT -> READY`，只加载宿主要求的当前 skill body 和 `Next` 新需要的规则，然后立即执行 `first_allowed_action`；不重读 research basis、已提取外部历史、整个任务树或仓库总览。
+4. 指纹、引用和语义状态均匹配时递增或初始化 `consecutive_matching_audits`，显式执行 `RESUME_AUDIT -> READY`，只加载宿主要求的当前 skill body 和 `Next` 新需要的规则，然后立即执行 `first_allowed_action`；对 `COMPACT_CONTINUATION`，核验调用必须合并在最多一个可并行工具批次中，且 productive action 必须发生在同一恢复轮。不重读 research basis、已提取外部历史、整个任务树或仓库总览。
 5. 引用 revision 变化但 source 匹配时转为 `SNAPSHOT_REQUIRED`，先读取引用增量并更新 `extracted_facts`；不因此重新扫描源码。
 6. source 部分失配时转为 `SNAPSHOT_REQUIRED`，先检查失配 changed items 或 artifact，只扩大到解释失配所需的生产者、消费者或所有权边界，并重写三个逻辑视图。
 7. 任务身份、契约或 source state 无法建立时停止实施，向用户请求一个聚焦的决定；不要猜路线。
@@ -218,6 +270,17 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 该脚本只返回 diagnostics、comparisons 和 suggested gate，不写运行态、不修改源码、不阻断工具、不提交或发布。宿主 adapter 负责安全采集 observation、解释 locator，并按授权应用状态转换；不能因为脚本可用就在每条命令后调用。
 
 默认恢复读取预算只包含：最新指令、任务契约、胶囊主视图、复合指纹 / revisions 的比较结果、宿主强制规则和 `Next` 必需的少量 anchors。任何超出预算的读取必须对应一个明确的身份 / 指纹 / 引用 / 锚点失配，并说明它将消除哪项不确定性。恢复后的第一项生产性动作必须直接服务于 `Next`；“继续读取以熟悉项目”不是生产性动作。
+
+宿主有并行工具能力时，`COMPACT_CONTINUATION` 的 source fingerprint、contract revision、reference cursor、LoadedRules revision 比较应作为一个并行批次发出；没有并行能力时仍只允许一个等价的有界比较阶段，不能把四项拆成多轮分析。以下指标作为 continuation trace 的默认硬门禁：
+
+- `resume_audit_tool_rounds <= 1`
+- `full_thread_reads == 0`
+- `unchanged_reference_reads == 0`
+- `recovery_commentary_only_turns == 0`
+- `first_productive_action_turn == resume_turn`
+- 第二次及后续 matching audit 的完整 reference / skill / workspace 重读为 `0`
+
+这些门禁只约束状态匹配的 `COMPACT_CONTINUATION`。`COLD_HANDOFF` 和已记录失配的恢复必须报告实际读取成本与原因，但不伪装成快路径失败。
 
 恢复审计通过后的第一项生产性动作必须服务于胶囊的 `Next` 和验收信号。相邻 TODO、旧方案或新可用工具都不能自动扩大范围。连续匹配恢复按以下止空转门禁处理：
 
@@ -271,11 +334,16 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 宿主自动化应保存完整有界状态，但 `SessionStart(source=compact)` 或等价入口只注入模型主视图、source strength、revision match summary、匹配计数和 `first_allowed_action`。原始 evidence、完整账本、长规则和完整系统图保持按 locator 拉取。
 
+第三方 memory / event-index / compaction 插件可以承担事件持久化、全文 / 语义检索和 lifecycle wiring；不得让插件生成的历史叙述取代 Capsule、Source Snapshot 或 gate。优先复用成熟后端，不复制数据库、FTS、embedding、transcript archive 或 hook installer。安装前核对宿主版本、许可证、数据位置、网络行为、依赖、hook trust 和注入上限；安装是显式的环境变更，不因技能可用而自动发生。具体选择规则见 [`host-adapters.md`](host-adapters.md)。
+
 ## 10. 标准化轨迹与评测适配
 
 宿主可把真实执行记录转换成 `scripts/evaluate_continuity_trace.py` 接受的有序 `events`。标准事件至少包含 `type`，按事件种类补充：
 
 - 读取：`target`、`revision/source_fingerprint`、`scope`、可选 `recovery_id`。
+- 恢复：顶层或事件记录 `recovery_type`、`resume_turn`、`identity_match`、`matching_audit_number`；恢复核验读取再记录 `continuity_phase=RESUME_AUDIT` 和同一并行批次共享的 `tool_round`。
+- 外部引用：读取事件标记 `target_kind=thread|task|issue|reference|research`、`cursor_changed/revision_changed` 与 scope；cursor 未变时不得生成 read 事件，若实际发生则评测为 `unchanged_reference_reads`。
+- 恢复 commentary：只有状态复述且没有生产动作的轮次记录 `commentary` / `recovery_commentary`，用来检测“本轮只恢复、下轮再执行”。
 - 生产动作：`action_id`、`turn`、`productive`、`serves_next`、可选 `recovery_id`。
 - 验证：`check_id`、source fingerprint、input revision、environment；等价四元组用于发现无依据重复执行。
 - 权威 artifact 写入：`content_classes`，由 adapter 标记 progress、test counts、todo、attempt history 等运行态类别。

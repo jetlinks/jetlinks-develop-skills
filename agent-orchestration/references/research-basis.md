@@ -20,6 +20,8 @@ The following are operational guardrails derived from the combined evidence, not
 
 - Default delegation depth one and one or two active slices to cap coordination and fan-out.
 - Parallelize independent evidence collection before shared implementation.
+- Represent substantial cross-module delivery as a bounded sequence of stage-level routing decisions; keep one primary orchestrator responsible for shared contracts, integration and acceptance instead of creating recursive Agent teams.
+- Freeze the relevant cross-slice contract revision and satisfy dependency gates before concurrent implementation writes; otherwise use a sequential handoff.
 - After one informative failure, stop cheap same-route retries and transfer a fresh escalation packet.
 - Keep public contracts, integration, external side effects and final acceptance under one primary owner.
 - Tune thresholds with task-class traces and compare against a single-owner baseline.

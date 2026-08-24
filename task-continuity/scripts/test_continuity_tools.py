@@ -213,6 +213,83 @@ class ContinuityStateTest(unittest.TestCase):
 
 
 class ContinuityTraceTest(unittest.TestCase):
+    def test_matching_compact_continuation_passes_same_turn_fast_path(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "resume_turn": 7,
+                "identity_match": True,
+                "matching_audit_number": 2,
+                "expected_action_id": "patch",
+                "events": [
+                    {
+                        "type": "identity_compare",
+                        "target": "source",
+                        "revision": "s1",
+                        "continuity_phase": "RESUME_AUDIT",
+                        "tool_round": 1,
+                        "turn": 7,
+                    },
+                    {
+                        "type": "reference_compare",
+                        "target": "thread",
+                        "revision": "cursor-4",
+                        "continuity_phase": "RESUME_AUDIT",
+                        "tool_round": 1,
+                        "turn": 7,
+                    },
+                    {"type": "mutation", "action_id": "patch", "turn": 7, "serves_next": True},
+                ],
+            }
+        )
+        self.assertEqual(1, metrics["resume_audit_tool_rounds"])
+        self.assertEqual(0, metrics["full_thread_reads"])
+        self.assertEqual(0, metrics["unchanged_reference_reads"])
+        self.assertEqual(0, metrics["recovery_commentary_only_turns"])
+        self.assertTrue(metrics["first_productive_action_on_resume_turn"])
+        self.assertTrue(metrics["compact_continuation_fast_path_passed"])
+
+    def test_compact_continuation_detects_reread_and_commentary_delay(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "resume_turn": 9,
+                "identity_match": True,
+                "matching_audit_number": 3,
+                "expected_action_id": "patch",
+                "events": [
+                    {
+                        "type": "thread_read",
+                        "target": "thread",
+                        "target_kind": "thread",
+                        "revision": "cursor-4",
+                        "scope": "full_thread",
+                        "cursor_changed": False,
+                        "continuity_phase": "RESUME_AUDIT",
+                        "tool_round": 1,
+                        "turn": 9,
+                    },
+                    {
+                        "type": "identity_compare",
+                        "target": "source",
+                        "revision": "s1",
+                        "continuity_phase": "RESUME_AUDIT",
+                        "tool_round": 2,
+                        "turn": 9,
+                    },
+                    {"type": "recovery_commentary", "turn": 9},
+                    {"type": "mutation", "action_id": "patch", "turn": 10, "serves_next": True},
+                ],
+            }
+        )
+        self.assertEqual(2, metrics["resume_audit_tool_rounds"])
+        self.assertEqual(1, metrics["full_thread_reads"])
+        self.assertEqual(1, metrics["unchanged_reference_reads"])
+        self.assertEqual(1, metrics["matching_audit_full_reference_reads"])
+        self.assertEqual(1, metrics["recovery_commentary_only_turns"])
+        self.assertFalse(metrics["first_productive_action_on_resume_turn"])
+        self.assertFalse(metrics["compact_continuation_fast_path_passed"])
+
     def test_detects_idle_reads_duplicate_check_and_prd_leak(self) -> None:
         metrics = TRACE.evaluate_trace(
             {

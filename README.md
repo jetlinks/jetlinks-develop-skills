@@ -49,11 +49,11 @@ jetlinks-develop-skills/
 
 ### `agent-orchestration`
 
-用于任意执行环境中的单 Agent / 多 Agent 动态路由、能力分层、并行边界、Assignment Capsule、失败升级、Result Packet 集成和阶段验证。默认只有明确质量、关键路径或上下文隔离收益时才委派：经济型 Agent 处理范围窄、影响低、证据可核验的工作；主智能体保留未知根因、共享契约、安全、迁移、并发、外部副作用、集成和最终验收。默认委派深度 1、同时 1–2 个切片、读并行优先、共享写串行；一次有效失败后升级或重构任务，不让弱模型通过换提示词反复重试。核心技能不依赖 Codex、具体模型、Trellis、Git 或本地路径。
+用于任意执行环境中的单 Agent / 多 Agent 动态路由、真实委派、能力分层、并行边界、Assignment Capsule、失败升级、Result Packet 集成和阶段验证。默认只有明确质量、关键路径或上下文隔离收益时才委派；一旦当前执行选择非 `SINGLE_OWNER` 且宿主允许，必须真实 dispatch、收集和集成，不能只输出 Agent 角色或提示词。经济型 Agent 处理范围窄、影响低、证据可核验的工作；主智能体保留未知根因、共享契约、安全、迁移、并发、外部副作用、集成和最终验收。默认委派深度 1、同时 1–2 个切片、读并行优先、共享写串行；一次有效失败后升级或重构任务，不让弱模型通过换提示词反复重试。核心技能不依赖 Codex、具体模型、Trellis、Git 或本地路径。
 
 ### `task-continuity`
 
-用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`，源码指纹、引用 / 规则 revisions 和完整证据 locator 留在机器 Continuity Metadata / Source Snapshot；并用 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 门禁阻止陈旧状态下继续修改。跨压缩拒绝空泛 `Next`，连续匹配恢复时直接进入精确动作而不反复重读；真实 continuation 对比和关键字段消融用于检验压缩是否丢失约束或决策证据。不要求 Trellis、Git、GitHub、本地文件或 hooks。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
+用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`，源码指纹、引用 / 规则 revisions 和完整证据 locator 留在机器 Continuity Metadata / Source Snapshot；并用 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 门禁阻止陈旧状态下继续修改。恢复区分压缩续跑、冷接管和外部重试；匹配的压缩续跑最多一个核验批次，并在同一恢复轮执行精确 `first_allowed_action`。真实 continuation 对比和关键字段消融用于检验压缩是否丢失约束或决策证据。不要求 Trellis、Git、GitHub、本地文件或 hooks。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
 
 ### `code-navigation`
 
@@ -133,12 +133,21 @@ jetlinks-develop-skills/
 
 通用 `$agent-orchestration` 不要求 subagent。仓库同时提供可选的 Codex 项目适配：
 
-- [`.codex/config.toml`](.codex/config.toml) 将项目级 subagent 并发上限设为 3，默认子 Agent 使用均衡型配置。
+- [`.codex/config.toml`](.codex/config.toml) 使用官方仍支持的保守并发别名将项目级 subagent 上限设为 3；模型档位由各 Agent profile 负责。
 - [`.codex/agents/bounded-explorer.toml`](.codex/agents/bounded-explorer.toml) 用于低成本只读证据检索。
+- [`.codex/agents/mechanical-worker.toml`](.codex/agents/mechanical-worker.toml) 用于已冻结契约、验收确定且写集独占的低影响机械修改；首次有效失败后升级，不重试猜测。
 - [`.codex/agents/bounded-worker.toml`](.codex/agents/bounded-worker.toml) 用于契约稳定、写集互斥的有界实现。
 - [`.codex/agents/stage-reviewer.toml`](.codex/agents/stage-reviewer.toml) 用于高影响阶段的只读审查。
 
-这些 `.codex/` 文件只配置当前项目；仅安装 skill 不会修改其他项目或个人 Codex 配置。需要跨项目复用时，再显式复制到目标项目 `.codex/agents/` 或个人 `~/.codex/agents/`，并按 [OpenAI 官方 Codex subagents 文档](https://learn.chatgpt.com/docs/agent-configuration/subagents) 核对当前模型和配置字段。
+复杂跨模块任务可以由 `$agent-orchestration` 建立通用 `OrchestrationProgram`：主会话保留需求、问题模型、共享契约、调度、集成、验收和交付，当前阶段仍使用已有 `RouteDecision`，有界 workers 只处理互斥叶子切片。它不是“复杂任务一律多 Agent”，也不创建前端 / 后端专用模式；并行写入必须先满足阶段依赖、冻结相关跨切片契约并证明 write set 互斥，否则顺序 handoff。
+
+这些 `.codex/` 文件只配置当前项目；仅安装 skill 不会修改其他项目或个人 Codex 配置。需要跨项目复用时，再显式复制到目标项目 `.codex/agents/` 或个人 `~/.codex/agents/`，并按 [OpenAI 官方 Codex subagents 文档](https://learn.chatgpt.com/docs/agent-configuration/subagents) 核对当前模型和配置字段。验证时必须让承载会话的准确 runtime 完整解析配置并观察一次真实 spawn；`codex --version`、profile 文件存在或只输出编排计划都不能证明已经生效。App / IDE 的内置 runtime 可能与终端 `PATH` 中的 `codex` 不同，需要分别检查。
+
+## Optional Continuity Backends
+
+`$task-continuity` 本身不安装状态服务。若宿主已有 task store、Trellis、memory、event index 或 lifecycle hooks，优先把它们映射为运行态 / reference backend。Codex 需要自动会话事件恢复时，可评估 [context-mode](https://github.com/mksglu/context-mode)；它已经实现 Codex `PreCompact` / `SessionStart`、SQLite/FTS5 和按需检索，避免重复建设数据库与 hook installer。它不提供复合源码指纹、reference cursor、证据 freshness 或 `first_allowed_action`，因此仍由 `$task-continuity` 负责是否可以继续执行。
+
+需要跨任务长期语义记忆时可单独评估 [MemPalace](https://github.com/MemPalace/mempalace)。第三方插件会新增本地数据、依赖、hook trust 和模型上下文，必须显式安装并做真实 compaction continuation 测试；MCP 已连接或快照出现不等于恢复有效。详细选择边界见 [`task-continuity/references/host-adapters.md`](task-continuity/references/host-adapters.md)。
 
 ## Install
 
@@ -225,7 +234,7 @@ Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
 - 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
-- 使用 `$agent-orchestration` 先判断是否值得委派，再按不确定性、影响面、耦合度和可验证性选择 `SINGLE_OWNER`、只读 scouts、有界 worker、顺序 handoff 或独立 reviewer；每个切片使用 Assignment Capsule，弱模型一次有效失败后升级而不是反复换提示词重试。
+- 使用 `$agent-orchestration` 先判断是否值得委派，再按不确定性、影响面、耦合度和可验证性选择 `SINGLE_OWNER`、只读 scouts、有界 worker、顺序 handoff 或独立 reviewer；对于确有多个独立工作流的复杂跨模块任务，可由主智能体建立阶段化 `OrchestrationProgram`，冻结共享契约后把互斥叶子实现交给 workers，主智能体只保留架构、协调、集成、验收和交付责任；当前执行选择非 `SINGLE_OWNER` 且宿主允许时必须真实 dispatch、收集并集成，每个切片使用 Assignment Capsule，弱模型一次有效失败后升级而不是反复换提示词重试。
 - 使用 `$task-continuity` 原位压缩实时计划，将模型恢复视图收敛为 `Contract / Checkpoint / DecisionState / Resume`，把完整 digest / revision / evidence ledger 留在机器元数据；验证改变路线时先刷新，压缩恢复时完成 `RESUME_AUDIT -> READY` 后从少量锚点和执行级 `Next` 继续，连续匹配恢复不重读完整技能集或重建同一系统图，并复用仍覆盖当前验收矩阵的验证证据；维护技能时用 full-context / capsule / ablation continuation 评测实际恢复质量；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
 - 使用 `$code-navigation` 先发现当前环境可用的检索能力，再从精确 symbol 或 changed items 出发，有界查询定义、引用、调用、组件 / 领域关系和候选测试；保留关系来源与置信度，不把语义相似度或作者机器上的工具当成精确事实或必需依赖。
 - 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。

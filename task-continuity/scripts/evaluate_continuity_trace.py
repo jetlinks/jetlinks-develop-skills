@@ -15,12 +15,15 @@ READ_TYPES = {
     "capsule_read",
     "identity_compare",
     "reference_compare",
+    "reference_read",
     "rule_compare",
+    "thread_read",
     "history_read",
     "graph_read",
 }
 PRODUCTIVE_TYPES = {"mutation", "solution_mutation", "action", "check", "verification", "blocker"}
 VERIFICATION_TYPES = {"check", "verification"}
+COMMENTARY_TYPES = {"commentary", "recovery_commentary"}
 OBSERVATION_RESULTS = {"DISCRIMINATING", "INVALID", "INCONCLUSIVE"}
 FULL_HISTORY_SCOPES = {"full_history", "full_task_history", "full_thread", "full_prd", "full_research"}
 REPOSITORY_WIDE_SCOPES = {"repository_wide", "workspace_wide", "full_repository", "full_workspace"}
@@ -96,13 +99,25 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "requires_discriminating_evidence",
         inherited.get("requires_discriminating_evidence", False),
     ) is True
+    recovery_type = trace.get("recovery_type", inherited.get("recovery_type"))
+    resume_turn = trace.get("resume_turn", inherited.get("resume_turn"))
+    identity_match = trace.get("identity_match", inherited.get("identity_match")) is True
+    default_matching_audit = trace.get(
+        "matching_audit_number",
+        inherited.get("matching_audit_number", 0),
+    )
 
     read_keys: list[tuple[str, str, str]] = []
     productive: list[tuple[int, dict[str, Any]]] = []
     verification_keys: list[tuple[str, str, str, str]] = []
     route_deviations: list[int] = []
     full_history_reads = 0
+    full_thread_reads = 0
     repository_wide_reads = 0
+    unchanged_reference_reads = 0
+    matching_audit_full_reference_reads = 0
+    resume_audit_tool_round_ids: set[str] = set()
+    recovery_turns: dict[Any, dict[str, bool]] = {}
     authoritative_runtime_leaks: list[dict[str, Any]] = []
     irrelevant_graph_injections: list[dict[str, Any]] = []
     observed_constraints: set[str] = set()
@@ -127,6 +142,9 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         event = raw_event
         event_type = str(event.get("type", ""))
         turn = event.get("turn", index + 1)
+        turn_state = recovery_turns.setdefault(turn, {"commentary": False, "productive": False})
+        if event_type in COMMENTARY_TYPES:
+            turn_state["commentary"] = True
         observed_constraints.update(_strings(event.get("constraint_ids")))
         observed_evidence.update(_strings(event.get("evidence_ids")))
         recovery_id = event.get("recovery_id")
@@ -140,6 +158,7 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         )
         if is_productive:
             productive.append((index, event))
+            turn_state["productive"] = True
             if isinstance(recovery_id, str) and recovery_id:
                 recovery_cycles[recovery_id]["productive"] = True
             if event.get("serves_next") is False:
@@ -152,8 +171,42 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
             read_keys.append((target, revision, scope))
             if scope in FULL_HISTORY_SCOPES or event.get("full_history") is True:
                 full_history_reads += 1
+            target_kind = str(event.get("target_kind", ""))
+            is_reference_read = event_type in {"reference_read", "thread_read", "history_read"} or target_kind in {
+                "thread",
+                "task",
+                "issue",
+                "reference",
+                "research",
+            }
+            is_full_reference_read = scope in FULL_HISTORY_SCOPES or event.get("full_history") is True
+            if scope == "full_thread" or (target_kind == "thread" and is_full_reference_read):
+                full_thread_reads += 1
+            revision_unchanged = (
+                event.get("revision_changed") is False
+                or event.get("cursor_changed") is False
+                or event.get("reference_unchanged") is True
+            )
+            if is_reference_read and revision_unchanged:
+                unchanged_reference_reads += 1
+            matching_audit_number = event.get("matching_audit_number", default_matching_audit)
+            if (
+                is_reference_read
+                and is_full_reference_read
+                and isinstance(matching_audit_number, int)
+                and matching_audit_number >= 2
+            ):
+                matching_audit_full_reference_reads += 1
             if scope in REPOSITORY_WIDE_SCOPES or event.get("repository_wide") is True:
                 repository_wide_reads += 1
+            in_resume_audit = (
+                event.get("resume_audit") is True
+                or event.get("continuity_phase") == "RESUME_AUDIT"
+                or event.get("phase") == "RESUME_AUDIT"
+            )
+            if in_resume_audit:
+                tool_round = event.get("tool_round", turn)
+                resume_audit_tool_round_ids.add(str(tool_round))
 
         if event_type in VERIFICATION_TYPES:
             verification_keys.append(
@@ -245,6 +298,24 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     actions_per_discriminating_observation = (
         len(productive) / discriminating_count if discriminating_count else None
     )
+    recovery_commentary_only_turns = sum(
+        1 for value in recovery_turns.values() if value["commentary"] and not value["productive"]
+    )
+    first_productive_action_on_resume_turn = (
+        first_turn == resume_turn if resume_turn is not None and first_turn is not None else None
+    )
+    compact_fast_path_applicable = recovery_type == "COMPACT_CONTINUATION" and identity_match
+    compact_fast_path_passed = None
+    if compact_fast_path_applicable:
+        compact_fast_path_passed = (
+            len(resume_audit_tool_round_ids) <= 1
+            and full_thread_reads == 0
+            and unchanged_reference_reads == 0
+            and recovery_commentary_only_turns == 0
+            and first_productive_action_on_resume_turn is True
+            and matching_audit_full_reference_reads == 0
+            and next_action_hit
+        )
 
     return {
         "event_count": len(events),
@@ -256,7 +327,16 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "distinct_read_count": len(set(read_keys)),
         "repeated_read_count": repeated_reads,
         "full_history_read_count": full_history_reads,
+        "full_thread_reads": full_thread_reads,
         "repository_wide_read_count": repository_wide_reads,
+        "unchanged_reference_reads": unchanged_reference_reads,
+        "matching_audit_full_reference_reads": matching_audit_full_reference_reads,
+        "resume_audit_tool_rounds": len(resume_audit_tool_round_ids),
+        "recovery_commentary_only_turns": recovery_commentary_only_turns,
+        "resume_turn": resume_turn,
+        "first_productive_action_on_resume_turn": first_productive_action_on_resume_turn,
+        "compact_continuation_fast_path_applicable": compact_fast_path_applicable,
+        "compact_continuation_fast_path_passed": compact_fast_path_passed,
         "verification_count": len(verification_keys),
         "repeated_verification_count": repeated_verifications,
         "route_deviation_count": len(set(route_deviations)),
@@ -307,6 +387,10 @@ def evaluate_document(document: Any) -> dict[str, Any]:
             "required_constraint_ids",
             "required_evidence_ids",
             "requires_discriminating_evidence",
+            "recovery_type",
+            "resume_turn",
+            "identity_match",
+            "matching_audit_number",
         )
         if key in document
     }

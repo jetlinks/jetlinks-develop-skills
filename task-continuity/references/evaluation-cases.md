@@ -10,7 +10,7 @@
 
 ## 评测观察项
 
-每条轨迹至少记录：连续性状态转换、恢复主视图和机器元数据分别注入的 token / 字符量、首次生产性动作前的读取范围与轮数、是否重读完整外部历史、source fingerprint 组成及强度、anchors 数量、遗漏或误用的长期约束、观察结果与其授权的解法变化、重复检查、checkpoint / publish / review 次数，以及运行态是否泄漏到权威来源。
+每条轨迹至少记录：恢复类型、resume turn、连续性状态转换、恢复主视图和机器元数据分别注入的 token / 字符量、首次生产性动作前的读取范围与工具批次、是否重读完整外部历史、source fingerprint 组成 / algorithm / 强度、reference cursor 是否变化、anchors 数量、遗漏或误用的长期约束、观察结果与其授权的解法变化、重复检查、checkpoint / publish / review 次数，以及运行态是否泄漏到权威来源。
 
 优先将真实宿主轨迹适配为 `scripts/evaluate_continuity_trace.py` 的标准事件，而不是人工复述执行过程。核心脚本输出读取、重复验证、空转恢复、路线偏离、运行态泄漏、无关图注入和上下文完整性指标；宿主仍需另外提供 acceptance success、token / 字符量、checkpoint / review 次数等其独有事实。`scripts/validate_continuity_state.py` 的 schema 用例只证明状态门禁，不能替代真实 continuation 评测。
 
@@ -29,6 +29,9 @@
 | 用例 | 输入变化 | 必须观察到 | 失败信号 |
 | --- | --- | --- | --- |
 | 压缩后无变化恢复 | 有 task、胶囊、强指纹、未变化的外部引用和少量精确 anchors | 比较身份与 revision 后直接执行 `Next`；不重扫 workspace | 重读完整 thread / research / README / 任务树，或先做相邻 TODO |
+| 压缩续跑单批次 | `COMPACT_CONTINUATION` 的 source / contract / reference / rules 均匹配 | 最多一个并行核验批次，同一 resume turn 命中 `first_allowed_action`；commentary-only turn 为 0 | 把四项核验拆成多轮、先总结恢复、下一轮才实施 |
+| 冷接管 | 新 owner 首次接管且没有可信 capsule / source identity | 一次有界 takeover audit 后建立胶囊与精确 Next，或报告真实 blocker | 把冷接管门槛施加到每次 compaction，或无界重扫整个项目 |
+| 外部重试 | 503 / timeout 后 task、source、contract、reference 未变化 | 核验远端 operation identity / 幂等状态并继续原 Next；不审计 workspace | 把服务重试当新任务恢复，重读源码和规则；不查状态就重复副作用操作 |
 | 验证失败后立即压缩 | 阶段验证产生新失败签名，改变验收状态与 `Next`，随后立刻压缩 | 验证观察后先进入 `SNAPSHOT_REQUIRED` 并刷新 evidence / Next；恢复进入 `RESUME_AUDIT` 后沿新 Next 继续 | 胶囊仍写旧通过数或旧 Next，恢复后继续旧补丁 |
 | 同阶段连续两次压缩 | 第一次恢复后尚未完成阶段又发生压缩，期间 task / source / reference / DecisionState / Next 未变化 | 两次都做有界 `RESUME_AUDIT -> READY`；跨压缩递增匹配计数，第二次不扩大读取并立即执行 `first_allowed_action` | 第二次把压缩当新任务，重读全部 skills / 项目材料，或再次只说“下一步将实现” |
 | 同一恢复切片连续五次压缩 | 同一 Slice 连续 3–5 次压缩，期间 source、引用、系统图和 `Next` 均不变且没有生产性动作 | 首次允许有界审计；第二次禁止完整重读；第三次必须执行精确 Next、区分检查或报告真实阻塞，后续分析空转为 0 | 每次重新加载规则 / PRD、重建同一系统图、复述根因并再次承诺下一步 |
@@ -64,6 +67,8 @@
 ## 通过标准
 
 - 指纹匹配恢复时，全仓扫描和未变化外部历史完整重读均为 0。
+- 匹配的 `COMPACT_CONTINUATION` 中，`resume_audit_tool_rounds <= 1`、`full_thread_reads == 0`、`unchanged_reference_reads == 0`、`recovery_commentary_only_turns == 0`，且 `first_productive_action_turn == resume_turn`。
+- 第二次及后续 matching audit 的完整 reference / skill / workspace 重读为 0；`EXTERNAL_RETRY` 不产生 workspace recovery audit。
 - 正常匹配恢复只注入模型主视图、identity / revision match summary 和 `Next` 必需 anchors；完整机器账本与原始 evidence 注入为 0。
 - 复合指纹对 tracked、untracked 或 nested 任一任务相关漂移的识别率为 100%；能力缺失时必须降级为 `partial`。
 - current plan 不保存完成流水；anchors 保持少量且足够定位，默认 3–7 个；第一项生产性动作服务于唯一 `Next`。

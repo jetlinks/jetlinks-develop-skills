@@ -87,19 +87,21 @@ class ValidateSkillsTest(unittest.TestCase):
                 "---\nname: task-continuity\ndescription: Example.\n---\n\n"
                 "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot "
                 "Contract Checkpoint DecisionState Resume "
-                "consecutive_matching_audits first_allowed_action\n",
+                "consecutive_matching_audits first_allowed_action "
+                "COMPACT_CONTINUATION COLD_HANDOFF EXTERNAL_RETRY\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
                 "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞\n",
+                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞 "
+                "resume_audit_tool_rounds <= 1 unmanaged_manifest_digest\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "evaluation-cases.md").write_text(
                 "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
                 "空泛 Next 规则 revision 未变化 Continuation 对比协议 "
                 "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交 "
-                "无关代码图注入 scripts/evaluate_continuity_trace.py\n",
+                "无关代码图注入 scripts/evaluate_continuity_trace.py 压缩续跑单批次 外部重试\n",
                 encoding="utf-8",
             )
             (continuity / "scripts").mkdir()
@@ -109,7 +111,8 @@ class ValidateSkillsTest(unittest.TestCase):
             )
             (continuity / "scripts" / "evaluate_continuity_trace.py").write_text(
                 "def evaluate_trace():\n    return {'repeated_read_count': 0, "
-                "'irrelevant_graph_injection_count': 0}\n",
+                "'irrelevant_graph_injection_count': 0, 'full_thread_reads': 0, "
+                "'unchanged_reference_reads': 0, 'compact_continuation_fast_path_passed': True}\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
@@ -202,20 +205,25 @@ class ValidateSkillsTest(unittest.TestCase):
             agents = root / ".codex" / "agents"
             agents.mkdir(parents=True)
             (root / ".codex" / "config.toml").write_text(
-                "[agents]\nenabled = true\nmax_concurrent_threads_per_session = 2\n"
-                'default_subagent_model = "balanced"\n'
-                'default_subagent_reasoning_effort = "medium"\n',
+                "[agents]\nmax_threads = 2\ninterrupt_message = true\n",
                 encoding="utf-8",
             )
             profiles = {
                 "bounded-explorer.toml": ("bounded_explorer", True),
+                "mechanical-worker.toml": ("mechanical_worker", False),
                 "bounded-worker.toml": ("bounded_worker", False),
                 "stage-reviewer.toml": ("stage_reviewer", True),
             }
             for filename, (name, read_only) in profiles.items():
                 sandbox = 'sandbox_mode = "read-only"\n' if read_only else ""
+                mechanical_settings = (
+                    'model = "gpt-5.6-luna"\nmodel_reasoning_effort = "medium"\n'
+                    'sandbox_mode = "workspace-write"\n'
+                    if name == "mechanical_worker"
+                    else ""
+                )
                 (agents / filename).write_text(
-                    f'name = "{name}"\ndescription = "Test profile"\n{sandbox}'
+                    f'name = "{name}"\ndescription = "Test profile"\n{sandbox}{mechanical_settings}'
                     'developer_instructions = "Do not spawn further agents."\n',
                     encoding="utf-8",
                 )
@@ -229,6 +237,58 @@ class ValidateSkillsTest(unittest.TestCase):
             )
             errors = VALIDATOR.validate_codex_adapter(root)
             self.assertTrue(any("read-only profile" in error for error in errors))
+
+            (agents / "mechanical-worker.toml").write_text(
+                'name = "mechanical_worker"\ndescription = "Test profile"\n'
+                'model = "gpt-5.6-terra"\nmodel_reasoning_effort = "high"\n'
+                'sandbox_mode = "read-only"\n'
+                'developer_instructions = "Do not spawn further agents."\n',
+                encoding="utf-8",
+            )
+            errors = VALIDATOR.validate_codex_adapter(root)
+            joined = "\n".join(errors)
+            self.assertIn("model must be 'gpt-5.6-luna'", joined)
+            self.assertIn("model_reasoning_effort must be 'medium'", joined)
+            self.assertIn("sandbox_mode must be 'workspace-write'", joined)
+
+            (agents / "mechanical-worker.toml").unlink()
+            errors = VALIDATOR.validate_codex_adapter(root)
+            self.assertTrue(any("mechanical-worker.toml: required Codex Agent profile missing" in error for error in errors))
+
+    def test_accepts_current_codex_agent_concurrency_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "agent-orchestration"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: agent-orchestration\ndescription: Test.\n---\n", encoding="utf-8")
+            agents = root / ".codex" / "agents"
+            agents.mkdir(parents=True)
+            (root / ".codex" / "config.toml").write_text(
+                "[agents]\nenabled = true\nmax_concurrent_threads_per_session = 2\n"
+                'default_subagent_model = "balanced"\n'
+                'default_subagent_reasoning_effort = "medium"\n',
+                encoding="utf-8",
+            )
+            profiles = {
+                "bounded-explorer.toml": ("bounded_explorer", True),
+                "mechanical-worker.toml": ("mechanical_worker", False),
+                "bounded-worker.toml": ("bounded_worker", False),
+                "stage-reviewer.toml": ("stage_reviewer", True),
+            }
+            for filename, (name, read_only) in profiles.items():
+                sandbox = 'sandbox_mode = "read-only"\n' if read_only else ""
+                mechanical_settings = (
+                    'model = "gpt-5.6-luna"\nmodel_reasoning_effort = "medium"\n'
+                    'sandbox_mode = "workspace-write"\n'
+                    if name == "mechanical_worker"
+                    else ""
+                )
+                (agents / filename).write_text(
+                    f'name = "{name}"\ndescription = "Test profile"\n{sandbox}{mechanical_settings}'
+                    'developer_instructions = "Do not spawn further agents."\n',
+                    encoding="utf-8",
+                )
+            self.assertEqual([], VALIDATOR.validate_codex_adapter(root))
 
 
 if __name__ == "__main__":

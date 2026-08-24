@@ -21,6 +21,7 @@ REQUIRED_SKILL_CONTRACTS = {
             "SINGLE_OWNER",
             "Assignment Capsule",
             "Result Packet",
+            "accepted dispatch receipt",
             "at most two active delegated slices",
             "After one failed attempt",
             "overlapping files",
@@ -42,12 +43,21 @@ REQUIRED_SKILL_CONTRACTS = {
             "same-slice retry",
             "overlapping writes",
             "scripts/evaluate_orchestration_trace.py",
+            "Advice-only delegation false positive",
         ),
         "scripts/evaluate_orchestration_trace.py": (
             "def evaluate_trace",
             "weak_retry_count",
             "overlapping active writes",
             "below escalated tier",
+            "dispatch_receipt",
+            "schema_version",
+            "acceptance_owner",
+            "acceptance_matrix",
+            "economy write requires",
+            "artifacts_checked",
+            "write_set does not match capsule permissions.write",
+            "does not match failed tier",
             "max_observed_active",
         ),
     },
@@ -63,6 +73,9 @@ REQUIRED_SKILL_CONTRACTS = {
             "Resume",
             "consecutive_matching_audits",
             "first_allowed_action",
+            "COMPACT_CONTINUATION",
+            "COLD_HANDOFF",
+            "EXTERNAL_RETRY",
         ),
         "references/task-state-and-recovery-rules.md": (
             "Continuity Metadata",
@@ -74,6 +87,8 @@ REQUIRED_SKILL_CONTRACTS = {
             "生产修改",
             "区分检查",
             "真实阻塞",
+            "resume_audit_tool_rounds <= 1",
+            "unmanaged_manifest_digest",
         ),
         "references/evaluation-cases.md": (
             "验证失败后立即压缩",
@@ -88,6 +103,8 @@ REQUIRED_SKILL_CONTRACTS = {
             "用户禁止提交",
             "无关代码图注入",
             "scripts/evaluate_continuity_trace.py",
+            "压缩续跑单批次",
+            "外部重试",
         ),
         "scripts/validate_continuity_state.py": (
             "def validate_state",
@@ -98,6 +115,9 @@ REQUIRED_SKILL_CONTRACTS = {
             "def evaluate_trace",
             "repeated_read_count",
             "irrelevant_graph_injection_count",
+            "full_thread_reads",
+            "unchanged_reference_reads",
+            "compact_continuation_fast_path_passed",
         ),
     },
     "systematic-solving": {
@@ -314,23 +334,38 @@ def validate_codex_adapter(repository_root: Path) -> list[str]:
         errors.append(f"{config_path}: missing [agents] table")
     else:
         agents_text = agents_match.group(1)
-        if not re.search(r"(?m)^enabled\s*=\s*true\s*$", agents_text):
-            errors.append(f"{config_path}: agents.enabled must be true")
-        max_match = re.search(r"(?m)^max_concurrent_threads_per_session\s*=\s*([0-9]+)\s*$", agents_text)
+        enabled_match = re.search(r"(?m)^enabled\s*=\s*(true|false)\s*$", agents_text)
+        if enabled_match is not None and enabled_match.group(1) != "true":
+            errors.append(f"{config_path}: agents.enabled must not disable multi-Agent tools")
+        current_max = re.search(r"(?m)^max_concurrent_threads_per_session\s*=\s*([0-9]+)\s*$", agents_text)
+        legacy_max = re.search(r"(?m)^max_threads\s*=\s*([0-9]+)\s*$", agents_text)
+        if current_max is not None and legacy_max is not None:
+            errors.append(f"{config_path}: use only one concurrency field")
+        max_match = current_max or legacy_max
         if max_match is None or int(max_match.group(1)) < 1:
-            errors.append(f"{config_path}: max_concurrent_threads_per_session must be a positive integer")
+            errors.append(
+                f"{config_path}: max_concurrent_threads_per_session or max_threads must be a positive integer"
+            )
         for field in ("default_subagent_model", "default_subagent_reasoning_effort"):
-            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]+)"\s*$', agents_text)
-            if value is None or not value.group(1).strip():
-                errors.append(f"{config_path}: agents.{field} must be a non-empty string")
+            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]*)"\s*$', agents_text)
+            if value is not None and not value.group(1).strip():
+                errors.append(f"{config_path}: agents.{field} must be non-empty when present")
 
     required_profiles = {
-        "bounded-explorer.toml": ("bounded_explorer", True),
-        "bounded-worker.toml": ("bounded_worker", False),
-        "stage-reviewer.toml": ("stage_reviewer", True),
+        "bounded-explorer.toml": {"name": "bounded_explorer", "read_only": True},
+        "mechanical-worker.toml": {
+            "name": "mechanical_worker",
+            "model": "gpt-5.6-luna",
+            "reasoning": "medium",
+            "sandbox": "workspace-write",
+        },
+        "bounded-worker.toml": {"name": "bounded_worker", "read_only": False},
+        "stage-reviewer.toml": {"name": "stage_reviewer", "read_only": True},
     }
     seen_names: set[str] = set()
-    for filename, (expected_name, read_only) in required_profiles.items():
+    for filename, requirements in required_profiles.items():
+        expected_name = requirements["name"]
+        read_only = requirements.get("read_only", False)
         path = repository_root / ".codex" / "agents" / filename
         if not path.is_file():
             errors.append(f"{path}: required Codex Agent profile missing")
@@ -368,6 +403,16 @@ def validate_codex_adapter(repository_root: Path) -> list[str]:
         sandbox_mode = sandbox_match.group(1) if sandbox_match else None
         if read_only and sandbox_mode != "read-only":
             errors.append(f"{path}: read-only profile must set sandbox_mode = 'read-only'")
+        expected_sandbox = requirements.get("sandbox")
+        if expected_sandbox is not None and sandbox_mode != expected_sandbox:
+            errors.append(f"{path}: sandbox_mode must be {expected_sandbox!r}")
+        for field, expected_value in (("model", requirements.get("model")), ("model_reasoning_effort", requirements.get("reasoning"))):
+            if expected_value is None:
+                continue
+            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+            actual_value = value.group(1) if value is not None else None
+            if actual_value != expected_value:
+                errors.append(f"{path}: {field} must be {expected_value!r}")
         if "spawn further agents" not in instructions:
             errors.append(f"{path}: profile must prohibit recursive Agent fan-out")
     return errors
