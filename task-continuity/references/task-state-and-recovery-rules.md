@@ -56,9 +56,9 @@ Recovery Capsule 只保留四个区块：
 | 区块 | 必需内容 |
 | --- | --- |
 | `Contract` | task identity / revision、契约 locator、一句话 observable objective、仍生效的不变量 / 约束、当前 acceptance signals |
-| `Checkpoint` | 当前 phase、最近一个 validated boundary 及 evidence pointer、当前 in-flight slice、expected changed items |
-| `DecisionState` | active hypothesis / chosen decision、最新能区分路线的观察、只保留足以阻止重试的 falsified route、仍需持续 resurfacing 的关键约束；系统性求解存在 active observation 时再保存其紧凑状态 |
-| `Resume` | continuity gate、少量精确 anchors、一个执行级 `Next` / `first_allowed_action`、observable signal、blocker 或 residual risk |
+| `Checkpoint` | 当前 phase、最近一个 validated boundary 及 evidence pointer、当前 in-flight slice 的稳定 `slice_id` / owner / status / expected changed items |
+| `DecisionState` | active hypothesis / chosen decision、最新能区分路线的观察、只保留足以阻止重试的 falsified route；对容易被恢复过程重开的动作保留有界 `do_not_reopen(action_id, reason, reopen_when)`；仍需持续 resurfacing 的关键约束；系统性求解存在 active observation 时再保存其紧凑状态 |
+| `Resume` | recovery type、continuity gate、少量精确 anchors、一个带稳定 `action_id` 的执行级 `Next` / `first_allowed_action`、observable signal、blocker 或 residual risk |
 
 默认只向模型注入这个主视图。它必须一次完整可读，不复制任务全文、整张关系图、长 diff、日志、命令流水、所有已完成阶段、引用正文或全部规则。anchors 默认保持少量且足够定位；`3–7` 是常用预算，不是不能调整的固定常数。
 
@@ -71,7 +71,7 @@ Continuity Metadata 保存：
 - `LoadedRules` 的 locator、revision / digest、extracted obligations 与重读条件。
 - 多 Agent 路线存在时的 `OrchestrationProgram` revision / current stage、冻结的 shared-contract revisions、当前 `RouteDecision` revision、assignment state 与 Result Packet locator。
 - 验证证据的 locator、输入 / 环境 identity、适用 acceptance 和 freshness。
-- `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence` 与最近 productive action。
+- `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence`、`previous_productive_action_id`、`pre_compaction_next_action_id`，以及与该 Next 同时捕获的 `instruction_revision_at_snapshot`。
 
 宿主无法提供独立机器存储时，可以把 metadata 放在 capsule 后面的折叠区或同一有界 artifact 中；恢复时仍先读主视图，只在 identity / revision 失配或 `Next` 需要时读取相关 metadata 项。
 
@@ -158,6 +158,32 @@ active_observation:
 
 “继续实现某阶段”“继续分析”“熟悉代码”“再看看相关材料”不包含边界和可观察信号，不能从 `RESUME_AUDIT` 进入 `READY`。先在 `SNAPSHOT_REQUIRED` 中把它改写为执行级动作。
 
+准备压缩或暂停时，为 continuation 固化一条最小动作链：
+
+```yaml
+Checkpoint:
+  in_flight:
+    slice_id: <stable slice identity>
+    status: planned | active | validation_pending | validation_passed
+    owner: <single current owner>
+    expected_changed_items: [<bounded locators>]
+DecisionState:
+  do_not_reopen:
+    - action_id: <closed or redundant action identity>
+      reason: <evidence-backed reason>
+      reopen_when: <specific invalidation condition>
+ContinuityMetadata:
+  instruction_revision_at_snapshot: <latest user-instruction revision or digest>
+  previous_productive_action_id: <stable id or null when none exists>
+  pre_compaction_next_action_id: <Resume.Next.action_id>
+Resume:
+  recovery_type: COMPACT_CONTINUATION | COLD_HANDOFF | EXTERNAL_RETRY
+  first_allowed_action:
+    action_id: <same id as pre_compaction_next_action_id>
+```
+
+`previous_productive_action_id` 只回答“刚才真正做了什么”，不能被恢复器当成默认续跑动作；它与 `pre_compaction_next_action_id` 不同时，压缩后的第一项生产动作若又命中 previous 即为上一动作回放。`do_not_reopen` 只保存有现实重放风险且有明确失效条件的少量动作，不能演变成历史清单。若用户在压缩后给出新指令，先比较独立的 instruction revision；确有变化时最新指令优先并刷新契约 / Next，不能把合法改线误报成恢复偏航。
+
 ### 多 Agent 程序运行态
 
 当编排能力建立阶段化程序时，只保存恢复和集成需要的控制面，不保存子 Agent 的过程日志或完整上下文：
@@ -190,6 +216,7 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 - 相关 source / reference / contract、`DecisionState`、Anchors 或 `Next` 因新事实改变时，刷新指纹并把计数重置为 `1`；仅发生上下文压缩、重新表述或重复读取不能清零。
 - `last_new_evidence` 只记录最近改变决策或验收状态的 locator；没有则写 `none`。普通恢复核对不冒充新证据。
 - `first_allowed_action` 必须是 `Next` 的可执行实例；它可以是一次有界 mutation、discriminating check 或 blocker report，不能是再次恢复审计或材料重读。
+- `pre_compaction_next_action_id` 必须与 `Next.action_id`、`first_allowed_action.action_id` 相同；`post_compaction_first_productive_action_id` 由轨迹在恢复后观测，匹配的 compact continuation 中也必须相同。仅仅重新表述胶囊不能改变这些 identity。
 
 主视图只保存路线索引；引用 / 规则账本与证据细节进入机器元数据。即使物理上共用一个文件，恢复正常匹配时也不能把整个 metadata 区重新注入模型。
 
@@ -250,7 +277,7 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 匹配恢复默认不加载 `$systematic-solving`、`$code-navigation`、交付 skill、完整 PRD / research / task history 或仓库概览。只有新失败或假设变化需要重建问题模型，anchor / owner / impact 失效需要重新导航，阶段 checkpoint 或最终交付需要交付 skill。技能可用不构成加载理由。
 
-1. `COMPACT_CONTINUATION` 与已有可信状态的 resume 先进入 `RESUME_AUDIT`；读取用户最新指令、任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束和执行级唯一下一步。`COLD_HANDOFF` 先建立这些状态，`EXTERNAL_RETRY` 则保留原 gate 和 `Next`。
+1. `COMPACT_CONTINUATION` 与已有可信状态的 resume 先进入 `RESUME_AUDIT`；分别比较用户最新 instruction revision 与 `instruction_revision_at_snapshot`，再读取任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束、in-flight `slice_id` 和执行级唯一下一步。instruction revision 变化时进入 `SNAPSHOT_REQUIRED`，按最新指令刷新路线；未变化时不得用旧症状或恢复叙述覆盖已保存的 Next。`COLD_HANDOFF` 先建立这些状态，`EXTERNAL_RETRY` 则保留原 gate 和 `Next`。
 2. 使用当前环境最轻量的只读能力比较 Source Snapshot、预期 changed items，以及机器元数据中的引用 / 规则 revisions；匹配时不读取完整 metadata、原始证据或外部正文。
 3. 计算当前 `audit_fingerprint`，核对 Contract、Checkpoint、DecisionState、少量 Anchors 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
 4. 指纹、引用和语义状态均匹配时递增或初始化 `consecutive_matching_audits`，显式执行 `RESUME_AUDIT -> READY`，只加载宿主要求的当前 skill body 和 `Next` 新需要的规则，然后立即执行 `first_allowed_action`；对 `COMPACT_CONTINUATION`，核验调用必须合并在最多一个可并行工具批次中，且 productive action 必须发生在同一恢复轮。不重读 research basis、已提取外部历史、整个任务树或仓库总览。
@@ -278,11 +305,15 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 - `unchanged_reference_reads == 0`
 - `recovery_commentary_only_turns == 0`
 - `first_productive_action_turn == resume_turn`
+- `pre_compaction_next_action_id == post_compaction_first_productive_action_id`
+- `recovery_route_deviation_count == 0`
 - 第二次及后续 matching audit 的完整 reference / skill / workspace 重读为 `0`
 
 这些门禁只约束状态匹配的 `COMPACT_CONTINUATION`。`COLD_HANDOFF` 和已记录失配的恢复必须报告实际读取成本与原因，但不伪装成快路径失败。
 
 恢复审计通过后的第一项生产性动作必须服务于胶囊的 `Next` 和验收信号。相邻 TODO、旧方案或新可用工具都不能自动扩大范围。连续匹配恢复按以下止空转门禁处理：
+
+在 identity、instruction revision 和引用均匹配的 `COMPACT_CONTINUATION` 中，下列行为在首个正确生产动作之前一旦发生即记为 route deviation，而不是“必要恢复成本”：完整 skill / rule set 重载、workspace / repository-wide scan、未变化外部历史完整重读、命中 `do_not_reopen` 的动作，以及 `previous_productive_action_id != pre_compaction_next_action_id` 时重新执行 previous。后面再执行正确 Next 不能抵消已经发生的偏航。
 
 - 第一次允许在默认预算内完成正常审计，随后必须转 `READY`。
 - 默认从第二次且没有 `last_new_evidence` 或生产性动作时，只比较保存的组成事实与当前轻量 identity；禁止完整重读 skills / PRD / research、仓库总览或重建同一系统图，匹配后立即执行 `first_allowed_action`。
@@ -323,7 +354,7 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 若宿主提供 lifecycle hooks、checkpoint callbacks 或 equivalent automation，可选择：
 
 - 在压缩前保存有界 Recovery Capsule、Continuity Metadata 与当前 Source Snapshot；保存失败时显式留下 `SNAPSHOT_REQUIRED`，不能伪装成功。
-- 在压缩 / 恢复后将状态置为 `RESUME_AUDIT`，只注入胶囊摘要、source strength、`audit_fingerprint`、匹配计数、唯一 `Next` 和 locator。
+- 在压缩 / 恢复后将状态置为 `RESUME_AUDIT`，只注入胶囊摘要、source strength、`audit_fingerprint`、instruction revision match、匹配计数、`previous_productive_action_id -> pre_compaction_next_action_id` 动作链、唯一 `Next` 和 locator。
 - 在停止时检查是否存在执行级唯一下一步、未映射验收项、未说明的失败，或连续匹配恢复后仍只有分析动作。
 - 在工具调用后只采集证据 locator，不把完整输出持续注入上下文。
 - 用外部来源 revision / cursor 自动维护增量引用账本，未变化时不再次注入完整历史。
@@ -344,7 +375,8 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 - 恢复：顶层或事件记录 `recovery_type`、`resume_turn`、`identity_match`、`matching_audit_number`；恢复核验读取再记录 `continuity_phase=RESUME_AUDIT` 和同一并行批次共享的 `tool_round`。
 - 外部引用：读取事件标记 `target_kind=thread|task|issue|reference|research`、`cursor_changed/revision_changed` 与 scope；cursor 未变时不得生成 read 事件，若实际发生则评测为 `unchanged_reference_reads`。
 - 恢复 commentary：只有状态复述且没有生产动作的轮次记录 `commentary` / `recovery_commentary`，用来检测“本轮只恢复、下轮再执行”。
-- 生产动作：`action_id`、`turn`、`productive`、`serves_next`、可选 `recovery_id`。
+- 生产动作：`action_id`、`turn`、`productive`、`serves_next`、可选 `recovery_id`。continuation 顶层同时记录 `previous_productive_action_id`、`pre_compaction_next_action_id`、压缩前后 instruction revisions；评测器输出 `post_compaction_first_productive_action_id` 和 action identity continuity。
+- 恢复入口动作：adapter 可用 `recovery_action_class=full_rule_reload|workspace_rescan|full_history_reread|suppressed_action_replay|previous_action_replay` 标准化；核心评测器也会从通用 event type / scope 推断可确定的类别。只有匹配的 compact continuation 在首个生产动作前把这些类别计为偏航。
 - 验证：`check_id`、source fingerprint、input revision、environment；等价四元组用于发现无依据重复执行。
 - 权威 artifact 写入：`content_classes`，由 adapter 标记 progress、test counts、todo、attempt history 等运行态类别。
 - 代码图注入：decision question、task anchor、task / graph source fingerprint、目标 / 图语言与范围。

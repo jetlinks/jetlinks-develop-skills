@@ -76,6 +76,9 @@ REQUIRED_SKILL_CONTRACTS = {
             "COMPACT_CONTINUATION",
             "COLD_HANDOFF",
             "EXTERNAL_RETRY",
+            "previous_productive_action_id",
+            "pre_compaction_next_action_id",
+            "post_compaction_first_productive_action_id",
         ),
         "references/task-state-and-recovery-rules.md": (
             "Continuity Metadata",
@@ -89,6 +92,8 @@ REQUIRED_SKILL_CONTRACTS = {
             "真实阻塞",
             "resume_audit_tool_rounds <= 1",
             "unmanaged_manifest_digest",
+            "instruction_revision_at_snapshot",
+            "do_not_reopen",
         ),
         "references/evaluation-cases.md": (
             "验证失败后立即压缩",
@@ -105,11 +110,14 @@ REQUIRED_SKILL_CONTRACTS = {
             "scripts/evaluate_continuity_trace.py",
             "压缩续跑单批次",
             "外部重试",
+            "压缩前后动作身份连续",
+            "正确动作前的恢复入口偏航",
         ),
         "scripts/validate_continuity_state.py": (
             "def validate_state",
             "suggested_gate",
             "SNAPSHOT_REQUIRED",
+            "pre_compaction_next_action_id",
         ),
         "scripts/evaluate_continuity_trace.py": (
             "def evaluate_trace",
@@ -118,6 +126,8 @@ REQUIRED_SKILL_CONTRACTS = {
             "full_thread_reads",
             "unchanged_reference_reads",
             "compact_continuation_fast_path_passed",
+            "post_compaction_first_productive_action_id",
+            "recovery_route_deviation_count",
         ),
     },
     "systematic-solving": {

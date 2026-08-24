@@ -22,7 +22,7 @@
 2. **Capsule continuation**：只给模型主视图、machine metadata 的 revision / identity 比较结果，以及 `Next` 必需 anchors。
 3. **Ablation continuation**：分别删除 critical constraint、latest discriminating evidence、source identity 或 executable Next，用来证明评测能发现真正有害的压缩丢失。
 
-至少比较：最终 acceptance success、首个生产动作是否命中 `first_allowed_action`、回到生产动作的轮数 / token / 读取 items、约束遗漏率、已完成工作 / 已有效验证的重复率、偏离 active route 的次数。若 capsule 比 oracle 失败，回看丢失的因果、状态、前置条件或决策线索并修订通用 schema / compression guideline；不得为具体任务名、文件名或 fixture 增加压缩特例。
+至少比较：最终 acceptance success、`previous_productive_action_id -> pre_compaction_next_action_id -> post_compaction_first_productive_action_id` 动作链、首个生产动作是否命中 `first_allowed_action`、回到生产动作的轮数 / token / 读取 items、约束遗漏率、已完成工作 / 已有效验证的重复率、偏离 active route 的次数。若 capsule 比 oracle 失败，回看丢失的因果、状态、前置条件或决策线索并修订通用 schema / compression guideline；不得为具体任务名、文件名或 fixture 增加压缩特例。
 
 ## 核心用例
 
@@ -30,6 +30,8 @@
 | --- | --- | --- | --- |
 | 压缩后无变化恢复 | 有 task、胶囊、强指纹、未变化的外部引用和少量精确 anchors | 比较身份与 revision 后直接执行 `Next`；不重扫 workspace | 重读完整 thread / research / README / 任务树，或先做相邻 TODO |
 | 压缩续跑单批次 | `COMPACT_CONTINUATION` 的 source / contract / reference / rules 均匹配 | 最多一个并行核验批次，同一 resume turn 命中 `first_allowed_action`；commentary-only turn 为 0 | 把四项核验拆成多轮、先总结恢复、下一轮才实施 |
+| 压缩前后动作身份连续 | 压缩前最后生产动作 A 已完成，唯一 Next 为 B，A 与 B 不同 | 保存 A 为 `previous_productive_action_id`、B 为 `pre_compaction_next_action_id`；压缩后首个生产动作为 B | 把 A 当成恢复入口重新执行，或从叙述重建出 C 后才回到 B |
+| 正确动作前的恢复入口偏航 | source / instruction / contract / reference / rules 均匹配，Next 已可执行 | 首个生产动作前完整 skill reload、workspace scan、旧 transcript / history read 和 `do_not_reopen` 动作为 0 | 即使本轮后面做了正确 Next，仍先重载技能、扫仓库、查旧 transcript 或回放已关闭动作 |
 | 冷接管 | 新 owner 首次接管且没有可信 capsule / source identity | 一次有界 takeover audit 后建立胶囊与精确 Next，或报告真实 blocker | 把冷接管门槛施加到每次 compaction，或无界重扫整个项目 |
 | 外部重试 | 503 / timeout 后 task、source、contract、reference 未变化 | 核验远端 operation identity / 幂等状态并继续原 Next；不审计 workspace | 把服务重试当新任务恢复，重读源码和规则；不查状态就重复副作用操作 |
 | 验证失败后立即压缩 | 阶段验证产生新失败签名，改变验收状态与 `Next`，随后立刻压缩 | 验证观察后先进入 `SNAPSHOT_REQUIRED` 并刷新 evidence / Next；恢复进入 `RESUME_AUDIT` 后沿新 Next 继续 | 胶囊仍写旧通过数或旧 Next，恢复后继续旧补丁 |
@@ -47,7 +49,7 @@
 | 区分证据授权解法 | 观察到达边界并排除或收窄候选 | 刷新 DecisionState 后，唯一 solution mutation 精确引用 observation id / revision | 没有证据引用，或在刷新前修改解法 |
 | 观察装置预算 | 同一 observation id 下连续出现两个无效修正周期 | 第一次允许集中 observation repair；第二次必须 reframe 并产生新 observation id | 通过换工具、输入、提示或 artifact 名继续清零预算 |
 | 简单任务兼容 | 根因明确、没有 active observation 的有界任务 | 旧的 mutation / check / blocker schema 正常进入 READY，不增加观察仪式 | 所有任务都被强制填充 Observation |
-| 用户改变目标 | 连续恢复期间用户实质改变任务目标或验收标准 | 最新指令优先，刷新任务契约与恢复切片，不强制执行旧 `first_allowed_action` | 以防空转为由忽略用户新指令，机械执行旧 Next |
+| 用户改变目标 | 连续恢复期间用户实质改变任务目标或验收标准 | 独立比较压缩前后的 instruction revision；最新指令优先，刷新任务契约与恢复切片，不强制执行旧 `first_allowed_action` | 以防空转为由忽略用户新指令，机械执行旧 Next；或没有 revision 证据却用旧症状覆盖 Next |
 | 同 HEAD 脏树漂移 | base revision 不变，但 tracked 内容或 untracked 内容改变 | 复合指纹报告失配并只检查失配 items | 仅因 HEAD 和文件数相同就声称匹配 |
 | 同 HEAD 未跟踪内容漂移 | HEAD、untracked 路径与数量均不变，但其中一个文件内容改变 | untracked manifest digest 失配，转 `SNAPSHOT_REQUIRED` 并只对账相关 item | 只比较路径清单或数量，继续使用旧胶囊 |
 | 外部引用增量 | 源码不变，引用 task / thread revision 增加 | 读取 revision / cursor 之后的增量并更新 extracted facts | 完整重读外部历史，或因引用变化重扫源码 |
@@ -67,12 +69,12 @@
 ## 通过标准
 
 - 指纹匹配恢复时，全仓扫描和未变化外部历史完整重读均为 0。
-- 匹配的 `COMPACT_CONTINUATION` 中，`resume_audit_tool_rounds <= 1`、`full_thread_reads == 0`、`unchanged_reference_reads == 0`、`recovery_commentary_only_turns == 0`，且 `first_productive_action_turn == resume_turn`。
+- 匹配且 instruction revision 未变化的 `COMPACT_CONTINUATION` 中，`resume_audit_tool_rounds <= 1`、`full_thread_reads == 0`、`unchanged_reference_reads == 0`、`recovery_commentary_only_turns == 0`、`recovery_route_deviation_count == 0`，且 `first_productive_action_turn == resume_turn`、`pre_compaction_next_action_id == post_compaction_first_productive_action_id`。
 - 第二次及后续 matching audit 的完整 reference / skill / workspace 重读为 0；`EXTERNAL_RETRY` 不产生 workspace recovery audit。
 - 正常匹配恢复只注入模型主视图、identity / revision match summary 和 `Next` 必需 anchors；完整机器账本与原始 evidence 注入为 0。
 - 复合指纹对 tracked、untracked 或 nested 任一任务相关漂移的识别率为 100%；能力缺失时必须降级为 `partial`。
 - current plan 不保存完成流水；anchors 保持少量且足够定位，默认 3–7 个；第一项生产性动作服务于唯一 `Next`。
-- `SNAPSHOT_REQUIRED` 或未完成 `RESUME_AUDIT` 时的生产修改为 0；验证改变路线后未刷新的陈旧胶囊为 0。
+- `SNAPSHOT_REQUIRED` 或未完成 `RESUME_AUDIT` 时的生产修改为 0；验证改变路线后未刷新的陈旧胶囊为 0；压缩后把 `previous_productive_action_id` 当默认 Next 的上一动作回放为 0。
 - 匹配恢复后的全 workspace 扫描、外部 revision 未变化时的完整重读均为 0；连续压缩不增加读取范围；匹配恢复后的完整技能集重读最多首次 1 次、后续为 0。
 - 连续两次相同恢复后仍无生产性动作、相同系统图重建、第三次分析空转和空泛 `Next` 获准实施均为 0；`RESUME_AUDIT -> READY` 后首个允许动作命中精确 `Next` 为 100%。
 - 每个连贯阶段最多一个本地 checkpoint；每个任务最多一个远程 review。

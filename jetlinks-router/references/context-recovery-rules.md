@@ -21,11 +21,11 @@
 | 区块 | 内容 |
 | --- | --- |
 | `Contract` | task ID / revision、契约路径、一句话目标、仍生效的不变量 / 约束和验收信号 |
-| `Checkpoint` | 当前 phase、最近 validated stage / evidence / local commit、in-flight 状态和 expected changed paths |
-| `DecisionState` | active hypothesis / decision、最新区分证据、足以阻止重试的否定路线，以及后续阶段必须 resurfacing 的关键约束 |
-| `Resume` | gate、少量精确 file / symbol / test anchors、执行级 `Next` / `first allowed action`、observable signal、blocker / residual risk |
+| `Checkpoint` | 当前 phase、最近 validated stage / evidence / local commit、带稳定 `slice_id` 的 in-flight 状态和 expected changed paths |
+| `DecisionState` | active hypothesis / decision、最新区分证据、足以阻止重试的否定路线、少量 `do_not_reopen(action_id, reason, reopen_when)`，以及后续阶段必须 resurfacing 的关键约束 |
+| `Resume` | recovery type、gate、少量精确 file / symbol / test anchors、带稳定 `action_id` 的执行级 `Next` / `first allowed action`、observable signal、blocker / residual risk |
 
-Continuity Metadata 另行记录 Git Source Snapshot 的 locator / match summary、referenced sources revisions / extracted facts、loaded rules digests / obligations、验证 evidence locator，以及 audit fingerprint / consecutive matching audits / last new evidence。正常匹配恢复只向模型提供 identity / revision match summary，不加载完整账本。
+Continuity Metadata 另行记录 Git Source Snapshot 的 locator / match summary、referenced sources revisions / extracted facts、loaded rules digests / obligations、验证 evidence locator，以及 audit fingerprint / consecutive matching audits / last new evidence、`instruction_revision_at_snapshot`、`previous_productive_action_id` 和 `pre_compaction_next_action_id`。正常匹配恢复只向模型提供 identity / revision match summary 和动作链，不加载完整账本。
 
 胶囊主视图应能一次完整读取；字段变化时原位替换。不要写命令流水、全部已完成步骤、长 diff、原始日志、会话总结或重复的设计正文。anchors 默认保持 3–7 个只是常用预算，可按真实定位需要收缩或扩展；不得用调整数量为全仓重读开口子。
 
@@ -50,7 +50,7 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 
 该算法必须先于普通 router 分类运行。若运行态可以导出通用三视图 JSON，可调用 `$task-continuity` 自带的 `scripts/validate_continuity_state.py`，把 Git 复合指纹、task revision、引用 cursor 与 loaded-rules digest 映射为 `observed`。脚本的 `suggested_gate` 只是确定性诊断：适配层负责读取 Git / Trellis 事实并更新运行态，脚本本身不得写文件、提交、发布或替代语义判断。没有脚本执行能力时仍按同一协议人工完成轻量比较，不能回退到完整重读。
 
-1. **进入审计**：压缩、恢复、暂停后继续或交接后先置为 `RESUME_AUDIT`；读取 active task / task contract 与 Recovery Capsule 主视图，确认 task ID、revision、目标、持续约束和执行级唯一下一步。
+1. **进入审计**：压缩、恢复、暂停后继续或交接后先置为 `RESUME_AUDIT`；把用户最新 instruction revision 与 `instruction_revision_at_snapshot` 独立比较，再读取 active task / task contract 与 Recovery Capsule 主视图，确认 task ID、revision、目标、持续约束、in-flight slice 和执行级唯一下一步。instruction revision 变化时按最新指令刷新契约；未变化时不能用恢复叙述重建 Next。
 2. **对 Git 指纹**：只运行轻量只读检查，比较 branch、HEAD、tracked diff digest、untracked manifest digest、相关 nested source 状态和 expected changed paths；干净 checkpoint 可直接比较 commit / tree。不要仅用 `git diff --stat` 或文件数声明匹配。
 3. **选择恢复范围**：
    - 指纹匹配：先用机器元数据中的 revision / cursor 对外部引用和 loaded rules 做增量检查；未变化时只返回 match summary 并复用 `extracted facts / obligations`。只读取宿主强制的当前 skill body、`Next` 新需要的 rule 和少量 anchors；若记录了匹配 revision 的 graph flow / edge，还必须确认其 decision question、task anchor、目标语言与 scope 匹配，之后才复用或从该节点做一跳查询。Contract、Checkpoint、DecisionState、Anchors 与 `Next` 一致后显式执行 `RESUME_AUDIT -> READY` 并直接执行 `first allowed action`。
@@ -86,6 +86,7 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 ## 偏航门禁
 
 - 恢复后的第一项生产改动必须服务于胶囊的 `Next` 和对应验收信号。
+- 匹配的 compact continuation 必须满足 `pre_compaction_next_action_id == first allowed action.action_id == post_compaction_first_productive_action_id`；`previous_productive_action_id` 不同时若先回放 previous，即使随后执行正确 Next 也已发生偏航。
 - 连续匹配恢复后的第一项允许动作必须等于 `first allowed action`；重新加载相同 skills、PRD、系统图或再次宣布“准备实现”不算进展。
 - `SNAPSHOT_REQUIRED` 和尚未完成的 `RESUME_AUDIT` 只允许有界读取、指纹计算和运行态覆盖写，不允许修改生产代码、配置或公共契约。
 - 恢复后需要补充调用方或影响面时，从 capsule 的 symbol / flow / edge anchor 扩一跳；不得因为索引工具可用就重新生成或读取整张图。
@@ -107,25 +108,25 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 ### Checkpoint
 - Phase: `<current phase>`
 - Validated: `<stage>`; evidence: `<locator>`; commit: `<hash>`
-- In-flight: `none` / `<stage>`; validation: `<pending / passed>`; expected paths: `<paths>`
+- In-flight: `none` / `<slice id>`; owner: `<owner>`; validation: `<planned / active / pending / passed>`; expected paths: `<paths>`
 
 ### DecisionState
 - Decision: keep `<hypothesis / policy>` because `<latest discriminating evidence>`
 - Persistent constraints: `<constraints that must survive later steps>`
-- Do not retry: `<rejected route>`
+- Do not retry: `<action id>`; reason: `<evidence-backed reason>`; reopen when: `<specific invalidation>`
 
 ### Resume
-- Gate: `<READY / SNAPSHOT_REQUIRED / RESUME_AUDIT>`; reason: `<transition reason>`
+- Recovery type / gate: `<COMPACT_CONTINUATION / COLD_HANDOFF / EXTERNAL_RETRY>` / `<READY / SNAPSHOT_REQUIRED / RESUME_AUDIT>`; reason: `<transition reason>`
 - Anchors:
   - `<file-or-symbol>` — `<why needed next>`
-- Next / first allowed action: `<mutation / discriminating check / blocker>`; owner/action: `<exact locator>`; scope: `<changed paths / read boundary>` → `<observable signal>`
+- Next / first allowed action: action id `<stable id>`; `<mutation / discriminating check / blocker>`; owner/action: `<exact locator>`; scope: `<changed paths / read boundary>` → `<observable signal>`
 - Blocker / residual risk: `none` / `<decision or risk>`
 
 ## Continuity Metadata
 
 - Referenced sources: `<locator>@<revision/cursor>`; facts locator: `<metadata key>`
 - Loaded rules: `<locator>@<revision/digest>`; obligations locator: `<metadata key>`
-- Audit: fingerprint `<digest>`; matching audits `<count>`; last new evidence `<locator / none>`; last productive action `<locator / none>`
+- Audit: fingerprint `<digest>`; matching audits `<count>`; instruction revision `<revision>`; previous productive action `<action id / none>`; pre-compaction Next `<action id>`; last new evidence `<locator / none>`
 
 ## Git Source Snapshot
 

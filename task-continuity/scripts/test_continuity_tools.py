@@ -40,15 +40,33 @@ def valid_state() -> dict:
                 "objective": "make continuation state executable",
                 "acceptance": ["matching state reaches READY"],
             },
-            "checkpoint": {"boundary_id": "b7", "phase": "implementation", "validated": [], "in_flight": {}},
+            "checkpoint": {
+                "boundary_id": "b7",
+                "phase": "implementation",
+                "validated": [],
+                "in_flight": {
+                    "slice_id": "validator-gate",
+                    "status": "active",
+                    "owner": "task-continuity/scripts/validate_continuity_state.py",
+                    "expected_changed_items": ["task-continuity/scripts"],
+                },
+            },
             "decision_state": {
                 "boundary_id": "b7",
                 "active_hypothesis": "missing deterministic execution layer",
                 "acceptance_status": "in_progress",
+                "do_not_reopen": [
+                    {
+                        "action_id": "reload-full-task-history",
+                        "reason": "the saved task revision already contains the required facts",
+                        "reopen_when": "the task revision changes or a recorded fact conflicts",
+                    }
+                ],
             },
             "resume": {
                 "boundary_id": "b7",
                 "gate": "RESUME_AUDIT",
+                "recovery_type": "COMPACT_CONTINUATION",
                 "anchors": ["task-continuity/scripts"],
                 "next": copy.deepcopy(action),
                 "first_allowed_action": copy.deepcopy(action),
@@ -58,6 +76,9 @@ def valid_state() -> dict:
             "boundary_id": "b7",
             "audit_fingerprint": "audit-3",
             "consecutive_matching_audits": 1,
+            "instruction_revision_at_snapshot": "instruction-r3",
+            "pre_compaction_next_action_id": "implement-validator",
+            "previous_productive_action_id": "model-current-state",
             "referenced_sources": [{"id": "trellis-docs", "revision": "0.6.14"}],
             "loaded_rules": [{"id": "task-continuity", "revision": "sha256:rules"}],
         },
@@ -74,6 +95,7 @@ def valid_state() -> dict:
             "boundary_id": "b7",
             "source_fingerprint": "sha256:tree",
             "contract_revision": "contract-r3",
+            "instruction_revision": "instruction-r3",
             "referenced_sources": {"trellis-docs": "0.6.14"},
             "loaded_rules": {"task-continuity": "sha256:rules"},
         },
@@ -143,6 +165,49 @@ class ContinuityStateTest(unittest.TestCase):
         self.assertTrue(result["valid"])
         self.assertEqual("SNAPSHOT_REQUIRED", result["suggested_gate"])
         self.assertEqual("mismatch", result["comparisons"]["contract"])
+
+    def test_user_instruction_revision_change_invalidates_saved_next(self) -> None:
+        document = valid_state()
+        document["observed"]["instruction_revision"] = "instruction-r4"
+        result = STATE.validate_state(document)
+        self.assertTrue(result["valid"])
+        self.assertEqual("SNAPSHOT_REQUIRED", result["suggested_gate"])
+        self.assertEqual("mismatch", result["comparisons"]["instruction"])
+
+    def test_compact_continuation_preserves_pre_compaction_action_identity(self) -> None:
+        document = valid_state()
+        document["continuity_metadata"]["pre_compaction_next_action_id"] = "accept-stage"
+        result = STATE.validate_state(document)
+        self.assertFalse(result["valid"])
+        self.assertIn("resume.pre_compaction_action_mismatch", {item["code"] for item in result["errors"]})
+
+    def test_compact_mutation_requires_stable_in_flight_slice(self) -> None:
+        document = valid_state()
+        document["recovery_capsule"]["checkpoint"]["in_flight"] = {}
+        result = STATE.validate_state(document)
+        self.assertFalse(result["valid"])
+        self.assertIn("checkpoint.compact_mutation_missing_slice", {item["code"] for item in result["errors"]})
+
+    def test_first_action_cannot_reopen_a_closed_action(self) -> None:
+        document = valid_state()
+        document["recovery_capsule"]["decision_state"]["do_not_reopen"][0]["action_id"] = "implement-validator"
+        result = STATE.validate_state(document)
+        self.assertFalse(result["valid"])
+        self.assertIn("resume.reopens_closed_action", {item["code"] for item in result["errors"]})
+
+    def test_cold_handoff_does_not_require_a_pre_compaction_action_chain(self) -> None:
+        document = valid_state()
+        document["recovery_capsule"]["resume"]["recovery_type"] = "COLD_HANDOFF"
+        for field in (
+            "instruction_revision_at_snapshot",
+            "pre_compaction_next_action_id",
+            "previous_productive_action_id",
+        ):
+            document["continuity_metadata"].pop(field)
+        document["observed"].pop("instruction_revision")
+        result = STATE.validate_state(document)
+        self.assertTrue(result["valid"])
+        self.assertTrue(result["ready"])
 
     def test_validated_stage_requires_evidence_and_checkpoint(self) -> None:
         document = valid_state()
@@ -219,6 +284,7 @@ class ContinuityTraceTest(unittest.TestCase):
                 "recovery_type": "COMPACT_CONTINUATION",
                 "resume_turn": 7,
                 "identity_match": True,
+                "instruction_changed": False,
                 "matching_audit_number": 2,
                 "expected_action_id": "patch",
                 "events": [
@@ -255,6 +321,7 @@ class ContinuityTraceTest(unittest.TestCase):
                 "recovery_type": "COMPACT_CONTINUATION",
                 "resume_turn": 9,
                 "identity_match": True,
+                "instruction_changed": False,
                 "matching_audit_number": 3,
                 "expected_action_id": "patch",
                 "events": [
@@ -289,6 +356,67 @@ class ContinuityTraceTest(unittest.TestCase):
         self.assertEqual(1, metrics["recovery_commentary_only_turns"])
         self.assertFalse(metrics["first_productive_action_on_resume_turn"])
         self.assertFalse(metrics["compact_continuation_fast_path_passed"])
+
+    def test_compact_continuation_detects_recovery_entry_replay_before_correct_action(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "resume_turn": 5,
+                "identity_match": True,
+                "instruction_changed": False,
+                "pre_compaction_next_action_id": "accept-stage",
+                "previous_productive_action_id": "implement-slice",
+                "events": [
+                    {"type": "skill_reload", "scope": "full_skill_set", "turn": 5},
+                    {"type": "workspace_scan", "scope": "full_workspace", "turn": 5},
+                    {"type": "mutation", "action_id": "accept-stage", "turn": 5},
+                ],
+            }
+        )
+        classes = {item["class"] for item in metrics["recovery_route_deviations"]}
+        self.assertEqual({"full_rule_reload", "workspace_rescan"}, classes)
+        self.assertTrue(metrics["action_identity_continuity"])
+        self.assertFalse(metrics["compact_continuation_fast_path_passed"])
+
+    def test_compact_continuation_detects_previous_action_replay(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "resume_turn": 4,
+                "identity_match": True,
+                "instruction_changed": False,
+                "pre_compaction_next_action_id": "verify-stage",
+                "previous_productive_action_id": "implement-slice",
+                "events": [
+                    {"type": "mutation", "action_id": "implement-slice", "turn": 4},
+                ],
+            }
+        )
+        self.assertFalse(metrics["action_identity_continuity"])
+        self.assertEqual(1, metrics["previous_action_replay_count"])
+        self.assertIn(
+            "previous_action_replay",
+            {item["class"] for item in metrics["recovery_route_deviations"]},
+        )
+
+    def test_changed_user_instruction_does_not_force_stale_action_identity(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "resume_turn": 8,
+                "identity_match": True,
+                "pre_compaction_next_action_id": "verify-stage",
+                "instruction_revision_at_snapshot": "instruction-r1",
+                "post_compaction_instruction_revision": "instruction-r2",
+                "events": [
+                    {"type": "action", "action_id": "answer-new-request", "turn": 8},
+                ],
+            }
+        )
+        self.assertTrue(metrics["instruction_changed"])
+        self.assertFalse(metrics["action_identity_continuity_applicable"])
+        self.assertIsNone(metrics["compact_continuation_fast_path_passed"])
+        self.assertEqual(0, metrics["route_deviation_count"])
 
     def test_detects_idle_reads_duplicate_check_and_prd_leak(self) -> None:
         metrics = TRACE.evaluate_trace(

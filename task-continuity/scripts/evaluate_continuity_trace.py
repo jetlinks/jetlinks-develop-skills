@@ -17,8 +17,11 @@ READ_TYPES = {
     "reference_compare",
     "reference_read",
     "rule_compare",
+    "rule_reload",
+    "skill_reload",
     "thread_read",
     "history_read",
+    "workspace_scan",
     "graph_read",
 }
 PRODUCTIVE_TYPES = {"mutation", "solution_mutation", "action", "check", "verification", "blocker"}
@@ -27,6 +30,14 @@ COMMENTARY_TYPES = {"commentary", "recovery_commentary"}
 OBSERVATION_RESULTS = {"DISCRIMINATING", "INVALID", "INCONCLUSIVE"}
 FULL_HISTORY_SCOPES = {"full_history", "full_task_history", "full_thread", "full_prd", "full_research"}
 REPOSITORY_WIDE_SCOPES = {"repository_wide", "workspace_wide", "full_repository", "full_workspace"}
+FULL_RULE_SCOPES = {"full_skill", "full_skill_set", "full_rules", "full_reference_set"}
+REPLAY_RECOVERY_CLASSES = {
+    "full_history_reread",
+    "full_rule_reload",
+    "previous_action_replay",
+    "suppressed_action_replay",
+    "workspace_rescan",
+}
 RUNTIME_CONTENT_CLASSES = {
     "runtime",
     "progress",
@@ -54,6 +65,19 @@ def _strings(value: Any) -> set[str]:
 def _event_action_id(event: dict[str, Any]) -> str | None:
     value = event.get("action_id")
     return value if isinstance(value, str) and value else None
+
+
+def _recovery_action_classes(event: dict[str, Any]) -> set[str]:
+    classes = _strings(event.get("recovery_action_class")) & REPLAY_RECOVERY_CLASSES
+    event_type = str(event.get("type", ""))
+    scope = str(event.get("scope", "bounded"))
+    if event_type in {"skill_reload", "rule_reload"} or scope in FULL_RULE_SCOPES:
+        classes.add("full_rule_reload")
+    if event_type == "workspace_scan" or scope in REPOSITORY_WIDE_SCOPES or event.get("repository_wide") is True:
+        classes.add("workspace_rescan")
+    if scope in FULL_HISTORY_SCOPES or event.get("full_history") is True:
+        classes.add("full_history_reread")
+    return classes
 
 
 def _observation_key(event: dict[str, Any]) -> tuple[str, str] | None:
@@ -91,7 +115,45 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     events = trace.get("events", [])
     if not isinstance(events, list):
         raise ValueError("events must be a list")
-    expected_action_id = trace.get("expected_action_id", inherited.get("expected_action_id"))
+    pre_compaction_next_action_id = trace.get(
+        "pre_compaction_next_action_id",
+        inherited.get("pre_compaction_next_action_id"),
+    )
+    expected_action_id = trace.get(
+        "expected_action_id",
+        inherited.get("expected_action_id", pre_compaction_next_action_id),
+    )
+    if pre_compaction_next_action_id is None:
+        pre_compaction_next_action_id = expected_action_id
+    previous_productive_action_id = trace.get(
+        "previous_productive_action_id",
+        inherited.get("previous_productive_action_id"),
+    )
+    suppressed_action_ids = _strings(
+        trace.get("suppressed_action_ids", inherited.get("suppressed_action_ids", []))
+    )
+    instruction_revision_at_snapshot = trace.get(
+        "instruction_revision_at_snapshot",
+        inherited.get("instruction_revision_at_snapshot"),
+    )
+    post_compaction_instruction_revision = trace.get(
+        "post_compaction_instruction_revision",
+        inherited.get("post_compaction_instruction_revision"),
+    )
+    explicit_instruction_changed = trace.get(
+        "instruction_changed",
+        inherited.get("instruction_changed"),
+    )
+    instruction_revision_compared = isinstance(explicit_instruction_changed, bool) or (
+        isinstance(instruction_revision_at_snapshot, str)
+        and isinstance(post_compaction_instruction_revision, str)
+    )
+    if isinstance(explicit_instruction_changed, bool):
+        instruction_changed = explicit_instruction_changed
+    elif isinstance(instruction_revision_at_snapshot, str) and isinstance(post_compaction_instruction_revision, str):
+        instruction_changed = instruction_revision_at_snapshot != post_compaction_instruction_revision
+    else:
+        instruction_changed = None
     expected_fingerprint = trace.get("source_fingerprint", inherited.get("source_fingerprint"))
     required_constraints = _strings(trace.get("required_constraint_ids", inherited.get("required_constraint_ids", [])))
     required_evidence = _strings(trace.get("required_evidence_ids", inherited.get("required_evidence_ids", [])))
@@ -111,6 +173,7 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     productive: list[tuple[int, dict[str, Any]]] = []
     verification_keys: list[tuple[str, str, str, str]] = []
     route_deviations: list[int] = []
+    recovery_route_deviations: list[dict[str, Any]] = []
     full_history_reads = 0
     full_thread_reads = 0
     repository_wide_reads = 0
@@ -135,6 +198,7 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     observation_repair_budget_exceeded: list[int] = []
     solution_change_before_snapshot: list[int] = []
     snapshot_refresh_pending = False
+    first_productive_seen = False
 
     for index, raw_event in enumerate(events):
         if not isinstance(raw_event, dict):
@@ -153,11 +217,29 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
             cycle["events"] += 1
             cycle["turns"].add(turn)
 
+        event_action_id = _event_action_id(event)
+        recovery_classes = _recovery_action_classes(event)
+        if event_action_id in suppressed_action_ids:
+            recovery_classes.add("suppressed_action_replay")
+        continuity_slice_matches = (
+            recovery_type == "COMPACT_CONTINUATION"
+            and identity_match
+            and instruction_revision_compared
+            and instruction_changed is False
+        )
+        if continuity_slice_matches and not first_productive_seen:
+            for recovery_class in sorted(recovery_classes):
+                recovery_route_deviations.append(
+                    {"event_index": index, "class": recovery_class}
+                )
+                route_deviations.append(index)
+
         is_productive = event.get("productive") is True or (
             event_type in PRODUCTIVE_TYPES and event.get("productive") is not False
         )
         if is_productive:
             productive.append((index, event))
+            first_productive_seen = True
             turn_state["productive"] = True
             if isinstance(recovery_id, str) and recovery_id:
                 recovery_cycles[recovery_id]["productive"] = True
@@ -288,8 +370,33 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     first_event = productive[0][1] if productive else None
     first_turn = first_event.get("turn", first_index + 1) if first_event is not None else None
     first_action_id = _event_action_id(first_event) if first_event is not None else None
+    action_identity_continuity_applicable = (
+        recovery_type == "COMPACT_CONTINUATION"
+        and identity_match
+        and instruction_revision_compared
+        and instruction_changed is False
+        and pre_compaction_next_action_id is not None
+    )
+    action_identity_continuity = (
+        first_action_id == pre_compaction_next_action_id
+        if action_identity_continuity_applicable and first_action_id is not None
+        else None
+    )
     next_action_hit = expected_action_id is None or first_action_id == expected_action_id
-    if expected_action_id is not None and first_event is not None and not next_action_hit:
+    if action_identity_continuity_applicable and first_event is not None and action_identity_continuity is False:
+        route_deviations.append(first_index)
+    elif expected_action_id is not None and first_event is not None and not next_action_hit and instruction_changed is not True:
+        route_deviations.append(first_index)
+    previous_action_replay = (
+        action_identity_continuity_applicable
+        and isinstance(previous_productive_action_id, str)
+        and first_action_id == previous_productive_action_id
+        and first_action_id != pre_compaction_next_action_id
+    )
+    if previous_action_replay and first_index is not None:
+        recovery_route_deviations.append(
+            {"event_index": first_index, "class": "previous_action_replay"}
+        )
         route_deviations.append(first_index)
     idle_cycles = sorted(key for key, value in recovery_cycles.items() if not value["productive"])
     missing_constraints = sorted(required_constraints - observed_constraints)
@@ -304,17 +411,24 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     first_productive_action_on_resume_turn = (
         first_turn == resume_turn if resume_turn is not None and first_turn is not None else None
     )
-    compact_fast_path_applicable = recovery_type == "COMPACT_CONTINUATION" and identity_match
+    compact_fast_path_applicable = (
+        recovery_type == "COMPACT_CONTINUATION"
+        and identity_match
+        and instruction_revision_compared
+        and instruction_changed is False
+    )
     compact_fast_path_passed = None
     if compact_fast_path_applicable:
         compact_fast_path_passed = (
             len(resume_audit_tool_round_ids) <= 1
+            and instruction_revision_compared
             and full_thread_reads == 0
             and unchanged_reference_reads == 0
             and recovery_commentary_only_turns == 0
             and first_productive_action_on_resume_turn is True
             and matching_audit_full_reference_reads == 0
-            and next_action_hit
+            and action_identity_continuity is True
+            and not recovery_route_deviations
         )
 
     return {
@@ -322,6 +436,14 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "first_productive_action_event": first_index,
         "first_productive_action_turn": first_turn,
         "first_action_id": first_action_id,
+        "pre_compaction_next_action_id": pre_compaction_next_action_id,
+        "post_compaction_first_productive_action_id": first_action_id,
+        "previous_productive_action_id": previous_productive_action_id,
+        "instruction_changed": instruction_changed,
+        "instruction_revision_compared": instruction_revision_compared,
+        "action_identity_continuity_applicable": action_identity_continuity_applicable,
+        "action_identity_continuity": action_identity_continuity,
+        "previous_action_replay_count": 1 if previous_action_replay else 0,
         "next_action_hit": next_action_hit,
         "read_event_count": len(read_keys),
         "distinct_read_count": len(set(read_keys)),
@@ -341,6 +463,8 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "repeated_verification_count": repeated_verifications,
         "route_deviation_count": len(set(route_deviations)),
         "route_deviation_events": sorted(set(route_deviations)),
+        "recovery_route_deviation_count": len(recovery_route_deviations),
+        "recovery_route_deviations": recovery_route_deviations,
         "idle_recovery_count": len(idle_cycles),
         "idle_recovery_ids": idle_cycles,
         "authoritative_runtime_leak_count": len(authoritative_runtime_leaks),
@@ -383,6 +507,12 @@ def evaluate_document(document: Any) -> dict[str, Any]:
         key: document[key]
         for key in (
             "expected_action_id",
+            "pre_compaction_next_action_id",
+            "previous_productive_action_id",
+            "suppressed_action_ids",
+            "instruction_revision_at_snapshot",
+            "post_compaction_instruction_revision",
+            "instruction_changed",
             "source_fingerprint",
             "required_constraint_ids",
             "required_evidence_ids",

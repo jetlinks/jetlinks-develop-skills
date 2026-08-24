@@ -88,31 +88,38 @@ class ValidateSkillsTest(unittest.TestCase):
                 "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot "
                 "Contract Checkpoint DecisionState Resume "
                 "consecutive_matching_audits first_allowed_action "
-                "COMPACT_CONTINUATION COLD_HANDOFF EXTERNAL_RETRY\n",
+                "COMPACT_CONTINUATION COLD_HANDOFF EXTERNAL_RETRY "
+                "previous_productive_action_id pre_compaction_next_action_id "
+                "post_compaction_first_productive_action_id\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
                 "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
                 "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞 "
-                "resume_audit_tool_rounds <= 1 unmanaged_manifest_digest\n",
+                "resume_audit_tool_rounds <= 1 unmanaged_manifest_digest "
+                "instruction_revision_at_snapshot do_not_reopen\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "evaluation-cases.md").write_text(
                 "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
                 "空泛 Next 规则 revision 未变化 Continuation 对比协议 "
                 "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交 "
-                "无关代码图注入 scripts/evaluate_continuity_trace.py 压缩续跑单批次 外部重试\n",
+                "无关代码图注入 scripts/evaluate_continuity_trace.py 压缩续跑单批次 外部重试 "
+                "压缩前后动作身份连续 正确动作前的恢复入口偏航\n",
                 encoding="utf-8",
             )
             (continuity / "scripts").mkdir()
             (continuity / "scripts" / "validate_continuity_state.py").write_text(
-                "def validate_state():\n    return {'suggested_gate': 'SNAPSHOT_REQUIRED'}\n",
+                "def validate_state():\n    pre_compaction_next_action_id = None\n"
+                "    return {'suggested_gate': 'SNAPSHOT_REQUIRED'}\n",
                 encoding="utf-8",
             )
             (continuity / "scripts" / "evaluate_continuity_trace.py").write_text(
                 "def evaluate_trace():\n    return {'repeated_read_count': 0, "
                 "'irrelevant_graph_injection_count': 0, 'full_thread_reads': 0, "
-                "'unchanged_reference_reads': 0, 'compact_continuation_fast_path_passed': True}\n",
+                "'unchanged_reference_reads': 0, 'compact_continuation_fast_path_passed': True, "
+                "'post_compaction_first_productive_action_id': None, "
+                "'recovery_route_deviation_count': 0}\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)

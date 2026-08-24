@@ -17,8 +17,10 @@ from typing import Any
 
 
 GATES = {"READY", "SNAPSHOT_REQUIRED", "RESUME_AUDIT"}
+RECOVERY_TYPES = {"COMPACT_CONTINUATION", "COLD_HANDOFF", "EXTERNAL_RETRY"}
 ACTION_TYPES = {"mutation", "check", "blocker"}
 ACTION_PURPOSES = {"solution", "observation_setup", "observation_repair"}
+IN_FLIGHT_STATUSES = {"planned", "active", "validation_pending", "validation_passed"}
 MATCH_VALUES = {"match", "mismatch", "unknown"}
 OBSERVATION_RESULTS = {"PLANNED", "DISCRIMINATING", "INVALID", "INCONCLUSIVE"}
 VAGUE_ACTION = re.compile(
@@ -55,6 +57,13 @@ def _stable_action_identity(action: dict[str, Any]) -> str:
     }
     payload = json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _explicit_action_id(action: Any) -> str | None:
+    if not isinstance(action, dict):
+        return None
+    value = action.get("action_id")
+    return value.strip() if _nonempty_string(value) else None
 
 
 def _validate_action(action: Any, path: str, errors: list[dict[str, str]]) -> None:
@@ -96,6 +105,60 @@ def _validate_action(action: Any, path: str, errors: list[dict[str, str]]) -> No
                 "Next must be an executable mutation, discriminating check, or concrete blocker report",
             )
         )
+
+
+def _validate_in_flight_slice(value: Any, path: str, errors: list[dict[str, str]]) -> bool:
+    if value is None or value == {}:
+        return False
+    if not isinstance(value, dict):
+        errors.append(_diagnostic("checkpoint.invalid_in_flight", path, "in_flight must be null or an object"))
+        return False
+    for field in ("slice_id", "owner"):
+        if not _nonempty_string(value.get(field)):
+            errors.append(
+                _diagnostic("checkpoint.in_flight_missing_field", f"{path}.{field}", "field must be non-empty")
+            )
+    status = value.get("status")
+    if status not in IN_FLIGHT_STATUSES:
+        errors.append(
+            _diagnostic(
+                "checkpoint.in_flight_invalid_status",
+                f"{path}.status",
+                "status must be planned, active, validation_pending, or validation_passed",
+            )
+        )
+    if not _nonempty_scope(value.get("expected_changed_items")):
+        errors.append(
+            _diagnostic(
+                "checkpoint.in_flight_missing_scope",
+                f"{path}.expected_changed_items",
+                "in-flight slice must name its bounded expected changed items",
+            )
+        )
+    return True
+
+
+def _validate_do_not_reopen(value: Any, path: str, errors: list[dict[str, str]]) -> set[str]:
+    if value is None:
+        return set()
+    if not isinstance(value, list):
+        errors.append(_diagnostic("decision.do_not_reopen_not_list", path, "do_not_reopen must be a list"))
+        return set()
+    action_ids: set[str] = set()
+    for index, item in enumerate(value):
+        item_path = f"{path}[{index}]"
+        if not isinstance(item, dict):
+            errors.append(_diagnostic("decision.do_not_reopen_invalid", item_path, "entry must be an object"))
+            continue
+        for field in ("action_id", "reason", "reopen_when"):
+            if not _nonempty_string(item.get(field)):
+                errors.append(
+                    _diagnostic("decision.do_not_reopen_missing_field", f"{item_path}.{field}", "field must be non-empty")
+                )
+        action_id = item.get("action_id")
+        if _nonempty_string(action_id):
+            action_ids.add(action_id.strip())
+    return action_ids
 
 
 def _validate_active_observation(value: Any, path: str, errors: list[dict[str, str]]) -> dict[str, Any] | None:
@@ -240,7 +303,13 @@ def validate_state(document: Any) -> dict[str, Any]:
     errors: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     mismatches: list[dict[str, str]] = []
-    comparisons = {"source": "unknown", "contract": "unknown", "references": "unknown", "rules": "unknown"}
+    comparisons = {
+        "source": "unknown",
+        "contract": "unknown",
+        "instruction": "unknown",
+        "references": "unknown",
+        "rules": "unknown",
+    }
 
     if not isinstance(document, dict):
         return {
@@ -294,6 +363,11 @@ def validate_state(document: Any) -> dict[str, Any]:
         )
     if not _nonempty_string(checkpoint.get("phase")):
         errors.append(_diagnostic("checkpoint.missing_phase", "recovery_capsule.checkpoint.phase", "phase must be non-empty"))
+    has_in_flight_slice = _validate_in_flight_slice(
+        checkpoint.get("in_flight"),
+        "recovery_capsule.checkpoint.in_flight",
+        errors,
+    )
     validated = checkpoint.get("validated")
     if not isinstance(validated, list):
         errors.append(
@@ -322,6 +396,11 @@ def validate_state(document: Any) -> dict[str, Any]:
             errors.append(
                 _diagnostic("decision.missing_field", f"recovery_capsule.decision_state.{field}", "field must be non-empty")
             )
+    do_not_reopen = _validate_do_not_reopen(
+        decision.get("do_not_reopen"),
+        "recovery_capsule.decision_state.do_not_reopen",
+        errors,
+    )
     active_observation = _validate_active_observation(
         decision.get("active_observation"),
         "recovery_capsule.decision_state.active_observation",
@@ -355,6 +434,17 @@ def validate_state(document: Any) -> dict[str, Any]:
     gate = resume.get("gate")
     if gate not in GATES:
         errors.append(_diagnostic("resume.invalid_gate", "recovery_capsule.resume.gate", "gate is invalid"))
+    recovery_type = resume.get("recovery_type")
+    if recovery_type not in RECOVERY_TYPES:
+        errors.append(
+            _diagnostic(
+                "resume.invalid_recovery_type",
+                "recovery_capsule.resume.recovery_type",
+                "recovery_type must be COMPACT_CONTINUATION, COLD_HANDOFF, or EXTERNAL_RETRY",
+            )
+        )
+    elif recovery_type != "COMPACT_CONTINUATION":
+        comparisons["instruction"] = "match"
     anchors = resume.get("anchors")
     if not isinstance(anchors, list):
         errors.append(_diagnostic("resume.anchors_not_list", "recovery_capsule.resume.anchors", "anchors must be a list"))
@@ -383,6 +473,32 @@ def validate_state(document: Any) -> dict[str, Any]:
                     "first_allowed_action must equal Next or share its stable action_id",
                 )
             )
+    first_action_id = _explicit_action_id(first_action)
+    if first_action_id in do_not_reopen:
+        errors.append(
+            _diagnostic(
+                "resume.reopens_closed_action",
+                "recovery_capsule.resume.first_allowed_action.action_id",
+                "first_allowed_action is still listed in DecisionState.do_not_reopen",
+            )
+        )
+    if recovery_type == "COMPACT_CONTINUATION" and isinstance(next_action, dict):
+        if _explicit_action_id(next_action) is None or first_action_id is None:
+            errors.append(
+                _diagnostic(
+                    "resume.compact_action_id_required",
+                    "recovery_capsule.resume.first_allowed_action.action_id",
+                    "compact continuation requires an explicit stable action_id for Next and first_allowed_action",
+                )
+            )
+        if next_action.get("type") == "mutation" and not has_in_flight_slice:
+            errors.append(
+                _diagnostic(
+                    "checkpoint.compact_mutation_missing_slice",
+                    "recovery_capsule.checkpoint.in_flight",
+                    "a compact continuation mutation must preserve its stable in-flight slice",
+                )
+            )
 
     if not _nonempty_string(metadata.get("audit_fingerprint")):
         errors.append(_diagnostic("metadata.missing_audit", "continuity_metadata.audit_fingerprint", "audit_fingerprint is required"))
@@ -391,6 +507,44 @@ def validate_state(document: Any) -> dict[str, Any]:
         errors.append(
             _diagnostic("metadata.invalid_audit_count", "continuity_metadata.consecutive_matching_audits", "count must be a non-negative integer")
         )
+    pre_compaction_next_action_id = metadata.get("pre_compaction_next_action_id")
+    previous_productive_action_id = metadata.get("previous_productive_action_id")
+    instruction_revision_at_snapshot = metadata.get("instruction_revision_at_snapshot")
+    if recovery_type == "COMPACT_CONTINUATION":
+        if not _nonempty_string(pre_compaction_next_action_id):
+            errors.append(
+                _diagnostic(
+                    "metadata.missing_pre_compaction_next",
+                    "continuity_metadata.pre_compaction_next_action_id",
+                    "compact continuation must preserve the action id committed before compaction",
+                )
+            )
+        elif first_action_id is not None and pre_compaction_next_action_id.strip() != first_action_id:
+            errors.append(
+                _diagnostic(
+                    "resume.pre_compaction_action_mismatch",
+                    "recovery_capsule.resume.first_allowed_action.action_id",
+                    "first_allowed_action must retain pre_compaction_next_action_id",
+                )
+            )
+        if "previous_productive_action_id" not in metadata or (
+            previous_productive_action_id is not None and not _nonempty_string(previous_productive_action_id)
+        ):
+            errors.append(
+                _diagnostic(
+                    "metadata.invalid_previous_productive_action",
+                    "continuity_metadata.previous_productive_action_id",
+                    "field must be null or a non-empty stable action id",
+                )
+            )
+        if not _nonempty_string(instruction_revision_at_snapshot):
+            errors.append(
+                _diagnostic(
+                    "metadata.missing_instruction_revision",
+                    "continuity_metadata.instruction_revision_at_snapshot",
+                    "compact continuation must preserve the latest user-instruction revision separately",
+                )
+            )
     references = _revision_map(metadata.get("referenced_sources"), "continuity_metadata.referenced_sources", errors)
     rules = _revision_map(metadata.get("loaded_rules"), "continuity_metadata.loaded_rules", errors)
 
@@ -423,6 +577,19 @@ def validate_state(document: Any) -> dict[str, Any]:
             if comparisons["contract"] == "mismatch":
                 mismatches.append(
                     _diagnostic("contract.revision_mismatch", "observed.contract_revision", "observed contract revision differs")
+                )
+        observed_instruction_revision = observed.get("instruction_revision")
+        if _nonempty_string(observed_instruction_revision) and _nonempty_string(instruction_revision_at_snapshot):
+            comparisons["instruction"] = (
+                "match" if observed_instruction_revision == instruction_revision_at_snapshot else "mismatch"
+            )
+            if comparisons["instruction"] == "mismatch":
+                mismatches.append(
+                    _diagnostic(
+                        "instruction.revision_mismatch",
+                        "observed.instruction_revision",
+                        "latest user instruction differs from the revision captured with the saved Next",
+                    )
                 )
         comparisons["references"] = _compare_ledger(
             references, observed.get("referenced_sources"), "referenced_sources", mismatches
@@ -475,6 +642,8 @@ def validate_state(document: Any) -> dict[str, Any]:
         "suggested_gate": suggested_gate,
         "comparisons": comparisons,
         "action_identity": _stable_action_identity(next_action) if isinstance(next_action, dict) else None,
+        "pre_compaction_next_action_id": pre_compaction_next_action_id,
+        "previous_productive_action_id": previous_productive_action_id,
         "errors": errors,
         "warnings": warnings,
         "mismatches": mismatches,

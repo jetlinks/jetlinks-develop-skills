@@ -8,19 +8,19 @@
 
 | 所需能力 | 可复用后端 | 仍由连续性协议负责 |
 | --- | --- | --- |
-| 生命周期触发、压缩前保存、压缩后注入 | 宿主原生 `PreCompact` / `SessionStart(source=compact)` 或等价事件 | 恢复类型、gate、注入预算、同轮 `first_allowed_action` |
+| 生命周期触发、压缩前保存、压缩后注入 | 宿主原生 `PreCompact` / `SessionStart(source=compact)` 或等价事件 | 恢复类型、gate、独立 instruction revision 对账、`previous_productive_action_id -> pre_compaction_next_action_id -> post_compaction_first_productive_action_id`、注入预算、同轮 `first_allowed_action` |
 | 会话事件持久化、全文检索、按需取回 | 本地 event store / SQLite / FTS / host memory | Capsule 的当前路线、reference cursor、Source Snapshot、证据有效性 |
 | 跨会话语义记忆 | 本地或获准的向量 / knowledge store | 当前任务身份、源码一致性、验收和版本交付 |
 | task / issue / thread 增量状态 | cursor / revision / wait / delta API | `ReferencedSources` 的 extracted facts 与重读条件 |
 
-不要因为某插件自称 memory、continuity 或 resume 就把它当成权威状态。用真实前向轨迹验证：压缩后首个动作是否命中 `Next`、是否重读完整历史、是否遗漏约束、源码漂移能否被发现。
+不要因为某插件自称 memory、continuity 或 resume 就把它当成权威状态。用真实前向轨迹验证：压缩前后动作 identity 是否连续、压缩后首个动作是否命中 `Next`、是否重读完整历史 / skill / workspace、是否遗漏约束、源码漂移能否被发现。用户改变目标时另行验证 instruction revision 能使旧动作失效。
 
 ## Codex 原生 Hooks
 
 OpenAI 官方 Hooks 已提供 `PreCompact`、`PostCompact`、`SessionStart`、`PreToolUse`、`PostToolUse` 和 `Stop`。根会话压缩后，`SessionStart(source=compact)` 会在紧接着的模型请求前运行，适合作为恢复索引注入点。
 
 - 只用 `PreCompact` 保存或校验有界状态；失败时标记 `SNAPSHOT_REQUIRED`，不要解析不稳定的 transcript 格式来猜完整任务状态。
-- 只在 `SessionStart(source=compact)` 注入一次 Capsule、identity match summary 和 `first_allowed_action`；不要再由 `PostCompact` 重复注入。
+- 只在 `SessionStart(source=compact)` 注入一次 Capsule、identity / instruction match summary、动作 identity 链和 `first_allowed_action`；不要再由 `PostCompact` 重复注入。若动作链不匹配，或首个生产事件重放 previous action，适配器应留下可审计的 route-deviation 事件并保持 `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 结果，不得用后续正确动作覆盖它。
 - 设置严格 `additionalContextLimit`。多个 hooks / plugins 的上下文会累积，不能把完整技能、事件账本和系统图同时塞回模型。
 - tool hooks 不是完整安全边界；覆盖不到的工具仍服从语义 gate。
 
