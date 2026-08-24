@@ -212,7 +212,7 @@ class ValidateSkillsTest(unittest.TestCase):
             agents = root / ".codex" / "agents"
             agents.mkdir(parents=True)
             (root / ".codex" / "config.toml").write_text(
-                "[agents]\nmax_threads = 2\ninterrupt_message = true\n",
+                "[features]\nmulti_agent = true\n\n[agents]\nmax_threads = 2\nmax_depth = 1\ninterrupt_message = true\n",
                 encoding="utf-8",
             )
             profiles = {
@@ -231,15 +231,31 @@ class ValidateSkillsTest(unittest.TestCase):
                 )
                 (agents / filename).write_text(
                     f'name = "{name}"\ndescription = "Test profile"\n{sandbox}{mechanical_settings}'
-                    'developer_instructions = "Do not spawn further agents."\n',
+                    'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                    'Do not spawn further agents."\n',
                     encoding="utf-8",
                 )
             self.assertEqual([], VALIDATOR.validate_codex_adapter(root))
 
+            (root / ".codex" / "config.toml").write_text(
+                "[features]\nmulti_agent = true\n\n[agents]\n"
+                "max_threads = 2\nmax_depth = 2\ninterrupt_message = true\n",
+                encoding="utf-8",
+            )
+            errors = VALIDATOR.validate_codex_adapter(root)
+            self.assertTrue(any("agents.max_depth must be exactly 1" in error for error in errors))
+
+            (root / ".codex" / "config.toml").write_text(
+                "[features]\nmulti_agent = true\n\n[agents]\nmax_threads = 2\n"
+                "max_depth = 1\ninterrupt_message = true\n",
+                encoding="utf-8",
+            )
+
             (agents / "bounded-explorer.toml").write_text(
                 'name = "bounded_explorer"\ndescription = "Test profile"\n'
                 'sandbox_mode = "workspace-write"\n'
-                'developer_instructions = "Do not spawn further agents."\n',
+                'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                'Do not spawn further agents."\n',
                 encoding="utf-8",
             )
             errors = VALIDATOR.validate_codex_adapter(root)
@@ -249,7 +265,8 @@ class ValidateSkillsTest(unittest.TestCase):
                 'name = "mechanical_worker"\ndescription = "Test profile"\n'
                 'model = "gpt-5.6-terra"\nmodel_reasoning_effort = "high"\n'
                 'sandbox_mode = "read-only"\n'
-                'developer_instructions = "Do not spawn further agents."\n',
+                'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                'Do not spawn further agents."\n',
                 encoding="utf-8",
             )
             errors = VALIDATOR.validate_codex_adapter(root)
@@ -271,7 +288,8 @@ class ValidateSkillsTest(unittest.TestCase):
             agents = root / ".codex" / "agents"
             agents.mkdir(parents=True)
             (root / ".codex" / "config.toml").write_text(
-                "[agents]\nenabled = true\nmax_concurrent_threads_per_session = 2\n"
+                "[features]\nmulti_agent = true\n\n"
+                "[agents]\nmax_concurrent_threads_per_session = 2\nmax_depth = 1\n"
                 'default_subagent_model = "balanced"\n'
                 'default_subagent_reasoning_effort = "medium"\n',
                 encoding="utf-8",
@@ -292,7 +310,8 @@ class ValidateSkillsTest(unittest.TestCase):
                 )
                 (agents / filename).write_text(
                     f'name = "{name}"\ndescription = "Test profile"\n{sandbox}{mechanical_settings}'
-                    'developer_instructions = "Do not spawn further agents."\n',
+                    'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                    'Do not spawn further agents."\n',
                     encoding="utf-8",
                 )
             self.assertEqual([], VALIDATOR.validate_codex_adapter(root))

@@ -25,6 +25,8 @@ REQUIRED_SKILL_CONTRACTS = {
             "at most two active delegated slices",
             "After one failed attempt",
             "overlapping files",
+            "Hard-disable multi-Agent tools",
+            "spawn broker",
         ),
         "references/orchestration-and-routing-rules.md": (
             "CAPABILITY_MISMATCH",
@@ -36,6 +38,8 @@ REQUIRED_SKILL_CONTRACTS = {
             "Default delegation depth: one",
             "one or two",
             "same capability tier",
+            "Capsule authority is monotonic",
+            "delegation: denied",
         ),
         "references/evaluation-cases.md": (
             "Short mechanical change",
@@ -44,6 +48,13 @@ REQUIRED_SKILL_CONTRACTS = {
             "overlapping writes",
             "scripts/evaluate_orchestration_trace.py",
             "Advice-only delegation false positive",
+            "Leaf attempts recursive delegation",
+            "Brokered nested scope attenuation",
+        ),
+        "references/codex-adapter.md": (
+            "agents.max_depth",
+            "Do not add an enabled Stage Manager profile",
+            "descendant scope / write-set ACL",
         ),
         "scripts/evaluate_orchestration_trace.py": (
             "def evaluate_trace",
@@ -59,6 +70,11 @@ REQUIRED_SKILL_CONTRACTS = {
             "write_set does not match capsule permissions.write",
             "does not match failed tier",
             "max_observed_active",
+            "AUTHORITY_CAPSULE_FIELDS",
+            "spawn_broker_enforced",
+            "child allowed_scope exceeds parent authority",
+            "child write_set exceeds parent authority",
+            "child budget.",
         ),
     },
     "task-continuity": {
@@ -339,14 +355,22 @@ def validate_codex_adapter(repository_root: Path) -> list[str]:
         config_text = config_path.read_text(encoding="utf-8")
     except OSError as error:
         return [f"{config_path}: cannot read config: {error}"]
+    features_match = re.search(r"(?ms)^\[features\]\s*$\n(.*?)(?=^\[|\Z)", config_text)
+    if features_match is None:
+        errors.append(f"{config_path}: missing [features] table")
+    else:
+        multi_agent = re.search(
+            r"(?m)^multi_agent\s*=\s*(true|false)\s*$",
+            features_match.group(1),
+        )
+        if multi_agent is None or multi_agent.group(1) != "true":
+            errors.append(f"{config_path}: primary features.multi_agent must be true")
+
     agents_match = re.search(r"(?ms)^\[agents\]\s*$\n(.*?)(?=^\[|\Z)", config_text)
     if agents_match is None:
         errors.append(f"{config_path}: missing [agents] table")
     else:
         agents_text = agents_match.group(1)
-        enabled_match = re.search(r"(?m)^enabled\s*=\s*(true|false)\s*$", agents_text)
-        if enabled_match is not None and enabled_match.group(1) != "true":
-            errors.append(f"{config_path}: agents.enabled must not disable multi-Agent tools")
         current_max = re.search(r"(?m)^max_concurrent_threads_per_session\s*=\s*([0-9]+)\s*$", agents_text)
         legacy_max = re.search(r"(?m)^max_threads\s*=\s*([0-9]+)\s*$", agents_text)
         if current_max is not None and legacy_max is not None:
@@ -356,6 +380,9 @@ def validate_codex_adapter(repository_root: Path) -> list[str]:
             errors.append(
                 f"{config_path}: max_concurrent_threads_per_session or max_threads must be a positive integer"
             )
+        max_depth = re.search(r"(?m)^max_depth\s*=\s*([0-9]+)\s*$", agents_text)
+        if max_depth is None or int(max_depth.group(1)) != 1:
+            errors.append(f"{config_path}: agents.max_depth must be exactly 1 for the flat adapter")
         for field in ("default_subagent_model", "default_subagent_reasoning_effort"):
             value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]*)"\s*$', agents_text)
             if value is not None and not value.group(1).strip():
@@ -425,6 +452,8 @@ def validate_codex_adapter(repository_root: Path) -> list[str]:
                 errors.append(f"{path}: {field} must be {expected_value!r}")
         if "spawn further agents" not in instructions:
             errors.append(f"{path}: profile must prohibit recursive Agent fan-out")
+        if "hard upper bounds" not in instructions or "escalation request" not in instructions:
+            errors.append(f"{path}: profile must treat capsule authority as bounded and escalate scope needs")
     return errors
 
 

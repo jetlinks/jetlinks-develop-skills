@@ -5,6 +5,7 @@ model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
 Review the integrated artifact against the supplied task contract, acceptance matrix, diff, and evidence locators.
+Treat its allowed scope, permissions, budget, and stop conditions as hard upper bounds; return an escalation request instead of expanding them.
 Prioritize correctness, public-contract behavior, security, concurrency, migrations, regressions, and missing validation.
 Report concrete findings with exact locators, confidence, and the acceptance signal at risk.
 Do not infer that Agent agreement is evidence, do not edit files, and do not spawn further agents.

@@ -30,6 +30,12 @@ CAPSULE_FIELDS = {
     "permissions",
 }
 STRICT_CAPSULE_FIELDS = CAPSULE_FIELDS | {"acceptance_owner"}
+AUTHORITY_CAPSULE_FIELDS = STRICT_CAPSULE_FIELDS | {
+    "parent_assignment_id",
+    "depth",
+    "budget",
+    "delegation",
+}
 TIER_ORDER = {"economy": 0, "balanced": 1, "strong": 2}
 
 
@@ -160,6 +166,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
         and (event.get("type") in {"accept", "primary_action"} or "dispatch_receipt" in event)
         for event in events
     )
+    authority_schema = schema_version >= 3
 
     budget = trace.get("budget") if isinstance(trace.get("budget"), dict) else {}
     max_active = int(budget.get("max_active", 2))
@@ -190,6 +197,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
     primary_leaf_violations = 0
     contract_gate_violations = 0
     active_contract_revisions: dict[str, dict[str, Any]] = {}
+    assignment_capsules: dict[str, dict[str, Any]] = {}
 
     for index, event in enumerate(events):
         if not isinstance(event, dict):
@@ -243,7 +251,10 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(capsule, dict):
                 errors.append(f"event[{index}] delegate lacks Assignment Capsule")
             else:
-                required_capsule_fields = STRICT_CAPSULE_FIELDS if strict_schema else CAPSULE_FIELDS
+                if authority_schema:
+                    required_capsule_fields = AUTHORITY_CAPSULE_FIELDS
+                else:
+                    required_capsule_fields = STRICT_CAPSULE_FIELDS if strict_schema else CAPSULE_FIELDS
                 missing = sorted(field for field in required_capsule_fields if not _nonempty(capsule.get(field)))
                 if missing:
                     errors.append(f"event[{index}] capsule missing: {', '.join(missing)}")
@@ -252,6 +263,73 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                     errors.append(f"event[{index}] capsule acceptance must declare named signals")
                 assignment_acceptance[assignment] = signals
                 assignment_acceptance_owner[assignment] = str(capsule.get("acceptance_owner", ""))
+                if authority_schema:
+                    capsule_depth = capsule.get("depth")
+                    if not isinstance(capsule_depth, int) or capsule_depth != depth:
+                        errors.append(f"event[{index}] capsule depth must match delegate depth")
+                    delegation = capsule.get("delegation")
+                    if delegation not in {"denied", "brokered"}:
+                        errors.append(f"event[{index}] capsule delegation must be denied or brokered")
+                    broker_enforced = budget.get("spawn_broker_enforced") is True
+                    if delegation == "brokered" and not broker_enforced:
+                        errors.append(f"event[{index}] brokered delegation requires spawn_broker_enforced=true")
+                    parent_assignment = str(capsule.get("parent_assignment_id", "")).strip()
+                    if depth == 1 and parent_assignment != "primary":
+                        errors.append(f"event[{index}] depth-one capsule parent_assignment_id must be primary")
+                    if depth > 1:
+                        parent_capsule = assignment_capsules.get(parent_assignment)
+                        if parent_capsule is None:
+                            errors.append(f"event[{index}] nested delegate lacks an active declared parent capsule")
+                        else:
+                            if parent_assignment not in assignment_for_agent.values():
+                                errors.append(f"event[{index}] nested delegate parent assignment is not active")
+                            if parent_capsule.get("delegation") != "brokered":
+                                errors.append(f"event[{index}] nested delegate parent does not permit brokered delegation")
+                            parent_depth = parent_capsule.get("depth")
+                            if not isinstance(parent_depth, int) or depth != parent_depth + 1:
+                                errors.append(f"event[{index}] child depth must be exactly parent depth + 1")
+                            parent_scope = parent_capsule.get("allowed_scope")
+                            child_scope = capsule.get("allowed_scope")
+                            if not isinstance(parent_scope, list) or not isinstance(child_scope, list):
+                                errors.append(f"event[{index}] authority scopes must be normalized lists")
+                            elif not set(child_scope).issubset(set(parent_scope)):
+                                errors.append(f"event[{index}] child allowed_scope exceeds parent authority")
+                            parent_permissions = parent_capsule.get("permissions")
+                            child_permissions = capsule.get("permissions")
+                            if isinstance(parent_permissions, dict) and isinstance(child_permissions, dict):
+                                for permission in ("read", "write", "external_side_effects", "secrets"):
+                                    parent_values = parent_permissions.get(permission, [])
+                                    child_values = child_permissions.get(permission, [])
+                                    if not isinstance(parent_values, list) or not isinstance(child_values, list):
+                                        errors.append(
+                                            f"event[{index}] permissions.{permission} must be a normalized list"
+                                        )
+                                    elif not set(child_values).issubset(set(parent_values)):
+                                        errors.append(
+                                            f"event[{index}] child permissions.{permission} exceeds parent authority"
+                                        )
+                                parent_write_set = set(parent_permissions.get("write", []))
+                                if not write_set.issubset(parent_write_set):
+                                    errors.append(f"event[{index}] child write_set exceeds parent authority")
+                            else:
+                                errors.append(f"event[{index}] nested authority permissions must be objects")
+                            parent_budget = parent_capsule.get("budget")
+                            child_budget = capsule.get("budget")
+                            if isinstance(parent_budget, dict) and isinstance(child_budget, dict):
+                                for budget_field in ("token_budget", "max_children"):
+                                    parent_value = parent_budget.get(budget_field)
+                                    child_value = child_budget.get(budget_field)
+                                    if (
+                                        isinstance(parent_value, (int, float))
+                                        and isinstance(child_value, (int, float))
+                                        and child_value > parent_value
+                                    ):
+                                        errors.append(
+                                            f"event[{index}] child budget.{budget_field} exceeds parent authority"
+                                        )
+                            else:
+                                errors.append(f"event[{index}] nested authority budgets must be objects")
+                    assignment_capsules[assignment] = capsule
             write_set = set(event.get("write_set") or [])
             contract_revisions: dict[str, Any] = {}
             if has_program:

@@ -30,6 +30,18 @@ def capsule(scope: str) -> dict[str, object]:
     }
 
 
+def authority_capsule(scope: str, *, parent: str = "primary", depth: int = 1,
+                      delegation: str = "denied") -> dict[str, object]:
+    value = capsule(scope)
+    value.update({
+        "parent_assignment_id": parent,
+        "depth": depth,
+        "budget": {"token_budget": 1000, "max_children": 0 if delegation == "denied" else 1},
+        "delegation": delegation,
+    })
+    return value
+
+
 def acceptance(assignment: str, *, artifacts_checked: bool = False,
                status: str = "accepted", signals: dict[str, object] | None = None,
                stage_id: str | None = None) -> dict[str, object]:
@@ -135,6 +147,83 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
             "events": [{"type": "route", "mode": "SINGLE_OWNER", "rationale": "short coupled task"}]
         })
         self.assertTrue(result["passed"], result["errors"])
+
+    def test_accepts_v3_leaf_with_denied_delegation(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 3,
+            "budget": {"max_active": 1, "max_depth": 1},
+            "events": [
+                {"type": "route", "mode": "PARALLEL_SCOUTS", "rationale": "bounded evidence"},
+                {"type": "delegate", "agent": "leaf", "assignment_id": "scan", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:scan", "write_set": [],
+                 "capsule": authority_capsule("backend")},
+                {"type": "result", "agent": "leaf", "assignment_id": "scan", "status": "success",
+                 "evidence": ["Owner.java:10"], "source_fingerprint": "abc"},
+                acceptance("scan"),
+                {"type": "integrate", "acceptance": ["scan accepted"], "evidence": ["Owner.java:10"]},
+            ],
+        })
+        self.assertTrue(result["passed"], result["errors"])
+
+    def test_rejects_v3_brokered_delegation_without_enforced_broker(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 3,
+            "budget": {"max_active": 1, "max_depth": 1},
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER", "rationale": "claimed manager"},
+                {"type": "delegate", "agent": "manager", "assignment_id": "stage", "tier": "strong",
+                 "depth": 1, "dispatch_receipt": "host:stage", "write_set": [],
+                 "capsule": authority_capsule("modules", delegation="brokered")},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("requires spawn_broker_enforced=true" in error for error in result["errors"]))
+
+    def test_rejects_v3_nested_scope_expansion(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 3,
+            "budget": {"max_active": 2, "max_depth": 2, "spawn_broker_enforced": True},
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER", "rationale": "brokered nested slice"},
+                {"type": "delegate", "agent": "manager", "assignment_id": "stage", "tier": "strong",
+                 "depth": 1, "dispatch_receipt": "host:stage", "write_set": [],
+                 "capsule": authority_capsule("module-a", delegation="brokered")},
+                {"type": "delegate", "agent": "leaf", "assignment_id": "child", "tier": "balanced",
+                 "depth": 2, "dispatch_receipt": "host:child", "write_set": [],
+                 "capsule": authority_capsule("module-b", parent="stage", depth=2)},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("child allowed_scope exceeds parent authority" in error for error in result["errors"]))
+
+    def test_rejects_v3_nested_permission_and_budget_expansion(self) -> None:
+        parent = authority_capsule("module-a", delegation="brokered")
+        parent["permissions"] = {
+            "read": ["module-a"], "write": ["module-a.py"],
+            "external_side_effects": [], "secrets": [],
+        }
+        child = authority_capsule("module-a", parent="stage", depth=2)
+        child["permissions"] = {
+            "read": ["module-a"], "write": ["module-a.py", "module-b.py"],
+            "external_side_effects": [], "secrets": [],
+        }
+        child["budget"] = {"token_budget": 2000, "max_children": 2}
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 3,
+            "budget": {"max_active": 2, "max_depth": 2, "spawn_broker_enforced": True},
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER", "rationale": "brokered nested slice"},
+                {"type": "delegate", "agent": "manager", "assignment_id": "stage", "tier": "strong",
+                 "depth": 1, "dispatch_receipt": "host:stage", "write_set": ["module-a.py"],
+                 "capsule": parent},
+                {"type": "delegate", "agent": "leaf", "assignment_id": "child", "tier": "balanced",
+                 "depth": 2, "dispatch_receipt": "host:child", "write_set": ["module-a.py", "module-b.py"],
+                 "capsule": child},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("child permissions.write exceeds parent authority" in error for error in result["errors"]))
+        self.assertTrue(any("child budget.token_budget exceeds parent authority" in error for error in result["errors"]))
 
     def test_rejects_overlapping_active_writes(self) -> None:
         first_capsule = with_write_permission(capsule("adapter-a"), "api.yaml")

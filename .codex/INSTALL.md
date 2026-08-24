@@ -71,12 +71,38 @@ command, use:
 codex features list
 ```
 
+The repository's `.codex/` adapter applies only while this repository is the
+active project. To reuse its roles across projects, deliberately copy the four
+profiles from `.codex/agents/` into the target project's `.codex/agents/` or
+your personal `~/.codex/agents/`. Keep the primary configuration enabled and
+the copied roles as leaf roles:
+
+```toml
+# project or personal root config.toml
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 3
+max_depth = 1
+```
+
+Every bounded leaf profile keeps the role instructions that deny recursion;
+the root `agents.max_depth = 1` is the hard boundary in the validated runtime.
+
+Do not enable recursive tools in a leaf merely to support another stage. The
+primary should dispatch a new leaf after receiving the first leaf's escalation
+request.
+
 `codex --version` is not a configuration check. A desktop app or IDE may use a
 bundled runtime different from the shell's first `codex` on `PATH`, so validate
 each client independently. Finally run one bounded forward test whose selected
 route is not `SINGLE_OWNER`; success requires an accepted spawn receipt,
 terminal Agent results, and one integrated response. Printed role prompts alone
-do not prove the adapter works.
+do not prove the adapter works. Also confirm that a spawned bounded role cannot
+dispatch another Agent; the profile instruction is defense in depth, while
+`agents.max_depth = 1` is the capability boundary for the locally validated
+runtime.
 
 ## Optional context continuity backend
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Orchestration"
   short_description: "Orchestrate and verify bounded multi-agent work"
-  default_prompt: "Use $agent-orchestration to select the current route. For qualifying multi-stage cross-module work, keep the primary as orchestrator, shared-contract owner, integrator, and acceptance owner while bounded agents implement disjoint slices. If the current route is not SINGLE_OWNER and the host allows delegation, dispatch now, collect terminal Result Packets, and verify the integrated result; do not only propose roles or prompts."
+  default_prompt: "Use $agent-orchestration to select and execute the current route. Keep the primary as the only dispatch, integration, acceptance, and delivery owner; delegate bounded leaf slices with hard-disabled recursive tools where supported, collect Result Packets, and validate the coherent integrated stage."

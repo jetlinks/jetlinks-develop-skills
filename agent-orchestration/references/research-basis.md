@@ -4,7 +4,7 @@ This reference records evidence that shaped the workflow. It is not loaded durin
 
 ## Product guidance
 
-- [OpenAI Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) documents built-in and custom Agents, project and personal Agent files, model / reasoning / sandbox overrides, orchestration controls, and the token cost of delegated work. It recommends starting with read-heavy parallel tasks and being cautious with concurrent write-heavy workflows. This supports context isolation, bounded roles, read-first parallelism and explicit concurrency limits.
+- [OpenAI Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) documents built-in and custom Agents, inherited configuration, model / reasoning / sandbox overrides, orchestration controls, and the token cost of delegated work. Together with the locally validated Codex `agents.max_depth` host control, this supports context isolation, bounded roles, read-first parallelism, explicit concurrency limits, and hard-stopping recursive fan-out instead of relying only on instructions.
 
 ## Research results
 
@@ -19,6 +19,7 @@ This reference records evidence that shaped the workflow. It is not loaded durin
 The following are operational guardrails derived from the combined evidence, not universal constants proven by any one paper:
 
 - Default delegation depth one and one or two active slices to cap coordination and fan-out.
+- Treat scope, permissions, write ownership and budget as monotonically decreasing capabilities. Allow nested delegation only when a host policy can enforce that attenuation before spawn; otherwise make delegated roles leaves.
 - Parallelize independent evidence collection before shared implementation.
 - Represent substantial cross-module delivery as a bounded sequence of stage-level routing decisions; keep one primary orchestrator responsible for shared contracts, integration and acceptance instead of creating recursive Agent teams.
 - Freeze the relevant cross-slice contract revision and satisfy dependency gates before concurrent implementation writes; otherwise use a sequential handoff.

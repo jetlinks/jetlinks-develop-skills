@@ -27,7 +27,7 @@ coupling: independent | ordered | shared_state
 verifiability: deterministic | evidence_backed | judgment_heavy
 failure_history: none | one_informative_failure | repeated_or_migrating
 benefit: quality | critical_path | context_isolation | none
-budget: active_slices, depth, read_scope, write_owners, stop_conditions
+budget: active_slices, max_depth, read_scope, write_owners, stop_conditions
 dispatch: not_applicable | required
 delegation_blocker: none | unavailable | unauthorized | unsafe
 acceptance_owner: primary integration owner
@@ -73,7 +73,7 @@ The `ORCHESTRATOR_INTEGRATOR` owns user decisions, the problem model, public and
 
 Before parallel implementation, the relevant shared contracts must be `frozen`, all `depends_on` artifacts accepted, active write sets mutually exclusive, and acceptance signals independently assignable. If any condition is false, use discovery, retain the work under `SINGLE_OWNER`, or serialize the slices with `SEQUENTIAL_HANDOFF`; do not let workers infer a changing contract from each other.
 
-Keep program depth at one and active delegated slices at one or two by default. Do not form recursive teams. After compaction or handoff, reconcile `program_id`, `current_stage`, accepted contract revisions, active assignment IDs and receipts before dispatching; never spawn a replacement for an assignment that is still active or already collected.
+Keep program depth at one and active delegated slices at one or two by default. The primary is the only dispatch owner and delegated roles are leaves. Do not form recursive teams merely because a stage contains multiple domains. After compaction or handoff, reconcile `program_id`, `current_stage`, accepted contract revisions, active assignment IDs and receipts before dispatching; never spawn a replacement for an assignment that is still active or already collected.
 
 ## 3. Risk and capability routing
 
@@ -126,6 +126,8 @@ Every delegation must contain:
 
 ```text
 assignment_id: stable identifier for this slice
+parent_assignment_id: primary or the broker-authorized parent assignment
+depth: root-relative delegation depth
 objective: observable result, not an activity label
 decision: decision this result will enable
 allowed_scope: exact files, symbols, sources, systems, or questions
@@ -142,9 +144,24 @@ output_contract: Result Packet fields and maximum useful detail
 stop_conditions: scope drift, source drift, contradiction, permission need, failed acceptance, or budget exhaustion
 escalation_triggers: uncertainty or impact that exceeds the assigned capability floor
 permissions: read, write set, external side effects, secrets and approval boundaries
+delegation: denied | brokered, with denied required for ordinary leaf roles
 ```
 
 An activity such as “inspect the code” is not an objective. Prefer “identify the owner and all direct consumers of symbol X at source fingerprint Y, cite exact locators, and flag unresolved dynamic edges.”
+
+Capsule authority is monotonic. A child capsule must satisfy:
+
+```text
+allowed_scope(child)       ⊆ allowed_scope(parent)
+permissions(child)         ⊆ permissions(parent)
+write_set(child)           ⊆ write_set(parent)
+external_effects(child)    ⊆ external_effects(parent)
+secrets(child)             ⊆ secrets(parent)
+budget(child)              ≤ remaining_budget(parent)
+depth(child)               = depth(parent) + 1
+```
+
+The child cannot add public-contract ownership, final acceptance, delivery, commit, push, PR, approval, or external-side-effect authority that the parent did not receive. Missing authority produces an escalation request to the parent; it never justifies self-expansion.
 
 ## 6. Execution and write ownership
 
@@ -171,7 +188,8 @@ An activity such as “inspect the code” is not an objective. Prefer “identi
 ```
 
 `artifacts_checked` is mandatory for a non-empty write set. `REJECTED` is an informative failure and must preserve the violated signal and evidence before capsule repair, reframing, or capability escalation.
-- Default delegation depth: one. A child requests help through its Result Packet; the primary decides whether to spawn another Agent.
+- Default delegation depth: one. The primary is the only dispatch owner; ordinary children have `delegation: denied` and their Agent tools are hard-disabled when the host supports it. A child requests adjacent help through its Result Packet; the primary decides whether to create a separate leaf assignment.
+- Depth greater than one is valid only when the host has an enforceable spawn broker or equivalent pre-dispatch policy. It must authenticate assignment ancestry, permit only declared child roles, intersect the requested capsule with the parent's remaining authority, enforce depth / child-count / token limits, and reject the spawn before side effects when any authority expands. If this capability is absent, prompt instructions and after-the-fact diff review do not make nested delegation safe; retain `max_depth = 1`.
 - Default active delegated slices: one or two. Increase only when independent critical-path work remains after integration cost is considered.
 - Assign a single owner to each file, public contract, schema, migration, runtime resource, and external side effect.
 - Parallelize read-only discovery freely only when scopes and questions are disjoint. Serialize overlapping writes and dependent checks.

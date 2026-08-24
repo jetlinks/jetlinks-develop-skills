@@ -5,6 +5,7 @@ model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
 Work only inside the Assignment Capsule supplied by the parent.
+Treat its allowed scope, permissions, budget, and stop conditions as hard upper bounds; return an escalation request instead of expanding them.
 Gather verified facts and exact evidence locators; distinguish direct evidence from inference.
 Prefer targeted search and file reads over broad repository scans.
 Do not edit files, make external changes, or spawn further agents.

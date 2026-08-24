@@ -9,12 +9,16 @@ OpenAI's current [Codex subagents documentation](https://learn.chatgpt.com/docs/
 Current Codex releases enable subagents by default. This repository uses a conservative project baseline that remains useful across clients which support the documented legacy concurrency alias:
 
 ```toml
+[features]
+multi_agent = true
+
 [agents]
 max_threads = 3
+max_depth = 1
 interrupt_message = true
 ```
 
-The current official schema also offers `enabled`, `max_concurrent_threads_per_session`, `default_subagent_model`, and `default_subagent_reasoning_effort`. Add richer fields only after the exact runtime that will host the session parses them successfully. The repository profiles already choose their own models, so the portable baseline does not need global model defaults.
+Codex configuration schemas evolve across runtimes. The locally validated adapter uses the stable `features.multi_agent` switch and the documented legacy concurrency alias; newer runtimes may also offer `max_concurrent_threads_per_session`, `default_subagent_model`, and `default_subagent_reasoning_effort`. Add richer fields only after the exact runtime that will host the session parses them successfully. The repository profiles already choose their own models, so the portable baseline does not need global model defaults.
 
 The repository includes this project-scoped configuration and four Agent profiles:
 
@@ -22,6 +26,8 @@ The repository includes this project-scoped configuration and four Agent profile
 - `mechanical_worker`: Luna-backed write worker for frozen, deterministic, low-impact and reversible changes with an exclusive write set.
 - `bounded_worker`: balanced, bounded implementation with an assigned disjoint write set.
 - `stage_reviewer`: stronger read-only review for material correctness or contract risk.
+
+All four profiles are leaf roles. The locally validated hard capability boundary is the root-level `agents.max_depth = 1`, which applies to the whole Agent tree. The profiles add defense-in-depth instructions to escalate scope needs instead of self-expanding. Do not add an enabled Stage Manager profile to this adapter: the published Codex configuration does not expose a descendant scope / write-set ACL that proves a grandchild is a subset of its parent. Express multiple stages in the primary's `OrchestrationProgram` and dispatch fresh leaves from the primary instead. If a future runtime exposes an enforceable spawn broker or profile-level capability override, validate that exact runtime and policy before enabling it.
 
 Project `.codex/` files configure work performed inside that project; installing only the skill does not silently alter another project's Codex configuration. To reuse the profiles elsewhere, copy or adapt them deliberately at project or personal scope and validate model availability in that host.
 
@@ -31,7 +37,7 @@ Do not treat file presence, `codex --version`, or a model-generated routing plan
 
 1. Identify the exact runtime that hosts the session. An app or IDE may use a bundled Codex executable different from the shell's first `codex` on `PATH`.
 2. Make that runtime fully parse its effective configuration. For a CLI that supports it, `codex features list` is a stronger smoke check than `codex --version`, which may return before configuration is decoded.
-3. Confirm the effective multi-Agent capability is enabled and the intended profiles or built-in roles are discoverable.
+3. Confirm the primary's effective multi-Agent capability is enabled, the intended profiles are discoverable, and the effective root Agent policy has `max_depth = 1`.
 4. Confirm the current session exposes real spawn, collect / wait, steer and interrupt capabilities allowed by its policy.
 5. Run a bounded forward test: a qualifying non-`SINGLE_OWNER` route must return an accepted dispatch receipt, terminal Result Packets and one integrated answer. Merely emitting role prompts fails.
 
@@ -47,7 +53,7 @@ If a runtime rejects the current official schema, either upgrade that runtime or
 - Ask for `bounded_worker` only after the contract is stable and write ownership is disjoint.
 - Ask for `stage_reviewer` after integration, with the task contract, artifact or diff and evidence locators. Do not disclose an expected verdict.
 - Wait for only the Agents on the current critical path. Steer or interrupt stale work instead of spawning replacements immediately.
-- Keep program fan-out at one level. Profiles are reusable execution roles, not nested frontend/backend teams; express the domain, dependencies, frozen contract revisions and exact write ownership in each Assignment Capsule.
+- Keep program fan-out at one level. Profiles are reusable leaf execution roles, not nested frontend/backend teams; express the domain, dependencies, frozen contract revisions and exact write ownership in each Assignment Capsule. When a leaf needs work outside its capsule, consume its escalation request and let the primary create a separate leaf assignment. The root `max_depth = 1` hard-stops descendant creation; the prompt is not the security boundary.
 - Keep the primary Agent on the user's chosen model unless the host has an explicit, validated routing policy.
 - If system policy withholds spawn tools or forbids proactive delegation, revise the current route to `SINGLE_OWNER`, report the blocker, and preserve the same role boundaries serially. Do not simulate a Codex tool call in prose.
 
