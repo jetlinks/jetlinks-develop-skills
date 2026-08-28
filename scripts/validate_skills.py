@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import filecmp
 import json
 import re
@@ -27,6 +28,12 @@ REQUIRED_SKILL_CONTRACTS = {
             "overlapping files",
             "Hard-disable multi-Agent tools",
             "spawn broker",
+            "schema_version: 5",
+            "profile: compact",
+            "merely to populate",
+            "SemanticFork",
+            "EvidenceBudget",
+            "evidence_reopen",
         ),
         "references/orchestration-and-routing-rules.md": (
             "CAPABILITY_MISMATCH",
@@ -40,6 +47,11 @@ REQUIRED_SKILL_CONTRACTS = {
             "same capability tier",
             "Capsule authority is monotonic",
             "delegation: denied",
+            "NEW_CANDIDATE",
+            "ADMISSION_PRECONDITION_INVALIDATED",
+            "Apply control-plane checks progressively",
+            "checks state already produced",
+            "compact form",
         ),
         "references/evaluation-cases.md": (
             "Short mechanical change",
@@ -50,31 +62,15 @@ REQUIRED_SKILL_CONTRACTS = {
             "Advice-only delegation false positive",
             "Leaf attempts recursive delegation",
             "Brokered nested scope attenuation",
+            "New candidate reopens a stopped gate",
+            "Review finding legitimately discards a retained artifact",
+            "Compact cross-module implementation",
+            "Packet completion is not an evidence task",
         ),
         "references/codex-adapter.md": (
             "agents.max_depth",
             "Do not add an enabled Stage Manager profile",
             "descendant scope / write-set ACL",
-        ),
-        "scripts/evaluate_orchestration_trace.py": (
-            "def evaluate_trace",
-            "weak_retry_count",
-            "overlapping active writes",
-            "below escalated tier",
-            "dispatch_receipt",
-            "schema_version",
-            "acceptance_owner",
-            "acceptance_matrix",
-            "economy write requires",
-            "artifacts_checked",
-            "write_set does not match capsule permissions.write",
-            "does not match failed tier",
-            "max_observed_active",
-            "AUTHORITY_CAPSULE_FIELDS",
-            "spawn_broker_enforced",
-            "child allowed_scope exceeds parent authority",
-            "child write_set exceeds parent authority",
-            "child budget.",
         ),
     },
     "task-continuity": {
@@ -95,6 +91,12 @@ REQUIRED_SKILL_CONTRACTS = {
             "previous_productive_action_id",
             "pre_compaction_next_action_id",
             "post_compaction_first_productive_action_id",
+            "SemanticFork",
+            "EvidenceBudget",
+            "SCOPE_INVALID",
+            "conversation_cursor_at_snapshot",
+            "directive_revision_at_snapshot",
+            "MainlineReturnAnchor",
         ),
         "references/task-state-and-recovery-rules.md": (
             "Continuity Metadata",
@@ -108,8 +110,13 @@ REQUIRED_SKILL_CONTRACTS = {
             "真实阻塞",
             "resume_audit_tool_rounds <= 1",
             "unmanaged_manifest_digest",
-            "instruction_revision_at_snapshot",
+            "conversation_cursor_at_snapshot",
+            "directive_revision_at_snapshot",
+            "MainlineReturnAnchor",
             "do_not_reopen",
+            "semantic_fork:",
+            "evidence_budget:",
+            "latest_discriminating_evidence",
         ),
         "references/evaluation-cases.md": (
             "验证失败后立即压缩",
@@ -128,22 +135,9 @@ REQUIRED_SKILL_CONTRACTS = {
             "外部重试",
             "压缩前后动作身份连续",
             "正确动作前的恢复入口偏航",
-        ),
-        "scripts/validate_continuity_state.py": (
-            "def validate_state",
-            "suggested_gate",
-            "SNAPSHOT_REQUIRED",
-            "pre_compaction_next_action_id",
-        ),
-        "scripts/evaluate_continuity_trace.py": (
-            "def evaluate_trace",
-            "repeated_read_count",
-            "irrelevant_graph_injection_count",
-            "full_thread_reads",
-            "unchanged_reference_reads",
-            "compact_continuation_fast_path_passed",
-            "post_compaction_first_productive_action_id",
-            "recovery_route_deviation_count",
+            "未解决语义分叉后压缩",
+            "已解决语义分叉后压缩",
+            "已停止取证预算后压缩",
         ),
     },
     "systematic-solving": {
@@ -151,10 +145,15 @@ REQUIRED_SKILL_CONTRACTS = {
             "stale consumer / oracle",
             "invalid fixture / input",
             "mechanical assembly defect",
+            "SemanticFork",
+            "EvidenceBudget",
+            "SCOPE_INVALID",
         ),
         "references/evaluation-cases.md": (
             "停滞后再次实施",
             "混合失败批次",
+            "语义分叉",
+            "EvidenceBudget=STOPPED",
         ),
     },
     "code-navigation": {
@@ -176,17 +175,98 @@ REQUIRED_SKILL_CONTRACTS = {
             "Before ordinary classification",
             "first_allowed_action",
             "Graph size is not evidence of relevance",
+            "current_decision",
+            "minimum_skills",
+            "SemanticFork",
+            "scripts/evaluate_route_trace.py",
         ),
         "references/ai-prompt.md": (
             "continuation fast path",
             "decision question",
             "目标语言",
+            "user_confirmation_required",
+            "unique_next",
         ),
         "references/context-recovery-rules.md": (
             "validate_continuity_state.py",
             "suggested_gate",
             "普通 router 分类",
+            "SemanticFork.status=OPEN",
         ),
+        "references/evaluation-cases.md": (
+            "最小领域组合",
+            "匹配 compact continuation",
+            "SemanticFork.status=OPEN",
+            "scripts/evaluate_route_trace.py",
+        ),
+    },
+}
+
+# Python helpers are executable contracts, not prose.  Check their AST shape and
+# require the negative tests that prove the important gates.  This deliberately
+# avoids importing or executing code from an arbitrary repository during a
+# structural validation pass; the coherent-stage test command executes these
+# suites once after edits are integrated.
+REQUIRED_PYTHON_CONTRACTS = {
+    "agent-orchestration": {
+        "scripts/evaluate_orchestration_trace.py": {
+            "functions": ("evaluate_trace",),
+        },
+        "scripts/test_orchestration_tools.py": {
+            "tests": (
+                "test_v4_route_requires_native_nonempty_decision_question",
+                "test_v4_rejects_duplicate_assignment_identity_without_overwriting_state",
+                "test_malformed_v4_lists_return_errors_instead_of_crashing",
+                "test_invalid_observation_reopen_is_limited_to_one_round",
+                "test_rejects_design_implementation_and_review_while_fork_open",
+            ),
+        },
+    },
+    "systematic-solving": {
+        "scripts/evaluate_systematic_trace.py": {
+            "functions": ("evaluate_trace",),
+        },
+        "scripts/test_systematic_tools.py": {
+            "tests": (
+                "test_user_resolution_must_match_cited_decision_and_locator",
+                "test_invalid_reopen_must_cite_current_round_and_cannot_repeat",
+                "test_completed_inconclusive_round_requires_explicit_stop",
+                "test_malformed_enum_values_do_not_crash",
+            ),
+        },
+    },
+    "task-continuity": {
+        "scripts/validate_continuity_state.py": {
+            "functions": ("validate_state",),
+        },
+        "scripts/evaluate_continuity_trace.py": {
+            "functions": ("evaluate_trace",),
+        },
+        "scripts/prepare_resume_context.py": {
+            "functions": ("project_context",),
+        },
+        "scripts/test_continuity_tools.py": {
+            "tests": (
+                "test_open_semantic_fork_blocks_solution_mutation",
+                "test_stopped_open_semantic_fork_rejects_more_evidence_without_reopen",
+                "test_semantic_options_are_not_silently_truncated",
+                "test_wrong_productive_action_does_not_close_recovery_deviation_window",
+            ),
+        },
+    },
+    "jetlinks-router": {
+        "scripts/evaluate_route_trace.py": {
+            "functions": ("evaluate_trace",),
+        },
+        "scripts/test_router_tools.py": {
+            "tests": (
+                "test_accepts_exact_minimum_skill_route",
+                "test_rejects_unadmitted_skill_load",
+                "test_matching_compact_route_reuses_rules_and_hits_saved_next",
+                "test_matching_compact_route_rejects_reload_and_reclassification",
+                "test_open_semantic_fork_rejects_solution_route",
+            ),
+        },
     },
 }
 FORBIDDEN_SKILL_CONTRACTS = {
@@ -282,8 +362,8 @@ def validate_generic_portability(skill_root: Path) -> list[str]:
     return errors
 
 
-def validate_required_contracts(skill_root: Path) -> list[str]:
-    """Keep cross-file behavioral contracts from silently regressing."""
+def validate_required_contract_markers(skill_root: Path) -> list[str]:
+    """Smoke-check documented contract markers; executable tests prove behavior."""
     required_files = REQUIRED_SKILL_CONTRACTS.get(skill_root.name)
     if required_files is None:
         return []
@@ -291,12 +371,82 @@ def validate_required_contracts(skill_root: Path) -> list[str]:
     for relative, markers in required_files.items():
         path = skill_root / relative
         if not path.is_file():
-            errors.append(f"{path}: required behavioral contract file missing")
+            errors.append(f"{path}: required contract-marker file missing")
             continue
         text = path.read_text(encoding="utf-8")
         for marker in markers:
             if marker not in text:
-                errors.append(f"{path}: missing required behavioral contract marker: {marker}")
+                errors.append(f"{path}: missing required contract marker: {marker}")
+    return errors
+
+
+def _test_methods(tree: ast.AST) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
+    methods: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    for node in getattr(tree, "body", []):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        is_test_case = any(
+            (isinstance(base, ast.Name) and base.id == "TestCase")
+            or (isinstance(base, ast.Attribute) and base.attr == "TestCase")
+            for base in node.bases
+        )
+        if not is_test_case:
+            continue
+        for item in node.body:
+            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name.startswith("test_"):
+                methods[item.name] = item
+    return methods
+
+
+def validate_python_contracts(skill_root: Path) -> list[str]:
+    """Validate executable contract structure without executing repository code."""
+
+    required_files = REQUIRED_PYTHON_CONTRACTS.get(skill_root.name)
+    if required_files is None:
+        return []
+    errors: list[str] = []
+    for relative, contract in required_files.items():
+        path = skill_root / relative
+        if not path.is_file():
+            errors.append(f"{path}: required executable contract file missing")
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        except (OSError, SyntaxError) as error:
+            errors.append(f"{path}: invalid Python executable contract: {error}")
+            continue
+
+        functions = {
+            node.name: node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        for name in contract.get("functions", ()):
+            function = functions.get(name)
+            if function is None:
+                errors.append(f"{path}: missing executable contract function {name}")
+                continue
+            has_input = bool(function.args.args or function.args.kwonlyargs)
+            has_gate = any(isinstance(node, (ast.If, ast.Try)) for node in ast.walk(function))
+            has_return = any(isinstance(node, ast.Return) for node in ast.walk(function))
+            if not (has_input and has_gate and has_return):
+                errors.append(
+                    f"{path}: executable contract function {name} is structurally incomplete; "
+                    "it must consume input, apply a conditional gate, and return a result"
+                )
+
+        methods = _test_methods(tree)
+        for name in contract.get("tests", ()):
+            method = methods.get(name)
+            if method is None:
+                errors.append(f"{path}: missing required behavioral test {name}")
+            elif not any(
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr.startswith("assert")
+                for node in ast.walk(method)
+            ):
+                errors.append(f"{path}: behavioral test {name} has no executable assertion")
     return errors
 
 
@@ -342,7 +492,7 @@ def validate_mirror(skill_root: Path, mirror_root: Path) -> list[str]:
     return errors
 
 
-def validate_codex_adapter(repository_root: Path) -> list[str]:
+def validate_codex_adapter(repository_root: Path, *, required: bool = False) -> list[str]:
     """Validate the optional project adapter when agent-orchestration is present."""
     if not (repository_root / "agent-orchestration" / "SKILL.md").is_file():
         return []
@@ -350,7 +500,9 @@ def validate_codex_adapter(repository_root: Path) -> list[str]:
     errors: list[str] = []
     config_path = repository_root / ".codex" / "config.toml"
     if not config_path.is_file():
-        return [f"{config_path}: Codex adapter config missing"]
+        # The skill is host-neutral.  Validate Codex files only when a project
+        # deliberately installs that optional adapter.
+        return [f"{config_path}: Codex adapter config missing"] if required else []
     try:
         config_text = config_path.read_text(encoding="utf-8")
     except OSError as error:
@@ -461,7 +613,12 @@ def discover_skills(repository_root: Path) -> list[Path]:
     return sorted(path.parent for path in repository_root.glob("*/SKILL.md"))
 
 
-def validate_repository(repository_root: Path, mirror_root: Path | None = None) -> dict[str, object]:
+def validate_repository(
+    repository_root: Path,
+    mirror_root: Path | None = None,
+    *,
+    codex_adapter: bool | None = None,
+) -> dict[str, object]:
     skills = discover_skills(repository_root)
     errors: list[str] = []
     names: set[str] = set()
@@ -480,14 +637,21 @@ def validate_repository(repository_root: Path, mirror_root: Path | None = None) 
         for markdown in sorted(skill_root.rglob("*.md")):
             errors.extend(validate_links(markdown, repository_root))
         errors.extend(validate_generic_portability(skill_root))
-        errors.extend(validate_required_contracts(skill_root))
+        errors.extend(validate_required_contract_markers(skill_root))
+        errors.extend(validate_python_contracts(skill_root))
         errors.extend(validate_forbidden_contracts(skill_root))
         if mirror_root is not None:
             errors.extend(validate_mirror(skill_root, mirror_root))
 
     if not skills:
         errors.append(f"{repository_root}: no root-level skill packages found")
-    errors.extend(validate_codex_adapter(repository_root))
+    should_validate_codex_adapter = (
+        (repository_root / ".codex").exists()
+        if codex_adapter is None
+        else codex_adapter
+    )
+    if should_validate_codex_adapter:
+        errors.extend(validate_codex_adapter(repository_root, required=True))
     return {
         "repository": str(repository_root),
         "skill_count": len(skills),
@@ -501,10 +665,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repository", nargs="?", default=".", type=Path)
     parser.add_argument("--mirror-root", type=Path, help="compare every skill with an installed mirror")
+    parser.add_argument(
+        "--validate-codex-adapter",
+        action="store_true",
+        help="require and validate the optional project-scoped Codex adapter",
+    )
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     args = parser.parse_args()
     mirror_root = args.mirror_root.resolve() if args.mirror_root else None
-    result = validate_repository(args.repository.resolve(), mirror_root)
+    result = validate_repository(
+        args.repository.resolve(),
+        mirror_root,
+        codex_adapter=True if args.validate_codex_adapter else None,
+    )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif result["errors"]:

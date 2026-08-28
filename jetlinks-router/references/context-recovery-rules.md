@@ -14,7 +14,7 @@
 
 ## 恢复主视图、Continuity Metadata 与 Git Source Snapshot
 
-在任务运行态中维护有界、可覆盖写的语义 `Recovery Capsule`、机器 `Continuity Metadata` 与 Git `Source Snapshot`。它们可以位于同一文件，但必须分别回答“目标与第一动作是什么”“哪些 identity / revisions / evidence 支撑它”“对应哪一份工作树”。它们包含阶段提交后的实际 commit hash，因此必须位于不会进入阶段提交和最终 PR 的 runtime / checkpoint artifact：Trellis 项目优先使用本地 workflow 已定义且经 `git check-ignore -v` 或等价规则确认不受版本控制的 task runtime；若 Trellis 只提供受 Git 管理的 task / `info.md`，保留其中的任务契约，但把运行态写入一个仓库本地 Git-ignored sidecar。无 Trellis 时写入同一 Git-ignored runtime file。不要用 `assume-unchanged` / `skip-worktree` 隐藏受跟踪文件，也不要为恢复胶囊新增受 Git 管理的 docs。
+在任务运行态中维护有界、可覆盖写的语义 `Recovery Capsule`、机器 `Continuity Metadata` 与 Source Snapshot。它们可以位于同一物理载体，但必须分别回答“目标与第一动作是什么”“哪些 identity / revisions / evidence 支撑它”“对应哪一份工作树或 source state”。在 JetLinks 的 Git 工作流中，Trellis 项目优先使用已有 workflow task runtime；只有 `git check-ignore -v` 或等价能力能证明 sidecar 不受版本控制时才使用仓库本地 ignored artifact。无 Trellis 时先复用宿主 task / runtime store，其次才是经验证的 ignored artifact；若宿主无 VCS、只读或没有安全持久载体，则在 active task context 保留有界三视图并在交接前输出 portable capsule。不要为此创建文件、修改 `.gitignore`，也不要用 `assume-unchanged` / `skip-worktree` 隐藏受跟踪文件或新增受 Git 管理的 docs。
 
 模型主视图只保留以下四个区块：
 
@@ -22,7 +22,7 @@
 | --- | --- |
 | `Contract` | task ID / revision、契约路径、一句话目标、仍生效的不变量 / 约束和验收信号 |
 | `Checkpoint` | 当前 phase、最近 validated stage / evidence / local commit、带稳定 `slice_id` 的 in-flight 状态和 expected changed paths |
-| `DecisionState` | active hypothesis / decision、最新区分证据、足以阻止重试的否定路线、少量 `do_not_reopen(action_id, reason, reopen_when)`，以及后续阶段必须 resurfacing 的关键约束 |
+| `DecisionState` | active hypothesis / decision、当前 decision question、最新区分证据、足以阻止重试的否定路线、少量 `do_not_reopen(action_id, reason, reopen_when)`，以及后续阶段必须 resurfacing 的关键约束；存在 material semantic fork 时保存其 `OPEN / RESOLVED`、resolution locator、evidence budget、current stage 与 entry gate |
 | `Resume` | recovery type、gate、少量精确 file / symbol / test anchors、带稳定 `action_id` 的执行级 `Next` / `first allowed action`、observable signal、blocker / residual risk |
 
 Continuity Metadata 另行记录 Git Source Snapshot 的 locator / match summary、referenced sources revisions / extracted facts、loaded rules digests / obligations、验证 evidence locator，以及 audit fingerprint / consecutive matching audits / last new evidence、`instruction_revision_at_snapshot`、`previous_productive_action_id` 和 `pre_compaction_next_action_id`。正常匹配恢复只向模型提供 identity / revision match summary 和动作链，不加载完整账本。
@@ -48,12 +48,12 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 
 ## 恢复算法
 
-该算法必须先于普通 router 分类运行。若运行态可以导出通用三视图 JSON，可调用 `$task-continuity` 自带的 `scripts/validate_continuity_state.py`，把 Git 复合指纹、task revision、引用 cursor 与 loaded-rules digest 映射为 `observed`。脚本的 `suggested_gate` 只是确定性诊断：适配层负责读取 Git / Trellis 事实并更新运行态，脚本本身不得写文件、提交、发布或替代语义判断。没有脚本执行能力时仍按同一协议人工完成轻量比较，不能回退到完整重读。
+该算法必须先于普通 router 分类运行。若运行态可以导出通用三视图 JSON，可调用 `$task-continuity` 自带的 `scripts/validate_continuity_state.py`，把 Git 复合指纹、task revision、引用 cursor 与 loaded-rules digest 映射为 `observed`。脚本的 `suggested_gate` 只是确定性诊断：适配层负责读取 Git / Trellis 事实并更新运行态，脚本本身不得写文件、提交、发布或替代语义判断。Codex 且已显式配置 execution adapter 时，复用其自动收据与 stage / delivery gate；不要再用模型总结声称“已经验证 / 可以发布”，也不要因此为每次编辑创建 checkpoint。没有脚本或 hook 能力时仍按同一协议人工完成轻量比较，不能回退到完整重读。
 
 1. **进入审计**：压缩、恢复、暂停后继续或交接后先置为 `RESUME_AUDIT`；把用户最新 instruction revision 与 `instruction_revision_at_snapshot` 独立比较，再读取 active task / task contract 与 Recovery Capsule 主视图，确认 task ID、revision、目标、持续约束、in-flight slice 和执行级唯一下一步。instruction revision 变化时按最新指令刷新契约；未变化时不能用恢复叙述重建 Next。
 2. **对 Git 指纹**：只运行轻量只读检查，比较 branch、HEAD、tracked diff digest、untracked manifest digest、相关 nested source 状态和 expected changed paths；干净 checkpoint 可直接比较 commit / tree。不要仅用 `git diff --stat` 或文件数声明匹配。
 3. **选择恢复范围**：
-   - 指纹匹配：先用机器元数据中的 revision / cursor 对外部引用和 loaded rules 做增量检查；未变化时只返回 match summary 并复用 `extracted facts / obligations`。只读取宿主强制的当前 skill body、`Next` 新需要的 rule 和少量 anchors；若记录了匹配 revision 的 graph flow / edge，还必须确认其 decision question、task anchor、目标语言与 scope 匹配，之后才复用或从该节点做一跳查询。Contract、Checkpoint、DecisionState、Anchors 与 `Next` 一致后显式执行 `RESUME_AUDIT -> READY` 并直接执行 `first allowed action`。
+   - 指纹匹配：先用机器元数据中的 revision / cursor 对外部引用和 loaded rules 做增量检查；未变化时只返回 match summary 并复用 `extracted facts / obligations`。只读取宿主强制的当前 skill body、`Next` 新需要的 rule 和少量 anchors；若记录了匹配 revision 的 graph flow / edge，还必须确认其 decision question、task anchor、目标语言与 scope 匹配，之后才复用或从该节点做一跳查询。Contract、Checkpoint、DecisionState（含已有 semantic fork / evidence budget / stage admission）、Anchors 与 `Next` 一致后显式执行 `RESUME_AUDIT -> READY` 并直接执行 `first allowed action`；不重新进行普通任务分类、plan-first 判定或阶段准入。
    - 引用变化但 Git 指纹匹配：转 `SNAPSHOT_REQUIRED`，优先读取 cursor 之后的增量或紧凑状态，更新引用账本，不重新读取整个引用任务或扫描源码。
    - 指纹部分失配：转 `SNAPSHOT_REQUIRED`，先查看失配 changed paths、最近提交或 task revision，做有界对账并重写三个逻辑视图。
    - task 身份、已确认契约或主分支状态无法建立：停止执行，向用户确认任务归属；不要猜路线。
@@ -88,6 +88,7 @@ Git Source Snapshot 单独记录 branch、HEAD / tree、tracked diff digest、un
 - 恢复后的第一项生产改动必须服务于胶囊的 `Next` 和对应验收信号。
 - 匹配的 compact continuation 必须满足 `pre_compaction_next_action_id == first allowed action.action_id == post_compaction_first_productive_action_id`；`previous_productive_action_id` 不同时若先回放 previous，即使随后执行正确 Next 也已发生偏航。
 - 连续匹配恢复后的第一项允许动作必须等于 `first allowed action`；重新加载相同 skills、PRD、系统图或再次宣布“准备实现”不算进展。
+- `SemanticFork.status=OPEN` 时，第一动作只能是保存的区分检查、observation setup / repair、聚焦用户决定或真实 blocker；不得从恢复摘要猜选项并进入权威设计、API 深化、生产实现或候选制品 review。已 `RESOLVED` 且 identity 匹配时不得重开相同 Scout 或重复询问同一问题。
 - `SNAPSHOT_REQUIRED` 和尚未完成的 `RESUME_AUDIT` 只允许有界读取、指纹计算和运行态覆盖写，不允许修改生产代码、配置或公共契约。
 - 恢复后需要补充调用方或影响面时，从 capsule 的 symbol / flow / edge anchor 扩一跳；不得因为索引工具可用就重新生成或读取整张图。
 - 已保存图的语言、scope 或 source fingerprint 与当前任务不匹配时，将图视为不可用 evidence，不注入上下文；它不使整个 Source Snapshot 失配，也不授权全仓重建，只从当前 anchor 做最小查询。

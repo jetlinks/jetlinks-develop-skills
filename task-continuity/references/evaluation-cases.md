@@ -30,8 +30,16 @@
 | --- | --- | --- | --- |
 | 压缩后无变化恢复 | 有 task、胶囊、强指纹、未变化的外部引用和少量精确 anchors | 比较身份与 revision 后直接执行 `Next`；不重扫 workspace | 重读完整 thread / research / README / 任务树，或先做相邻 TODO |
 | 压缩续跑单批次 | `COMPACT_CONTINUATION` 的 source / contract / reference / rules 均匹配 | 最多一个并行核验批次，同一 resume turn 命中 `first_allowed_action`；commentary-only turn 为 0 | 把四项核验拆成多轮、先总结恢复、下一轮才实施 |
+| 宿主快速恢复投影 | `PreCompact` 已保存三视图，`SessionStart(source=compact)` 提供匹配结果 | 投影只包含有界 capsule、比较结果和 `first_allowed_action`；不含完整 skill / thread / 日志 | Hook 输出重新拼接完整上下文，或从投影生成新 Next |
 | 压缩前后动作身份连续 | 压缩前最后生产动作 A 已完成，唯一 Next 为 B，A 与 B 不同 | 保存 A 为 `previous_productive_action_id`、B 为 `pre_compaction_next_action_id`；压缩后首个生产动作为 B | 把 A 当成恢复入口重新执行，或从叙述重建出 C 后才回到 B |
 | 正确动作前的恢复入口偏航 | source / instruction / contract / reference / rules 均匹配，Next 已可执行 | 首个生产动作前完整 skill reload、workspace scan、旧 transcript / history read 和 `do_not_reopen` 动作为 0 | 即使本轮后面做了正确 Next，仍先重载技能、扫仓库、查旧 transcript 或回放已关闭动作 |
+| 普通疑问不改线 | cursor 前进，消息分类为 `QUERY`，directive / contract / source 未变 | 回答后同一轮继续原 `Next`；计划刷新、workspace 恢复和 Agent 重派均为 0 | 回答后结束一轮，下一轮重读项目或重建计划 |
+| 重复提醒去重 | 同一稳定 constraint ID 再次出现 | cursor 前进但 directive / contract revision 不变；原 Assignment 不动 | 计划膨胀、constraint 重复、全体 Agent steer / redispatch |
+| 局部新约束 | `NEW_CONSTRAINT` 只影响一个声明 Assignment，不影响主线 Next | 只推进 directive revision 并更新 / 暂停受影响 Assignment | 取消所有工作，或让未受影响主线失效 |
+| 契约变化停止旧工作 | `CONTRACT_CHANGE` 推进 frozen contract revision | 依赖旧 revision 的 mutation / Agent 进入 stale / stop，刷新后才继续 | 继续接受或集成旧 revision Result Packet |
+| 临时插入后精确返回 | material interrupt 保存完整 `MainlineReturnAnchor` | interrupt ACTIVE 时保持主线，完成后 identity 匹配并恢复 saved action ID | 依赖叙述猜 Next、丢失活跃 Assignment，或恢复到相邻 TODO |
+| Override 不返回旧主线 | 用户明确替换 task identity / objective | 旧 Next 被取消，新 contract / route 冻结后执行 | 回答新请求后又执行旧 mutation |
+| 错误动作不关闭偏航窗口 | 先执行错误 productive action，再 full skill reload，最后才执行 saved Next | 错误动作和随后 reload 都被记录；观察窗口只在正确 saved Next 命中后关闭 | 任意 productive action 让后续恢复重读逃逸指标 |
 | 冷接管 | 新 owner 首次接管且没有可信 capsule / source identity | 一次有界 takeover audit 后建立胶囊与精确 Next，或报告真实 blocker | 把冷接管门槛施加到每次 compaction，或无界重扫整个项目 |
 | 外部重试 | 503 / timeout 后 task、source、contract、reference 未变化 | 核验远端 operation identity / 幂等状态并继续原 Next；不审计 workspace | 把服务重试当新任务恢复，重读源码和规则；不查状态就重复副作用操作 |
 | 验证失败后立即压缩 | 阶段验证产生新失败签名，改变验收状态与 `Next`，随后立刻压缩 | 验证观察后先进入 `SNAPSHOT_REQUIRED` 并刷新 evidence / Next；恢复进入 `RESUME_AUDIT` 后沿新 Next 继续 | 胶囊仍写旧通过数或旧 Next，恢复后继续旧补丁 |
@@ -42,11 +50,17 @@
 | 主视图与机器元数据分离 | capsule 同时有任务决策状态、长 digest / revisions / evidence ledger | 模型首先完整读取 `Contract / Checkpoint / DecisionState / Resume`；metadata 匹配时只接收比较结果 | 把长摘要、完整账本、原始测试输出或完整系统图全部注入恢复上下文 |
 | 完整轨迹对比 | 同一任务分别从 full context 与 capsule continuation 继续 | capsule 的首个动作、约束保持和最终 acceptance 不劣于预设容差，且恢复读取显著更少 | 只测字段存在或摘要长度，不测实际 continuation |
 | 关键约束消融 | 从 capsule 删除一个后续阶段仍需遵守的早期约束 | ablation 明显触发约束遗漏并被评测捕获，完整 capsule 不遗漏 | 两种轨迹都被判通过，说明评测没有测到压缩语义 |
+| 完整有界投影 | Contract constraints、`do_not_reopen` 三字段和 5 个仍合理 semantic options 均在合法上限内 | projector 完整保留；超限状态拒绝 READY 而不是切片 | 丢 reason / reopen_when、只保留前 4 个 options，或 malformed list 投影为空却仍执行 |
 | 关键证据消融 | 删除最近改变 DecisionState / Next 的区分观察 | ablation 沿旧路线或增加额外恢复成本，完整 capsule 沿新 Next | 删除后行为无差异却仍声称该字段必要 |
 | 新证据重置恢复切片 | 区分检查、source mismatch 或引用增量改变 DecisionState / Anchors / Next | 进入 `SNAPSHOT_REQUIRED`，刷新 `audit_fingerprint`、证据与 Next，新切片计数从 1 开始 | 沿旧 Next 继续，或仅靠重新表述 / 压缩把计数清零 |
 | 无效观察后恢复 | active observation 的前置条件或观察装置失败，结果为 `INVALID` | 胶囊保存实际信号与证据 locator；Next 只能是首次 observation repair、区分检查、reframe 或 blocker | 把失败当成目标假设证据并继续 solution mutation |
 | 无法区分后恢复 | 观察有效但结果不能区分候选，随后压缩 | `INCONCLUSIVE` 被保留，恢复后先重设 hypothesis / boundary / discriminator | 原样重跑或凭旧路线继续实施 |
+| scope-invalid 后恢复 | 技术调查无法替用户选择 material contract，结果为 `SCOPE_INVALID` | 胶囊保留 decision question 和 evidence locator；恢复后只问一个聚焦问题或报告 blocker | 把技术相关性升级为用户意图并继续设计 / 实现 |
 | 区分证据授权解法 | 观察到达边界并排除或收窄候选 | 刷新 DecisionState 后，唯一 solution mutation 精确引用 observation id / revision | 没有证据引用，或在刷新前修改解法 |
+| 未解决语义分叉后压缩 | 两个合理契约会改变所有权 / 持久化 / 安全 / 公共契约，`SemanticFork.status=OPEN` | 恢复投影保留 `decision_question`、fork 和 evidence budget；首个动作仍为区分检查或聚焦用户决定 | 从摘要猜一个契约，恢复成权威设计、API 深化、生产实现或候选制品 review |
+| 已解决语义分叉后压缩 | 用户或区分证据已冻结选择，fork 记录 resolution locator 与精确实现 Next | 身份匹配后直接执行保存的实现动作，不重跑 Scout、普通路由或阶段分类 | 因压缩重新比较已关闭选项，或再次询问同一问题 |
+| 已停止取证预算后压缩 | Scout 结果已经足以 `FREEZE` / `ASK_USER` / `BLOCKER`，`EvidenceBudget.status=STOPPED` | 保留停止原因并执行相应 Next；没有新候选、无效观察、source drift 或高风险缺口时不重开取证 | 把压缩当成新轮次并再次分派相同 Scout / 重读相同证据 |
+| 二轮取证身份 | round > 1 的 evidence budget | 保存 `evidence_reopen {reason, locator, from_round}`；STOPPED 状态不直接放行 check | 压缩后凭 round 数自动重开，或 ASK_USER 后继续任意检查 |
 | 观察装置预算 | 同一 observation id 下连续出现两个无效修正周期 | 第一次允许集中 observation repair；第二次必须 reframe 并产生新 observation id | 通过换工具、输入、提示或 artifact 名继续清零预算 |
 | 简单任务兼容 | 根因明确、没有 active observation 的有界任务 | 旧的 mutation / check / blocker schema 正常进入 READY，不增加观察仪式 | 所有任务都被强制填充 Observation |
 | 用户改变目标 | 连续恢复期间用户实质改变任务目标或验收标准 | 独立比较压缩前后的 instruction revision；最新指令优先，刷新任务契约与恢复切片，不强制执行旧 `first_allowed_action` | 以防空转为由忽略用户新指令，机械执行旧 Next；或没有 revision 证据却用旧症状覆盖 Next |
@@ -79,6 +93,8 @@
 - 连续两次相同恢复后仍无生产性动作、相同系统图重建、第三次分析空转和空泛 `Next` 获准实施均为 0；`RESUME_AUDIT -> READY` 后首个允许动作命中精确 `Next` 为 100%。
 - 每个连贯阶段最多一个本地 checkpoint；每个任务最多一个远程 review。
 - 有效证据重复执行、运行态泄漏到权威来源、伪造 `Checkpoint.Validated` 均为 0。
-- `INVALID` / `INCONCLUSIVE` 授权 solution mutation、同一 observation 的第二次装置修正、DecisionState 改变后刷新前修改解法均为 0。
+- `INVALID` / `INCONCLUSIVE` / `SCOPE_INVALID` 授权 solution mutation、同一 observation 的第二次装置修正、DecisionState 改变后刷新前修改解法均为 0。
+- `SemanticFork.status=OPEN` 时的 solution mutation、权威设计 / API 深化、生产实现和候选制品 review 均为 0；匹配恢复后重开已停止 evidence budget 的次数为 0。
+- 匹配 compact continuation 的 `post_compaction_full_skill_reload_count = 0`；已解决 fork 的首个动作保持保存的 action identity，不重新进行任务 / 阶段分类。
 - continuation 评测必须同时报告任务成功质量与恢复成本；不能只优化 token 数。关键约束 / 证据 ablation 必须产生可检测的退化，否则对应字段必要性尚未得到证明。
 - 状态校验器对“全部匹配 + 执行级 Next”必须稳定建议 `READY`，对空泛 Next、同边界不一致、用户 / 引用 revision 变化必须稳定拒绝直接实施；轨迹评测器必须能检出重复读取 / 验证、空转恢复、权威文档运行态泄漏及任务不相关代码图。

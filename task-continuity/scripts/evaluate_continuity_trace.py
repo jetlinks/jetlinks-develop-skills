@@ -27,7 +27,18 @@ READ_TYPES = {
 PRODUCTIVE_TYPES = {"mutation", "solution_mutation", "action", "check", "verification", "blocker"}
 VERIFICATION_TYPES = {"check", "verification"}
 COMMENTARY_TYPES = {"commentary", "recovery_commentary"}
-OBSERVATION_RESULTS = {"DISCRIMINATING", "INVALID", "INCONCLUSIVE"}
+OBSERVATION_RESULTS = {"DISCRIMINATING", "INVALID", "INCONCLUSIVE", "SCOPE_INVALID"}
+MESSAGE_CLASSES = {
+    "QUERY",
+    "REMINDER",
+    "NEW_CONSTRAINT",
+    "CONTRACT_CHANGE",
+    "TEMPORARY_INTERRUPT",
+    "OVERRIDE",
+    "OBSERVATION",
+    "DECISION",
+}
+PASSIVE_MESSAGE_CLASSES = {"QUERY", "REMINDER"}
 FULL_HISTORY_SCOPES = {"full_history", "full_task_history", "full_thread", "full_prd", "full_research"}
 REPOSITORY_WIDE_SCOPES = {"repository_wide", "workspace_wide", "full_repository", "full_workspace"}
 FULL_RULE_SCOPES = {"full_skill", "full_skill_set", "full_rules", "full_reference_set"}
@@ -132,28 +143,60 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     suppressed_action_ids = _strings(
         trace.get("suppressed_action_ids", inherited.get("suppressed_action_ids", []))
     )
-    instruction_revision_at_snapshot = trace.get(
-        "instruction_revision_at_snapshot",
-        inherited.get("instruction_revision_at_snapshot"),
+    directive_revision_at_snapshot = trace.get(
+        "directive_revision_at_snapshot",
+        inherited.get(
+            "directive_revision_at_snapshot",
+            trace.get(
+                "instruction_revision_at_snapshot",
+                inherited.get("instruction_revision_at_snapshot"),
+            ),
+        ),
     )
-    post_compaction_instruction_revision = trace.get(
-        "post_compaction_instruction_revision",
-        inherited.get("post_compaction_instruction_revision"),
+    post_compaction_directive_revision = trace.get(
+        "post_compaction_directive_revision",
+        inherited.get(
+            "post_compaction_directive_revision",
+            trace.get(
+                "post_compaction_instruction_revision",
+                inherited.get("post_compaction_instruction_revision"),
+            ),
+        ),
     )
-    explicit_instruction_changed = trace.get(
-        "instruction_changed",
-        inherited.get("instruction_changed"),
+    explicit_directive_changed = trace.get(
+        "directive_changed",
+        inherited.get(
+            "directive_changed",
+            trace.get("instruction_changed", inherited.get("instruction_changed")),
+        ),
     )
-    instruction_revision_compared = isinstance(explicit_instruction_changed, bool) or (
-        isinstance(instruction_revision_at_snapshot, str)
-        and isinstance(post_compaction_instruction_revision, str)
+    directive_revision_compared = isinstance(explicit_directive_changed, bool) or (
+        isinstance(directive_revision_at_snapshot, str)
+        and isinstance(post_compaction_directive_revision, str)
     )
-    if isinstance(explicit_instruction_changed, bool):
-        instruction_changed = explicit_instruction_changed
-    elif isinstance(instruction_revision_at_snapshot, str) and isinstance(post_compaction_instruction_revision, str):
-        instruction_changed = instruction_revision_at_snapshot != post_compaction_instruction_revision
+    if isinstance(explicit_directive_changed, bool):
+        directive_changed = explicit_directive_changed
+    elif isinstance(directive_revision_at_snapshot, str) and isinstance(post_compaction_directive_revision, str):
+        directive_changed = directive_revision_at_snapshot != post_compaction_directive_revision
     else:
-        instruction_changed = None
+        directive_changed = None
+    # Retain the old metric names for readable historical traces.
+    instruction_revision_compared = directive_revision_compared
+    instruction_changed = directive_changed
+    conversation_cursor_at_snapshot = trace.get(
+        "conversation_cursor_at_snapshot",
+        inherited.get("conversation_cursor_at_snapshot"),
+    )
+    post_compaction_conversation_cursor = trace.get(
+        "post_compaction_conversation_cursor",
+        inherited.get("post_compaction_conversation_cursor"),
+    )
+    conversation_advanced = (
+        conversation_cursor_at_snapshot != post_compaction_conversation_cursor
+        if isinstance(conversation_cursor_at_snapshot, str)
+        and isinstance(post_compaction_conversation_cursor, str)
+        else None
+    )
     expected_fingerprint = trace.get("source_fingerprint", inherited.get("source_fingerprint"))
     required_constraints = _strings(trace.get("required_constraint_ids", inherited.get("required_constraint_ids", [])))
     required_evidence = _strings(trace.get("required_evidence_ids", inherited.get("required_evidence_ids", [])))
@@ -174,6 +217,7 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     verification_keys: list[tuple[str, str, str, str]] = []
     route_deviations: list[int] = []
     recovery_route_deviations: list[dict[str, Any]] = []
+    post_compaction_full_skill_reload_count = 0
     full_history_reads = 0
     full_thread_reads = 0
     repository_wide_reads = 0
@@ -194,11 +238,23 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     solution_change_count = 0
     solution_without_evidence: list[int] = []
     invalid_observation_used: list[int] = []
+    scope_invalid_observation_used: list[int] = []
     repeated_nondiscriminating: list[int] = []
     observation_repair_budget_exceeded: list[int] = []
     solution_change_before_snapshot: list[int] = []
     snapshot_refresh_pending = False
-    first_productive_seen = False
+    correct_next_seen = False
+    message_route_deviations: list[dict[str, Any]] = []
+    unnecessary_plan_refreshes: list[int] = []
+    duplicate_reminder_revisions: list[int] = []
+    missing_return_anchors: list[int] = []
+    wrong_mainline_returns: list[int] = []
+    stale_contract_actions: list[int] = []
+    pending_return_action_id: str | None = None
+    pending_return_turn: Any = None
+    pending_return_ready = False
+    pending_message_class: str | None = None
+    mainline_invalidated = False
 
     for index, raw_event in enumerate(events):
         if not isinstance(raw_event, dict):
@@ -209,6 +265,66 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         turn_state = recovery_turns.setdefault(turn, {"commentary": False, "productive": False})
         if event_type in COMMENTARY_TYPES:
             turn_state["commentary"] = True
+
+        if event_type == "user_message":
+            message_class = str(event.get("message_class", ""))
+            if message_class not in MESSAGE_CLASSES:
+                message_route_deviations.append(
+                    {"event_index": index, "class": "unclassified_user_message"}
+                )
+            affects_saved_next = event.get("affects_saved_next") is True
+            if message_class in PASSIVE_MESSAGE_CLASSES:
+                pending_message_class = message_class
+                pending_return_action_id = str(
+                    event.get("saved_next_action_id") or pre_compaction_next_action_id or ""
+                ) or None
+                pending_return_turn = turn
+                pending_return_ready = True
+                revision_changed = event.get("directive_changed") is True or (
+                    isinstance(event.get("directive_revision_before"), str)
+                    and isinstance(event.get("directive_revision_after"), str)
+                    and event.get("directive_revision_before") != event.get("directive_revision_after")
+                )
+                if message_class == "REMINDER" and revision_changed:
+                    duplicate_reminder_revisions.append(index)
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "duplicate_reminder_revision"}
+                    )
+                if affects_saved_next or _strings(event.get("affected_assignment_ids")):
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "passive_message_route_change"}
+                    )
+            elif message_class == "TEMPORARY_INTERRUPT":
+                anchor = event.get("return_anchor")
+                pending_message_class = message_class
+                pending_return_ready = False
+                if not isinstance(anchor, dict) or not isinstance(anchor.get("saved_next_action_id"), str):
+                    missing_return_anchors.append(index)
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "missing_return_anchor"}
+                    )
+                    pending_return_action_id = None
+                else:
+                    pending_return_action_id = anchor["saved_next_action_id"]
+                    pending_return_turn = turn
+            elif message_class in {"CONTRACT_CHANGE", "OVERRIDE"} or affects_saved_next:
+                mainline_invalidated = True
+
+        if event_type in {"plan_refresh", "route_refresh", "assignment_redispatch"}:
+            if pending_message_class in PASSIVE_MESSAGE_CLASSES and pending_return_ready:
+                unnecessary_plan_refreshes.append(index)
+                message_route_deviations.append(
+                    {"event_index": index, "class": "passive_message_plan_refresh"}
+                )
+
+        if event_type == "interrupt_complete" and pending_message_class == "TEMPORARY_INTERRUPT":
+            pending_return_ready = True
+            pending_return_turn = turn
+
+        if event_type in {"snapshot_refreshed", "contract_snapshot_refreshed"} and event.get(
+            "refreshes_user_change"
+        ) is True:
+            mainline_invalidated = False
         observed_constraints.update(_strings(event.get("constraint_ids")))
         observed_evidence.update(_strings(event.get("evidence_ids")))
         recovery_id = event.get("recovery_id")
@@ -227,24 +343,54 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
             and instruction_revision_compared
             and instruction_changed is False
         )
-        if continuity_slice_matches and not first_productive_seen:
+        if continuity_slice_matches and not correct_next_seen:
+            if "full_rule_reload" in recovery_classes:
+                post_compaction_full_skill_reload_count += 1
             for recovery_class in sorted(recovery_classes):
                 recovery_route_deviations.append(
                     {"event_index": index, "class": recovery_class}
                 )
                 route_deviations.append(index)
+            if pending_message_class in PASSIVE_MESSAGE_CLASSES and pending_return_ready and recovery_classes:
+                message_route_deviations.append(
+                    {"event_index": index, "class": "passive_message_recovery_replay"}
+                )
 
         is_productive = event.get("productive") is True or (
             event_type in PRODUCTIVE_TYPES and event.get("productive") is not False
         )
+        inline_message_action = event.get("serves_user_message") is True
         if is_productive:
-            productive.append((index, event))
-            first_productive_seen = True
+            if not inline_message_action:
+                productive.append((index, event))
+            target_action_id = pre_compaction_next_action_id or expected_action_id
+            if not inline_message_action and (target_action_id is None or event_action_id == target_action_id):
+                correct_next_seen = True
             turn_state["productive"] = True
             if isinstance(recovery_id, str) and recovery_id:
                 recovery_cycles[recovery_id]["productive"] = True
             if event.get("serves_next") is False:
                 route_deviations.append(index)
+            if not inline_message_action and pending_return_ready and pending_return_action_id is not None:
+                if event_action_id == pending_return_action_id:
+                    if pending_message_class in PASSIVE_MESSAGE_CLASSES and turn != pending_return_turn:
+                        wrong_mainline_returns.append(index)
+                        message_route_deviations.append(
+                            {"event_index": index, "class": "passive_message_delayed_return"}
+                        )
+                    pending_return_ready = False
+                    pending_message_class = None
+                    pending_return_action_id = None
+                else:
+                    wrong_mainline_returns.append(index)
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "wrong_mainline_return"}
+                    )
+            if mainline_invalidated and event_type in {"mutation", "solution_mutation", "action"}:
+                stale_contract_actions.append(index)
+                message_route_deviations.append(
+                    {"event_index": index, "class": "stale_contract_action"}
+                )
 
         if event_type in READ_TYPES:
             target = str(event.get("target", "<unknown>"))
@@ -353,6 +499,8 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
                     solution_without_evidence.append(index)
                 if result == "INVALID":
                     invalid_observation_used.append(index)
+                if result == "SCOPE_INVALID":
+                    scope_invalid_observation_used.append(index)
 
         if event_type in {"authoritative_doc_write", "prd_write"}:
             leaked = sorted(_strings(event.get("content_classes")) & RUNTIME_CONTENT_CLASSES)
@@ -398,6 +546,10 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
             {"event_index": first_index, "class": "previous_action_replay"}
         )
         route_deviations.append(first_index)
+    if pending_return_ready and pending_return_action_id is not None:
+        message_route_deviations.append(
+            {"event_index": len(events), "class": "mainline_return_missing"}
+        )
     idle_cycles = sorted(key for key, value in recovery_cycles.items() if not value["productive"])
     missing_constraints = sorted(required_constraints - observed_constraints)
     missing_evidence = sorted(required_evidence - observed_evidence)
@@ -441,6 +593,9 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "previous_productive_action_id": previous_productive_action_id,
         "instruction_changed": instruction_changed,
         "instruction_revision_compared": instruction_revision_compared,
+        "directive_changed": directive_changed,
+        "directive_revision_compared": directive_revision_compared,
+        "conversation_advanced": conversation_advanced,
         "action_identity_continuity_applicable": action_identity_continuity_applicable,
         "action_identity_continuity": action_identity_continuity,
         "previous_action_replay_count": 1 if previous_action_replay else 0,
@@ -463,8 +618,16 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "repeated_verification_count": repeated_verifications,
         "route_deviation_count": len(set(route_deviations)),
         "route_deviation_events": sorted(set(route_deviations)),
+        "message_route_deviation_count": len(message_route_deviations),
+        "message_route_deviations": message_route_deviations,
+        "unnecessary_plan_refresh_count": len(unnecessary_plan_refreshes),
+        "duplicate_reminder_revision_count": len(duplicate_reminder_revisions),
+        "missing_return_anchor_count": len(missing_return_anchors),
+        "wrong_mainline_return_count": len(wrong_mainline_returns),
+        "stale_contract_action_count": len(stale_contract_actions),
         "recovery_route_deviation_count": len(recovery_route_deviations),
         "recovery_route_deviations": recovery_route_deviations,
+        "post_compaction_full_skill_reload_count": post_compaction_full_skill_reload_count,
         "idle_recovery_count": len(idle_cycles),
         "idle_recovery_ids": idle_cycles,
         "authoritative_runtime_leak_count": len(authoritative_runtime_leaks),
@@ -480,11 +643,14 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "discriminating_observation_count": discriminating_count,
         "invalid_observation_count": observation_counts["INVALID"],
         "inconclusive_observation_count": observation_counts["INCONCLUSIVE"],
+        "scope_invalid_observation_count": observation_counts["SCOPE_INVALID"],
         "solution_change_count": solution_change_count,
         "solution_change_without_discriminating_evidence_count": len(solution_without_evidence),
         "solution_change_without_discriminating_evidence_events": solution_without_evidence,
         "invalid_observation_used_as_evidence_count": len(invalid_observation_used),
         "invalid_observation_used_as_evidence_events": invalid_observation_used,
+        "scope_invalid_observation_used_as_evidence_count": len(scope_invalid_observation_used),
+        "scope_invalid_observation_used_as_evidence_events": scope_invalid_observation_used,
         "repeated_nondiscriminating_observation_count": len(repeated_nondiscriminating),
         "repeated_nondiscriminating_observation_events": repeated_nondiscriminating,
         "observation_repair_budget_exceeded_count": len(observation_repair_budget_exceeded),
@@ -513,6 +679,11 @@ def evaluate_document(document: Any) -> dict[str, Any]:
             "instruction_revision_at_snapshot",
             "post_compaction_instruction_revision",
             "instruction_changed",
+            "directive_revision_at_snapshot",
+            "post_compaction_directive_revision",
+            "directive_changed",
+            "conversation_cursor_at_snapshot",
+            "post_compaction_conversation_cursor",
             "source_fingerprint",
             "required_constraint_ids",
             "required_evidence_ids",

@@ -10,7 +10,7 @@ Read [`references/event-driven-rules.md`](references/event-driven-rules.md) firs
 ## Workflow
 
 1. Confirm whether the task is a lifecycle event, domain event, or continuous subscription flow.
-2. If this is a new backend feature, large behavior change, or event flow spanning multiple modules, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in Trellis or the chosen Git-ignored runtime artifact, wait for explicit user confirmation, then update authoritative docs only for accepted durable event contracts.
+2. If this is a new backend feature, large behavior change, or event flow spanning multiple modules, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in the selected host runtime carrier, wait for explicit user confirmation, then update authoritative docs only for accepted durable event contracts.
 3. For entity or business side effects, follow [`references/event-driven-rules.md`](references/event-driven-rules.md).
 4. For Topic, EventBus, or message-stream handlers, follow [`references/realtime-subscription-rules.md`](references/realtime-subscription-rules.md).
 5. Before implementing handlers, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): trigger timing, transaction boundary, idempotency, loop prevention, replay handling, batch / backpressure limits, Topic compatibility, and subscription lifecycle cleanup.

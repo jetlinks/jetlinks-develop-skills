@@ -10,7 +10,7 @@ Read [`references/module-list.md`](references/module-list.md) first.
 ## Workflow
 
 1. Inspect the root layout, parent `pom.xml`, aggregator modules, and symlinked directories. When the workspace already has a valid module / symbol index, use `$code-navigation` to narrow candidate modules, then confirm ownership against the actual build manifests.
-2. If the request creates a new backend module or large backend capability, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in Trellis or the chosen Git-ignored runtime artifact, wait for explicit user confirmation, then update authoritative docs only for accepted durable module boundaries.
+2. If the request creates a new backend module or large backend capability, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in the selected host runtime carrier, wait for explicit user confirmation, then update authoritative docs only for accepted durable module boundaries.
 3. Identify the candidate business modules and explain why each one matches the request.
 4. If no existing module fits, read [`references/module-creation-rules.md`](references/module-creation-rules.md) and create the smallest compliant module structure.
 5. When creating a module that includes public contracts, starter configuration, SPI registration, or first sample code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md).

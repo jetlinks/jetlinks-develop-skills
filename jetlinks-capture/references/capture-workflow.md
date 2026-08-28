@@ -54,7 +54,7 @@
 适用：
 
 - 当前阶段、进度、假设、尝试、失败、下一步和恢复信息
-- Trellis task / journal / runtime，或非 Trellis 项目的单一 Git-ignored runtime file
+- 宿主 task / runtime store、Trellis task / journal / runtime，或在 VCS 与 ignore 校验可用时使用的单一 ignored artifact；无安全载体时使用有界 active-context / portable capsule
 
 这些内容不进入仓库权威 docs，也不因任务完成自动升级为 worklog。历史追溯依赖 task workflow、PR、CI 和 Git；只有抽象出的稳定规则继续进入下列沉淀类型。
 

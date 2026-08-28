@@ -10,7 +10,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 ## Workflow
 
 1. Classify the request as protocol reading, protocol implementation, binary packet analysis, or integration debugging.
-2. If this creates a new protocol package or changes protocol behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract, protocol examples, and realistic test goals in Trellis or the chosen Git-ignored runtime artifact, wait for explicit user confirmation, then update authoritative docs only for accepted durable wire contracts.
+2. If this creates a new protocol package or changes protocol behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract, protocol examples, and realistic test goals in the selected host runtime carrier, wait for explicit user confirmation, then update authoritative docs only for accepted durable wire contracts.
 3. Inspect protocol support registration first, then locate routes, config metadata, authenticators, and codec bindings.
 4. Trace the upstream path from transport input to `DeviceMessage`, then trace the downstream path back to encoded packets, topics, or replies.
 5. Read [`references/development-patterns.md`](references/development-patterns.md) when creating a new protocol package or turning a protocol document into implementation tasks.

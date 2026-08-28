@@ -57,10 +57,12 @@ Recovery Capsule 只保留四个区块：
 | --- | --- |
 | `Contract` | task identity / revision、契约 locator、一句话 observable objective、仍生效的不变量 / 约束、当前 acceptance signals |
 | `Checkpoint` | 当前 phase、最近一个 validated boundary 及 evidence pointer、当前 in-flight slice 的稳定 `slice_id` / owner / status / expected changed items |
-| `DecisionState` | active hypothesis / chosen decision、最新能区分路线的观察、只保留足以阻止重试的 falsified route；对容易被恢复过程重开的动作保留有界 `do_not_reopen(action_id, reason, reopen_when)`；仍需持续 resurfacing 的关键约束；系统性求解存在 active observation 时再保存其紧凑状态 |
+| `DecisionState` | active hypothesis / chosen decision、当前 `decision_question`、最新能区分路线的观察、只保留足以阻止重试的 falsified route；对容易被恢复过程重开的动作保留有界 `do_not_reopen(action_id, reason, reopen_when)`；仍需持续 resurfacing 的关键约束；系统性求解存在 active observation、material semantic fork 或 evidence budget 时再保存其紧凑状态 |
 | `Resume` | recovery type、continuity gate、少量精确 anchors、一个带稳定 `action_id` 的执行级 `Next` / `first_allowed_action`、observable signal、blocker 或 residual risk |
 
 默认只向模型注入这个主视图。它必须一次完整可读，不复制任务全文、整张关系图、长 diff、日志、命令流水、所有已完成阶段、引用正文或全部规则。anchors 默认保持少量且足够定位；`3–7` 是常用预算，不是不能调整的固定常数。
+
+`Contract.constraints` 与 `Contract.acceptance` 都是非空、类型明确的有界字符串列表；前者保存压缩后仍会影响后续阶段的用户硬约束 / 不变量，后者保存当前验收信号。投影不得只保留目标而丢掉约束。`Checkpoint.Validated` 只保留最近一个已验证边界，`do_not_reopen`、anchors、观察前置条件与 semantic options 也必须在保存前分组收敛到有界完整集合；超限状态进入 `SNAPSHOT_REQUIRED`，不能由 projector 静默截断后继续执行。
 
 ### 机器元数据
 
@@ -71,7 +73,7 @@ Continuity Metadata 保存：
 - `LoadedRules` 的 locator、revision / digest、extracted obligations 与重读条件。
 - 多 Agent 路线存在时的 `OrchestrationProgram` revision / current stage、冻结的 shared-contract revisions、当前 `RouteDecision` revision、assignment state 与 Result Packet locator。
 - 验证证据的 locator、输入 / 环境 identity、适用 acceptance 和 freshness。
-- `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence`、`previous_productive_action_id`、`pre_compaction_next_action_id`，以及与该 Next 同时捕获的 `instruction_revision_at_snapshot`。
+- `audit_fingerprint`、`consecutive_matching_audits`、`last_new_evidence`、`previous_productive_action_id`、`pre_compaction_next_action_id`，以及与该 Next 同时捕获的 `conversation_cursor_at_snapshot` 和 `directive_revision_at_snapshot`。任务语义 revision 仍由 `Contract.revision` 表示；三者不能合并成一个 instruction counter。
 
 宿主无法提供独立机器存储时，可以把 metadata 放在 capsule 后面的折叠区或同一有界 artifact 中；恢复时仍先读主视图，只在 identity / revision 失配或 `Next` 需要时读取相关 metadata 项。
 
@@ -148,13 +150,45 @@ active_observation:
   prediction: <可证伪预测>
   discriminator: <区分规则>
   invalidators: [<无效条件>]
-  result: PLANNED | DISCRIMINATING | INVALID | INCONCLUSIVE
+  result: PLANNED | DISCRIMINATING | INVALID | INCONCLUSIVE | SCOPE_INVALID
   repair_cycles: <同一观察契约已使用的装置修正周期>
   actual_signal: <非 PLANNED 时的稳定摘要>
   evidence_locator: <非 PLANNED 时的证据指针>
 ```
 
-这不是新的 Capsule 区块，也不为根因明确的简单任务强制启用。细长输入、日志和完整假设表仍留在 evidence locator 后。active observation 存在时，mutation action 额外声明 `purpose`：`solution`、`observation_setup` 或 `observation_repair`；check 和 blocker 不需要伪装成 mutation。
+这不是新的 Capsule 区块，也不为根因明确的简单任务强制启用。细长输入、日志和完整假设表仍留在 evidence locator 后。active observation 存在时，mutation action 额外声明 `purpose`：`solution`、`observation_setup` 或 `observation_repair`；check 和 blocker 不需要伪装成 mutation。`SCOPE_INVALID` 表示证据可能与技术候选相关，却不能替用户选择契约；恢复后只能继续聚焦用户问题、重构决策边界或报告 blocker。
+
+当两个以上仍合理的契约会改变所有权、持久化、安全、公共契约、迁移或发布边界时，`DecisionState.semantic_fork` 保存跨压缩仍需继续的最小决策状态：
+
+```yaml
+semantic_fork:
+  decision_question: <当前唯一要决定的问题>
+  status: NOT_APPLICABLE | OPEN | RESOLVED
+  evidence_can_decide: <true | false | unknown>
+  options:
+    - id: <稳定选项身份>
+      contract: <仍合理的契约>
+  architectural_consequences:
+    <ownership / persistence / security / public-contract / migration-release>: <会随选项变化的责任或契约>
+  resolution:                         # 仅 RESOLVED 时存在
+    source: EVIDENCE | USER
+    decision: <已冻结的选择>
+    locator: <区分证据或用户指令 revision>
+evidence_budget:
+  round: <当前有界取证轮次，从 1 开始>
+  scout_count: <本轮实际 scouts 数>
+  status: OPEN | STOPPED
+  stop_reason: FREEZE | ASK_USER | BLOCKER | INVALID_OBSERVATION | SOURCE_DRIFT | HIGH_RISK_GAP
+evidence_reopen:                     # round > 1 时存在
+  reason: NEW_CANDIDATE | INVALID_OBSERVATION | SOURCE_DRIFT | HIGH_RISK_GAP
+  locator: <改变上一轮边界的稳定证据>
+  from_round: <紧邻的上一轮>
+current_stage: <当前阶段>
+stage_entry_gate: <进入该阶段仍需满足的事实或决策>
+latest_discriminating_evidence: <locator / none>
+```
+
+这些字段保存决策，不保存 Scout 流水。`OPEN` 分叉只能把 `Next` 指向有界区分检查、observation setup / repair、聚焦用户决定或真实 blocker；它不能恢复成权威设计、API 深化、生产实现或对候选制品的 review。`RESOLVED` 必须同时记录选择、来源和 locator；`resolution.source=EVIDENCE` 还要求 `evidence_can_decide=true`，其他状态不得携带 resolution。`EvidenceBudget.status=STOPPED` 时不得因压缩重新开启同一轮取证：`ASK_USER` / `BLOCKER` 只能恢复为对应 blocker，`FREEZE` 必须先记录 resolution，其他停止原因必须先形成带合法 `evidence_reopen` 的新 `OPEN` round，之后才可继续 check。round 大于 1 却没有 reopen reason / locator 的状态无效。
 
 “继续实现某阶段”“继续分析”“熟悉代码”“再看看相关材料”不包含边界和可观察信号，不能从 `RESUME_AUDIT` 进入 `READY`。先在 `SNAPSHOT_REQUIRED` 中把它改写为执行级动作。
 
@@ -173,7 +207,8 @@ DecisionState:
       reason: <evidence-backed reason>
       reopen_when: <specific invalidation condition>
 ContinuityMetadata:
-  instruction_revision_at_snapshot: <latest user-instruction revision or digest>
+  conversation_cursor_at_snapshot: <latest processed message cursor>
+  directive_revision_at_snapshot: <execution constraints / permissions / priority digest>
   previous_productive_action_id: <stable id or null when none exists>
   pre_compaction_next_action_id: <Resume.Next.action_id>
 Resume:
@@ -222,6 +257,21 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 ## 5. 连续性状态门禁与刷新边界
 
+用户消息先经过语义分流，不直接等同于任务 revision 变化：
+
+| 分类 | 状态影响 | 主线动作 |
+| --- | --- | --- |
+| `QUERY` | 仅推进 conversation cursor | 回答后在同一轮继续原 `Next`，不刷新计划 |
+| `REMINDER` | 按稳定 constraint ID 去重；不推进 directive / contract revision | 重申已有约束但不重派 Agent |
+| `NEW_CONSTRAINT` | 只推进 directive revision，并列出 affected assignment IDs / 是否影响 saved Next | 仅暂停或更新受影响切片 |
+| `CONTRACT_CHANGE` | 推进 `Contract.revision` | 进入 `SNAPSHOT_REQUIRED`，暂停依赖旧契约的 mutation / Agent |
+| `TEMPORARY_INTERRUPT` | 保存 `MainlineReturnAnchor`；原主线保持 `RESUME_AUDIT` | 插入任务完成且 identity 匹配后恢复精确 saved Next |
+| `OVERRIDE` | 更换 task identity 或主目标 | 取消受影响旧路线，不能返回旧 Next |
+| `OBSERVATION` | 只有改变 active model、acceptance 或 Next 时才刷新 | 无语义影响则继续，有影响则刷新 |
+| `DECISION` | 解决对应 SemanticFork 并更新其 locator | 从已记录决策门禁继续 |
+
+`MainlineReturnAnchor` 至少包含 `interruption_id`、`original_task_id`、`saved_stage`、`saved_next_action_id`、`frozen_contract_revision`、`active_assignment_ids`、`source_fingerprint`、`interrupt_objective` 与 `resume_condition`。它只保存返回身份，不复制插入任务流水。可选宿主 hook 可以保存 cursor / digest，但不得仅凭关键词自动把消息判为 override、取消任务或改契约。
+
 状态含义：
 
 | 状态 | 含义 | 允许动作 |
@@ -232,9 +282,9 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 以下任一事件发生时立即进入 `SNAPSHOT_REQUIRED`，不能等到下一个“成功阶段”再补：
 
-- 新证据改变 active hypothesis、失败签名、解法层级、验收通过 / 失败状态或唯一 `Next`。
+- 新证据改变 active hypothesis、semantic fork 状态 / resolution、evidence budget、stage admission、失败签名、解法层级、验收通过 / 失败状态或唯一 `Next`。
 - 观察从 `PLANNED` 变成完成态、实际信号命中 invalidator、观察 revision / result 改变，或结果要求重设 boundary / discriminator。
-- 用户、外部引用或权威契约的新 revision 改变当前路线依赖的事实。
+- 用户 directive / contract、外部引用或权威契约的新 revision 改变当前路线依赖的事实；conversation cursor 单独推进不构成该条件。
 - source identity 出现未声明的 changed item、nested source 漂移或预期切片之外的内容变化。
 - 一个声明的 in-flight 实现切片完成、被放弃或需要换成另一切片。
 
@@ -277,9 +327,9 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 匹配恢复默认不加载 `$systematic-solving`、`$code-navigation`、交付 skill、完整 PRD / research / task history 或仓库概览。只有新失败或假设变化需要重建问题模型，anchor / owner / impact 失效需要重新导航，阶段 checkpoint 或最终交付需要交付 skill。技能可用不构成加载理由。
 
-1. `COMPACT_CONTINUATION` 与已有可信状态的 resume 先进入 `RESUME_AUDIT`；分别比较用户最新 instruction revision 与 `instruction_revision_at_snapshot`，再读取任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束、in-flight `slice_id` 和执行级唯一下一步。instruction revision 变化时进入 `SNAPSHOT_REQUIRED`，按最新指令刷新路线；未变化时不得用旧症状或恢复叙述覆盖已保存的 Next。`COLD_HANDOFF` 先建立这些状态，`EXTERNAL_RETRY` 则保留原 gate 和 `Next`。
+1. `COMPACT_CONTINUATION` 与已有可信状态的 resume 先进入 `RESUME_AUDIT`；分别比较 conversation cursor、`directive_revision_at_snapshot` 与 `Contract.revision`，再读取任务契约和 Recovery Capsule 主视图，确认任务身份、目标、关键约束、in-flight `slice_id` 和执行级唯一下一步。cursor 推进时只读取新 delta 并分类影响；directive 变化只使声明受影响的 Next / Assignment 失效；contract 变化进入 `SNAPSHOT_REQUIRED`。三者均未影响 saved Next 时不得用新消息叙述覆盖它。`COLD_HANDOFF` 先建立这些状态，`EXTERNAL_RETRY` 则保留原 gate 和 `Next`。
 2. 使用当前环境最轻量的只读能力比较 Source Snapshot、预期 changed items，以及机器元数据中的引用 / 规则 revisions；匹配时不读取完整 metadata、原始证据或外部正文。
-3. 计算当前 `audit_fingerprint`，核对 Contract、Checkpoint、DecisionState、少量 Anchors 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验。
+3. 计算当前 `audit_fingerprint`，核对 Contract、Checkpoint、DecisionState（包括已存在的 semantic fork / evidence budget / stage admission）、少量 Anchors 和 `Next` 是否彼此一致；不要仅因 source fingerprint 匹配就跳过语义核验，也不要在匹配时重新进行阶段分类。
 4. 指纹、引用和语义状态均匹配时递增或初始化 `consecutive_matching_audits`，显式执行 `RESUME_AUDIT -> READY`，只加载宿主要求的当前 skill body 和 `Next` 新需要的规则，然后立即执行 `first_allowed_action`；对 `COMPACT_CONTINUATION`，核验调用必须合并在最多一个可并行工具批次中，且 productive action 必须发生在同一恢复轮。不重读 research basis、已提取外部历史、整个任务树或仓库总览。
 5. 引用 revision 变化但 source 匹配时转为 `SNAPSHOT_REQUIRED`，先读取引用增量并更新 `extracted_facts`；不因此重新扫描源码。
 6. source 部分失配时转为 `SNAPSHOT_REQUIRED`，先检查失配 changed items 或 artifact，只扩大到解释失配所需的生产者、消费者或所有权边界，并重写三个逻辑视图。
@@ -291,8 +341,10 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 - `Next` 与 `first_allowed_action` 是否为 mutation / check / blocker，是否含 owner、bounded scope 和 observable signal，以及两者是否同一稳定 action identity。
 - `Checkpoint.Validated` 是否同时有 evidence locator 与真实 checkpoint identity；只通过测试但未 checkpoint 的阶段不能伪装成 validated。
 - partial fingerprint 是否列出 missing layers、expected changed items 与 residual identity risk。
-- source / contract / referenced sources / loaded rules 的轻量 observation 是否匹配；缺 observation 时保持 `RESUME_AUDIT`，失配或 schema 无效时建议 `SNAPSHOT_REQUIRED`。
+- conversation cursor、classified message effect、directive / contract、source / referenced sources / loaded rules 的轻量 observation 是否匹配；cursor 可单独前进，只有实际影响 saved Next 的 directive / contract 变化才失效；缺 observation 时保持 `RESUME_AUDIT`，失配或 schema 无效时建议 `SNAPSHOT_REQUIRED`。
+- temporary interrupt 是否保存完整 `MainlineReturnAnchor`，以及返回时 task / contract / source / saved action identity 是否仍匹配；ACTIVE interrupt 不能执行原主线，`RESUME_READY` 匹配后才能恢复。
 - active observation 存在时，其 revision / result 是否与轻量 observed state 匹配，以及 mutation purpose 是否受结果门禁允许：`DISCRIMINATING -> solution`、`PLANNED -> observation_setup`、首次 `INVALID -> observation_repair`；`INCONCLUSIVE` 或已用完修正预算不能直接 mutation。
+- semantic fork 存在时，其结构与 resolution 是否完整；`OPEN` 状态不得以 `purpose=solution` 的 mutation、权威设计或候选制品 review 作为 `Next`。恢复投影必须保留当前 `decision_question`、fork / budget 状态和唯一动作，不能从长摘要生成新选择。
 
 该脚本只返回 diagnostics、comparisons 和 suggested gate，不写运行态、不修改源码、不阻断工具、不提交或发布。宿主 adapter 负责安全采集 observation、解释 locator，并按授权应用状态转换；不能因为脚本可用就在每条命令后调用。
 
@@ -313,7 +365,7 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 
 恢复审计通过后的第一项生产性动作必须服务于胶囊的 `Next` 和验收信号。相邻 TODO、旧方案或新可用工具都不能自动扩大范围。连续匹配恢复按以下止空转门禁处理：
 
-在 identity、instruction revision 和引用均匹配的 `COMPACT_CONTINUATION` 中，下列行为在首个正确生产动作之前一旦发生即记为 route deviation，而不是“必要恢复成本”：完整 skill / rule set 重载、workspace / repository-wide scan、未变化外部历史完整重读、命中 `do_not_reopen` 的动作，以及 `previous_productive_action_id != pre_compaction_next_action_id` 时重新执行 previous。后面再执行正确 Next 不能抵消已经发生的偏航。
+在 identity、instruction revision 和引用均匹配的 `COMPACT_CONTINUATION` 中，下列行为在首个正确 saved Next 生产动作之前一旦发生即记为 route deviation，而不是“必要恢复成本”：完整 skill / rule set 重载、workspace / repository-wide scan、未变化外部历史完整重读、命中 `do_not_reopen` 的动作，以及 `previous_productive_action_id != pre_compaction_next_action_id` 时重新执行 previous。错误的生产动作不会提前关闭这个观察窗口；后面再执行正确 Next 也不能抵消已经发生的偏航。
 
 - 第一次允许在默认预算内完成正常审计，随后必须转 `READY`。
 - 默认从第二次且没有 `last_new_evidence` 或生产性动作时，只比较保存的组成事实与当前轻量 identity；禁止完整重读 skills / PRD / research、仓库总览或重建同一系统图，匹配后立即执行 `first_allowed_action`。
@@ -385,5 +437,6 @@ Continuity Metadata 中的 `audit_fingerprint` 对当前 task / contract revisio
 - 观察装置修正：每个语义修正批次记录一个 `observation_apparatus_changed`，不按文件或命令拆分；更换 hypothesis、boundary 或 discriminator 后使用新的 observation id。
 - 解法变化：mutation / action 标记 `purpose=solution` 并引用授权它的 observation id / revision；观察 setup / repair 使用对应 purpose。若复杂路径要求区分证据，轨迹或事件标记 `requires_discriminating_evidence=true`。
 - 状态刷新：改变 DecisionState 的观察后记录 `snapshot_refreshed`；评测器据此识别陈旧胶囊下的解法变化。
+- 语义分叉与阶段准入：记录 `semantic_fork` / `semantic_resolution`、`evidence_budget` 和 `stage_admission` 事件及其 revision；宿主应把权威设计、API 深化、生产实现和 review 标为对应 action class，以便发现 `OPEN` 分叉下的非法推进。匹配恢复中的 `skill_reload` / `rule_reload` 必须保留实际 scope，评测器单独报告 `post_compaction_full_skill_reload_count`。
 
 标准化时保留真实发生顺序和来源，不能把事后总结伪造成当时已注入的约束或证据。核心评测器不读取 agent 私有思维，不判定业务代码正确性，也不绑定具体 trace API；adapter 仅做可审计的字段映射。评测在一个阶段或一组 continuation 轨迹完成后集中运行，不在每次工具调用后制造新的验证循环。

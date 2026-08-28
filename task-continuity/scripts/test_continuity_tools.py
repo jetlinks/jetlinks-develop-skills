@@ -21,6 +21,7 @@ def load_script(name: str):
 
 STATE = load_script("validate_continuity_state")
 TRACE = load_script("evaluate_continuity_trace")
+PROJECTOR = load_script("prepare_resume_context")
 
 
 def valid_state() -> dict:
@@ -37,7 +38,9 @@ def valid_state() -> dict:
                 "boundary_id": "b7",
                 "task_id": "continuity-tools",
                 "revision": "contract-r3",
+                "locator": "task://continuity-tools@contract-r3",
                 "objective": "make continuation state executable",
+                "constraints": ["do not replay completed recovery work"],
                 "acceptance": ["matching state reaches READY"],
             },
             "checkpoint": {
@@ -77,6 +80,8 @@ def valid_state() -> dict:
             "audit_fingerprint": "audit-3",
             "consecutive_matching_audits": 1,
             "instruction_revision_at_snapshot": "instruction-r3",
+            "directive_revision_at_snapshot": "directive-r3",
+            "conversation_cursor_at_snapshot": "cursor-3",
             "pre_compaction_next_action_id": "implement-validator",
             "previous_productive_action_id": "model-current-state",
             "referenced_sources": [{"id": "trellis-docs", "revision": "0.6.14"}],
@@ -86,7 +91,7 @@ def valid_state() -> dict:
             "boundary_id": "b7",
             "source_id": "workspace",
             "source_fingerprint": "sha256:tree",
-            "strength": "full",
+            "strength": "strong",
             "locator": "workspace-state",
             "expected_changed_items": ["task-continuity/scripts"],
             "missing_layers": [],
@@ -96,6 +101,8 @@ def valid_state() -> dict:
             "source_fingerprint": "sha256:tree",
             "contract_revision": "contract-r3",
             "instruction_revision": "instruction-r3",
+            "directive_revision": "directive-r3",
+            "conversation_cursor": "cursor-3",
             "referenced_sources": {"trellis-docs": "0.6.14"},
             "loaded_rules": {"task-continuity": "sha256:rules"},
         },
@@ -131,12 +138,126 @@ def with_active_observation(
     return document
 
 
+def with_semantic_fork(document: dict, status: str = "OPEN") -> dict:
+    fork = {
+        "decision_question": "which externally visible contract should be frozen",
+        "status": status,
+        "evidence_can_decide": False,
+        "options": [
+            {"id": "snapshot", "contract": "snapshot contract"},
+            {"id": "current", "contract": "current-state contract"},
+        ],
+        "architectural_consequences": {
+            "persistence": "persistence ownership changes",
+            "security": "authorization timing changes",
+        },
+    }
+    if status == "RESOLVED":
+        fork["resolution"] = {
+            "source": "USER",
+            "decision": "snapshot contract",
+            "locator": "instruction://r4",
+        }
+    document["recovery_capsule"]["decision_state"].update(
+        {
+            "semantic_fork": fork,
+            "evidence_budget": {
+                "round": 1,
+                "scout_count": 2,
+                "status": "STOPPED",
+                "stop_reason": "ASK_USER" if status == "OPEN" else "FREEZE",
+            },
+            "current_stage": "semantic-decision",
+            "stage_entry_gate": "semantic fork must be RESOLVED before design",
+            "latest_discriminating_evidence": "evidence://contract-boundaries",
+        }
+    )
+    return document
+
+
 class ContinuityStateTest(unittest.TestCase):
+    def test_resume_context_projects_only_bounded_fast_path_fields(self) -> None:
+        document = valid_state()
+        document["recovery_capsule"]["checkpoint"]["in_flight"]["owner"] = "owner-" + ("x" * 500)
+        projected = PROJECTOR.project_context(document, max_anchors=1, text_limit=80)
+        self.assertTrue(projected["ready"])
+        self.assertEqual("READY", projected["gate"])
+        self.assertEqual("implement-validator", projected["resume"]["first_allowed_action"]["action_id"])
+        self.assertEqual("task://continuity-tools@contract-r3", projected["contract"]["locator"])
+        self.assertEqual(["task-continuity/scripts"], projected["resume"]["anchors"])
+        self.assertEqual(
+            ["do not replay completed recovery work"], projected["contract"]["constraints"]
+        )
+        self.assertEqual(
+            "the saved task revision already contains the required facts",
+            projected["decision_state"]["do_not_reopen"][0]["reason"],
+        )
+        self.assertLessEqual(len(projected["checkpoint"]["in_flight"]["owner"]), 80)
+        self.assertNotIn("referenced_sources", projected)
+        self.assertNotIn("loaded_rules", projected)
+        self.assertIn("do not reload unchanged references", projected["instructions"])
+
+    def test_resume_context_projects_mismatch_without_authorizing_mutation(self) -> None:
+        document = valid_state()
+        document["observed"]["source_fingerprint"] = "sha256:changed"
+        projected = PROJECTOR.project_context(document)
+        self.assertFalse(projected["ready"])
+        self.assertEqual("SNAPSHOT_REQUIRED", projected["gate"])
+        self.assertIn("source", projected["identity"]["comparisons"])
+        self.assertIn("do not mutate production state", projected["instructions"])
+
     def test_matching_observations_transition_to_ready(self) -> None:
         result = STATE.validate_state(valid_state())
         self.assertTrue(result["valid"])
         self.assertTrue(result["ready"])
         self.assertEqual("READY", result["suggested_gate"])
+
+    def test_malformed_enum_values_return_diagnostics_instead_of_crashing(self) -> None:
+        mutations = (
+            ("recovery_capsule.checkpoint.in_flight.status", []),
+            ("recovery_capsule.resume.next.type", []),
+            ("recovery_capsule.resume.next.purpose", []),
+            ("recovery_capsule.resume.recovery_type", []),
+        )
+        for dotted_path, malformed in mutations:
+            with self.subTest(path=dotted_path):
+                document = valid_state()
+                target = document
+                parts = dotted_path.split(".")
+                for part in parts[:-1]:
+                    target = target[part]
+                target[parts[-1]] = malformed
+                result = STATE.validate_state(document)
+                self.assertFalse(result["valid"])
+                self.assertTrue(result["errors"])
+
+    def test_compact_lists_are_typed_and_bounded(self) -> None:
+        malformed_acceptance = valid_state()
+        malformed_acceptance["recovery_capsule"]["contract"]["acceptance"] = [{}]
+        self.assertFalse(STATE.validate_state(malformed_acceptance)["valid"])
+
+        malformed_anchors = valid_state()
+        malformed_anchors["recovery_capsule"]["resume"]["anchors"] = [{}]
+        self.assertFalse(STATE.validate_state(malformed_anchors)["valid"])
+
+        expanded = valid_state()
+        expanded["recovery_capsule"]["checkpoint"]["validated"] = [
+            {
+                "stage": f"stage-{index}",
+                "evidence": {"locator": f"evidence:{index}"},
+                "checkpoint": {"id": f"checkpoint:{index}"},
+            }
+            for index in range(2)
+        ]
+        result = STATE.validate_state(expanded)
+        self.assertIn("checkpoint.validated_too_large", {item["code"] for item in result["errors"]})
+
+    def test_unknown_source_strength_cannot_authorize_ready(self) -> None:
+        document = valid_state()
+        document["source_snapshot"]["strength"] = "garbage"
+        result = STATE.validate_state(document)
+        self.assertFalse(result["ready"])
+        self.assertIn("snapshot.invalid_strength", {item["code"] for item in result["errors"]})
 
     def test_vague_next_requires_snapshot(self) -> None:
         document = valid_state()
@@ -168,11 +289,120 @@ class ContinuityStateTest(unittest.TestCase):
 
     def test_user_instruction_revision_change_invalidates_saved_next(self) -> None:
         document = valid_state()
-        document["observed"]["instruction_revision"] = "instruction-r4"
+        document["observed"]["directive_revision"] = "directive-r4"
         result = STATE.validate_state(document)
         self.assertTrue(result["valid"])
         self.assertEqual("SNAPSHOT_REQUIRED", result["suggested_gate"])
+        self.assertEqual("mismatch", result["comparisons"]["directive"])
         self.assertEqual("mismatch", result["comparisons"]["instruction"])
+
+    def test_query_advances_cursor_without_invalidating_saved_next(self) -> None:
+        document = valid_state()
+        document["observed"].update({
+            "conversation_cursor": "cursor-4",
+            "message_class": "QUERY",
+            "message_effect": {"affects_saved_next": False, "affected_assignment_ids": []},
+        })
+        result = STATE.validate_state(document)
+        self.assertTrue(result["ready"])
+        self.assertEqual("advanced", result["comparisons"]["conversation"])
+        self.assertEqual("match", result["comparisons"]["directive"])
+
+    def test_duplicate_reminder_does_not_refresh_revision_or_assignments(self) -> None:
+        document = valid_state()
+        document["observed"].update({
+            "conversation_cursor": "cursor-4",
+            "message_class": "REMINDER",
+            "message_effect": {"affects_saved_next": False, "affected_assignment_ids": []},
+        })
+        result = STATE.validate_state(document)
+        self.assertTrue(result["ready"])
+
+    def test_scoped_constraint_change_preserves_unaffected_saved_next(self) -> None:
+        document = valid_state()
+        document["observed"].update({
+            "conversation_cursor": "cursor-4",
+            "directive_revision": "directive-r4",
+            "message_class": "NEW_CONSTRAINT",
+            "message_effect": {
+                "affects_saved_next": False,
+                "affected_assignment_ids": ["frontend-slice"],
+            },
+        })
+        result = STATE.validate_state(document)
+        self.assertTrue(result["ready"])
+        self.assertEqual("scoped_change", result["comparisons"]["directive"])
+
+    def test_constraint_change_affecting_saved_next_requires_snapshot(self) -> None:
+        document = valid_state()
+        document["observed"].update({
+            "conversation_cursor": "cursor-4",
+            "directive_revision": "directive-r4",
+            "message_class": "NEW_CONSTRAINT",
+            "message_effect": {
+                "affects_saved_next": True,
+                "affected_assignment_ids": ["validator-gate"],
+            },
+        })
+        result = STATE.validate_state(document)
+        self.assertEqual("SNAPSHOT_REQUIRED", result["suggested_gate"])
+
+    def test_temporary_interrupt_holds_mainline_then_resumes_exact_next(self) -> None:
+        document = valid_state()
+        document["recovery_capsule"]["resume"]["mainline_return_anchor"] = {
+            "interruption_id": "interrupt-1",
+            "original_task_id": "continuity-tools",
+            "saved_stage": "implementation",
+            "saved_next_action_id": "implement-validator",
+            "frozen_contract_revision": "contract-r3",
+            "active_assignment_ids": [],
+            "source_fingerprint": "sha256:tree",
+            "interrupt_objective": "answer a bounded user question",
+            "resume_condition": "the bounded question is answered",
+        }
+        document["observed"].update({
+            "conversation_cursor": "cursor-4",
+            "message_class": "TEMPORARY_INTERRUPT",
+            "message_effect": {
+                "affects_saved_next": False,
+                "affected_assignment_ids": [],
+                "interruption_state": "ACTIVE",
+            },
+        })
+        held = STATE.validate_state(document)
+        self.assertTrue(held["valid"])
+        self.assertFalse(held["ready"])
+        self.assertEqual("RESUME_AUDIT", held["suggested_gate"])
+
+        document["observed"]["message_effect"]["interruption_state"] = "RESUME_READY"
+        resumed = STATE.validate_state(document)
+        self.assertTrue(resumed["ready"])
+
+    def test_temporary_interrupt_rejects_stale_return_anchor(self) -> None:
+        document = valid_state()
+        document["recovery_capsule"]["resume"]["mainline_return_anchor"] = {
+            "interruption_id": "interrupt-1",
+            "original_task_id": "continuity-tools",
+            "saved_stage": "implementation",
+            "saved_next_action_id": "implement-validator",
+            "frozen_contract_revision": "contract-r3",
+            "active_assignment_ids": [],
+            "source_fingerprint": "sha256:stale",
+            "interrupt_objective": "handle a bounded interrupt",
+            "resume_condition": "interrupt complete",
+        }
+        document["observed"].update({
+            "conversation_cursor": "cursor-4",
+            "message_class": "TEMPORARY_INTERRUPT",
+            "message_effect": {
+                "affects_saved_next": False,
+                "affected_assignment_ids": [],
+                "interruption_state": "RESUME_READY",
+            },
+        })
+        result = STATE.validate_state(document)
+        self.assertEqual("SNAPSHOT_REQUIRED", result["suggested_gate"])
+        self.assertIn("return_anchor.identity_mismatch", {item["code"] for item in result["mismatches"]})
 
     def test_compact_continuation_preserves_pre_compaction_action_identity(self) -> None:
         document = valid_state()
@@ -219,7 +449,7 @@ class ContinuityStateTest(unittest.TestCase):
 
     def test_partial_fingerprint_must_declare_risk(self) -> None:
         document = valid_state()
-        document["source_snapshot"]["strength"] = "partial(untracked)"
+        document["source_snapshot"]["strength"] = "partial"
         document["source_snapshot"]["missing_layers"] = ["untracked"]
         result = STATE.validate_state(document)
         self.assertIn("snapshot.partial_risk_missing", {item["code"] for item in result["errors"]})
@@ -267,6 +497,23 @@ class ContinuityStateTest(unittest.TestCase):
         self.assertTrue(allowed["valid"])
         self.assertTrue(allowed["ready"])
 
+    def test_scope_invalid_observation_cannot_authorize_solution_mutation(self) -> None:
+        document = with_active_observation(valid_state(), "SCOPE_INVALID", "solution")
+        blocked = STATE.validate_state(document)
+        self.assertIn(
+            "observation.scope_invalid_blocks_mutation",
+            {item["code"] for item in blocked["errors"]},
+        )
+
+        blocker_document = with_active_observation(valid_state(), "SCOPE_INVALID", "solution")
+        for field in ("next", "first_allowed_action"):
+            action = blocker_document["recovery_capsule"]["resume"][field]
+            action["type"] = "blocker"
+            action.pop("purpose")
+        allowed = STATE.validate_state(blocker_document)
+        self.assertTrue(allowed["valid"])
+        self.assertTrue(allowed["ready"])
+
     def test_observed_observation_change_requires_snapshot_refresh(self) -> None:
         document = with_active_observation(valid_state(), "DISCRIMINATING", "solution")
         document["observed"]["observation_result"] = "INVALID"
@@ -275,6 +522,119 @@ class ContinuityStateTest(unittest.TestCase):
         self.assertFalse(result["ready"])
         self.assertEqual("SNAPSHOT_REQUIRED", result["suggested_gate"])
         self.assertEqual("mismatch", result["comparisons"]["observation"])
+
+    def test_open_semantic_fork_blocks_solution_mutation(self) -> None:
+        document = with_semantic_fork(valid_state())
+        for field in ("next", "first_allowed_action"):
+            document["recovery_capsule"]["resume"][field]["purpose"] = "solution"
+        result = STATE.validate_state(document)
+        self.assertFalse(result["valid"])
+        self.assertIn("semantic_fork.open_blocks_solution", {item["code"] for item in result["errors"]})
+
+    def test_stopped_open_semantic_fork_resumes_focused_blocker_and_projects_state(self) -> None:
+        document = with_semantic_fork(valid_state())
+        for field in ("next", "first_allowed_action"):
+            action = document["recovery_capsule"]["resume"][field]
+            action["type"] = "blocker"
+            action.pop("purpose", None)
+            action["observable_signal"] = "the user selects one contract or reports a real blocker"
+        result = STATE.validate_state(document)
+        self.assertTrue(result["valid"])
+        self.assertTrue(result["ready"])
+        projected = PROJECTOR.project_context(document)
+        self.assertEqual("OPEN", projected["decision_state"]["semantic_fork"]["status"])
+        self.assertEqual("snapshot", projected["decision_state"]["semantic_fork"]["options"][0]["id"])
+        self.assertEqual("STOPPED", projected["decision_state"]["evidence_budget"]["status"])
+        self.assertEqual("semantic-decision", projected["decision_state"]["current_stage"])
+
+    def test_stopped_open_semantic_fork_rejects_more_evidence_without_reopen(self) -> None:
+        document = with_semantic_fork(valid_state())
+        for field in ("next", "first_allowed_action"):
+            action = document["recovery_capsule"]["resume"][field]
+            action["type"] = "check"
+            action.pop("purpose", None)
+        result = STATE.validate_state(document)
+        self.assertIn(
+            "evidence_budget.stopped_blocks_evidence",
+            {item["code"] for item in result["errors"]},
+        )
+
+    def test_second_open_evidence_round_requires_and_projects_reopen_identity(self) -> None:
+        document = with_semantic_fork(valid_state())
+        decision = document["recovery_capsule"]["decision_state"]
+        decision["evidence_budget"] = {
+            "round": 2, "scout_count": 0, "status": "OPEN",
+        }
+        decision["evidence_reopen"] = {
+            "reason": "NEW_CANDIDATE",
+            "locator": "source://new-candidate",
+            "from_round": 1,
+        }
+        for field in ("next", "first_allowed_action"):
+            action = document["recovery_capsule"]["resume"][field]
+            action["type"] = "check"
+            action.pop("purpose", None)
+        result = STATE.validate_state(document)
+        self.assertTrue(result["valid"], result["errors"])
+        projected = PROJECTOR.project_context(document)
+        self.assertEqual("NEW_CANDIDATE", projected["decision_state"]["evidence_reopen"]["reason"])
+
+    def test_semantic_options_are_not_silently_truncated(self) -> None:
+        document = with_semantic_fork(valid_state())
+        options = document["recovery_capsule"]["decision_state"]["semantic_fork"]["options"]
+        options.extend(
+            {"id": f"option-{index}", "contract": f"contract-{index}"}
+            for index in range(3)
+        )
+        for field in ("next", "first_allowed_action"):
+            action = document["recovery_capsule"]["resume"][field]
+            action["type"] = "blocker"
+            action.pop("purpose", None)
+        projected = PROJECTOR.project_context(document)
+        self.assertEqual(5, len(projected["decision_state"]["semantic_fork"]["options"]))
+
+    def test_material_fork_cannot_be_relabeled_not_applicable(self) -> None:
+        document = with_semantic_fork(valid_state())
+        document["recovery_capsule"]["decision_state"]["semantic_fork"]["status"] = "NOT_APPLICABLE"
+        result = STATE.validate_state(document)
+        self.assertIn(
+            "semantic_fork.false_not_applicable",
+            {item["code"] for item in result["errors"]},
+        )
+
+    def test_resolved_semantic_fork_requires_resolution_locator(self) -> None:
+        document = with_semantic_fork(valid_state(), status="RESOLVED")
+        document["recovery_capsule"]["decision_state"]["semantic_fork"]["resolution"].pop("locator")
+        result = STATE.validate_state(document)
+        self.assertIn(
+            "semantic_fork.missing_resolution_field",
+            {item["code"] for item in result["errors"]},
+        )
+
+    def test_evidence_resolution_requires_evidence_can_decide_true(self) -> None:
+        document = with_semantic_fork(valid_state(), status="RESOLVED")
+        fork = document["recovery_capsule"]["decision_state"]["semantic_fork"]
+        fork["resolution"]["source"] = "EVIDENCE"
+        result = STATE.validate_state(document)
+        self.assertIn(
+            "semantic_fork.invalid_evidence_resolution",
+            {item["code"] for item in result["errors"]},
+        )
+
+    def test_not_applicable_semantic_fork_cannot_carry_resolution(self) -> None:
+        document = with_semantic_fork(valid_state())
+        fork = document["recovery_capsule"]["decision_state"]["semantic_fork"]
+        fork["status"] = "NOT_APPLICABLE"
+        fork["options"] = []
+        fork["architectural_consequences"] = {}
+        fork["resolution"] = {
+            "source": "USER", "decision": "unused", "locator": "instruction://r4"
+        }
+        result = STATE.validate_state(document)
+        self.assertIn(
+            "semantic_fork.premature_resolution",
+            {item["code"] for item in result["errors"]},
+        )
 
 
 class ContinuityTraceTest(unittest.TestCase):
@@ -377,6 +737,7 @@ class ContinuityTraceTest(unittest.TestCase):
         self.assertEqual({"full_rule_reload", "workspace_rescan"}, classes)
         self.assertTrue(metrics["action_identity_continuity"])
         self.assertFalse(metrics["compact_continuation_fast_path_passed"])
+        self.assertEqual(1, metrics["post_compaction_full_skill_reload_count"])
 
     def test_compact_continuation_detects_previous_action_replay(self) -> None:
         metrics = TRACE.evaluate_trace(
@@ -399,6 +760,28 @@ class ContinuityTraceTest(unittest.TestCase):
             {item["class"] for item in metrics["recovery_route_deviations"]},
         )
 
+    def test_wrong_productive_action_does_not_close_recovery_deviation_window(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "resume_turn": 4,
+                "identity_match": True,
+                "instruction_changed": False,
+                "pre_compaction_next_action_id": "saved-next",
+                "events": [
+                    {"type": "mutation", "action_id": "wrong", "turn": 4},
+                    {"type": "skill_reload", "scope": "full_skill_set", "turn": 4},
+                    {"type": "mutation", "action_id": "saved-next", "turn": 4},
+                ],
+            }
+        )
+        self.assertEqual(1, metrics["post_compaction_full_skill_reload_count"])
+        self.assertIn(
+            "full_rule_reload",
+            {item["class"] for item in metrics["recovery_route_deviations"]},
+        )
+        self.assertFalse(metrics["compact_continuation_fast_path_passed"])
+
     def test_changed_user_instruction_does_not_force_stale_action_identity(self) -> None:
         metrics = TRACE.evaluate_trace(
             {
@@ -417,6 +800,121 @@ class ContinuityTraceTest(unittest.TestCase):
         self.assertFalse(metrics["action_identity_continuity_applicable"])
         self.assertIsNone(metrics["compact_continuation_fast_path_passed"])
         self.assertEqual(0, metrics["route_deviation_count"])
+
+    def test_query_answer_returns_to_saved_next_in_same_turn_without_refresh(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "resume_turn": 8,
+                "identity_match": True,
+                "pre_compaction_next_action_id": "verify-stage",
+                "directive_changed": False,
+                "events": [
+                    {
+                        "type": "user_message",
+                        "message_class": "QUERY",
+                        "saved_next_action_id": "verify-stage",
+                        "affects_saved_next": False,
+                        "turn": 8,
+                    },
+                    {
+                        "type": "action",
+                        "action_id": "answer-query",
+                        "serves_user_message": True,
+                        "turn": 8,
+                    },
+                    {"type": "mutation", "action_id": "verify-stage", "turn": 8},
+                ],
+            }
+        )
+        self.assertEqual(0, metrics["message_route_deviation_count"])
+        self.assertTrue(metrics["action_identity_continuity"])
+
+    def test_query_plan_refresh_and_delayed_return_are_detected(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "pre_compaction_next_action_id": "verify-stage",
+                "events": [
+                    {
+                        "type": "user_message",
+                        "message_class": "QUERY",
+                        "saved_next_action_id": "verify-stage",
+                        "affects_saved_next": False,
+                        "turn": 3,
+                    },
+                    {"type": "plan_refresh", "turn": 3},
+                    {"type": "action", "action_id": "answer", "serves_user_message": True, "turn": 3},
+                    {"type": "mutation", "action_id": "verify-stage", "turn": 4},
+                ],
+            }
+        )
+        self.assertEqual(1, metrics["unnecessary_plan_refresh_count"])
+        self.assertEqual(1, metrics["wrong_mainline_return_count"])
+
+    def test_duplicate_reminder_revision_is_detected(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "pre_compaction_next_action_id": "verify-stage",
+                "events": [
+                    {
+                        "type": "user_message",
+                        "message_class": "REMINDER",
+                        "saved_next_action_id": "verify-stage",
+                        "affects_saved_next": False,
+                        "directive_revision_before": "d1",
+                        "directive_revision_after": "d2",
+                        "turn": 2,
+                    },
+                    {"type": "mutation", "action_id": "verify-stage", "turn": 2},
+                ],
+            }
+        )
+        self.assertEqual(1, metrics["duplicate_reminder_revision_count"])
+
+    def test_temporary_interrupt_requires_anchor_and_exact_return(self) -> None:
+        missing = TRACE.evaluate_trace(
+            {
+                "events": [
+                    {"type": "user_message", "message_class": "TEMPORARY_INTERRUPT", "turn": 2},
+                    {"type": "interrupt_complete", "turn": 2},
+                ]
+            }
+        )
+        self.assertEqual(1, missing["missing_return_anchor_count"])
+
+        wrong = TRACE.evaluate_trace(
+            {
+                "events": [
+                    {
+                        "type": "user_message",
+                        "message_class": "TEMPORARY_INTERRUPT",
+                        "return_anchor": {"saved_next_action_id": "saved-next"},
+                        "turn": 2,
+                    },
+                    {"type": "action", "action_id": "interrupt-work", "serves_user_message": True, "turn": 2},
+                    {"type": "interrupt_complete", "turn": 2},
+                    {"type": "mutation", "action_id": "different-next", "turn": 2},
+                ]
+            }
+        )
+        self.assertEqual(1, wrong["wrong_mainline_return_count"])
+
+    def test_contract_change_blocks_old_mainline_until_snapshot_refresh(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "events": [
+                    {
+                        "type": "user_message",
+                        "message_class": "CONTRACT_CHANGE",
+                        "affects_saved_next": True,
+                    },
+                    {"type": "mutation", "action_id": "old-next"},
+                    {"type": "contract_snapshot_refreshed", "refreshes_user_change": True},
+                    {"type": "mutation", "action_id": "new-next"},
+                ]
+            }
+        )
+        self.assertEqual(1, metrics["stale_contract_action_count"])
 
     def test_detects_idle_reads_duplicate_check_and_prd_leak(self) -> None:
         metrics = TRACE.evaluate_trace(
@@ -512,6 +1010,32 @@ class ContinuityTraceTest(unittest.TestCase):
         self.assertEqual(1, metrics["invalid_observation_count"])
         self.assertEqual(1, metrics["solution_change_without_discriminating_evidence_count"])
         self.assertEqual(1, metrics["invalid_observation_used_as_evidence_count"])
+
+    def test_scope_invalid_observation_cannot_authorize_solution_change(self) -> None:
+        metrics = TRACE.evaluate_trace(
+            {
+                "requires_discriminating_evidence": True,
+                "events": [
+                    {
+                        "type": "observation_result",
+                        "observation_id": "select-contract",
+                        "observation_revision": "r1",
+                        "result": "SCOPE_INVALID",
+                        "changes_decision_state": True,
+                    },
+                    {"type": "snapshot_refreshed"},
+                    {
+                        "type": "mutation",
+                        "purpose": "solution",
+                        "observation_id": "select-contract",
+                        "observation_revision": "r1",
+                    },
+                ],
+            }
+        )
+        self.assertEqual(1, metrics["scope_invalid_observation_count"])
+        self.assertEqual(1, metrics["solution_change_without_discriminating_evidence_count"])
+        self.assertEqual(1, metrics["scope_invalid_observation_used_as_evidence_count"])
 
     def test_discriminating_observation_authorizes_solution_after_snapshot_refresh(self) -> None:
         metrics = TRACE.evaluate_trace(

@@ -21,6 +21,7 @@ def capsule(scope: str) -> dict[str, object]:
         "allowed_scope": [scope],
         "excluded_scope": ["production edits"],
         "inputs": ["source:abc"],
+        "directive_revision": "directive-r1",
         "acceptance": ["owner cited"],
         "acceptance_owner": "primary",
         "output_contract": ["findings", "evidence"],
@@ -102,6 +103,212 @@ def program_capsule(scope: str, *paths: str, revision: str = "r1") -> dict[str, 
     return value
 
 
+def semantic_fork(status: str = "RESOLVED", *, source: str = "EVIDENCE",
+                  evidence_can_decide: object | None = None) -> dict[str, object]:
+    if evidence_can_decide is None:
+        evidence_can_decide = source == "EVIDENCE"
+    value: dict[str, object] = {
+        "decision_question": "Which boundary owns the behavior?",
+        "status": status,
+        "evidence_can_decide": evidence_can_decide,
+        "options": [
+            {"id": "boundary-a", "contract": "Boundary A owns the behavior"},
+            {"id": "boundary-b", "contract": "Boundary B owns the behavior"},
+        ] if status != "NOT_APPLICABLE" else [],
+        "architectural_consequences": {
+            "ownership": "The selected boundary becomes the behavior owner",
+            "public_contract": "Consumers bind to the selected boundary",
+        } if status != "NOT_APPLICABLE" else {},
+    }
+    if status == "RESOLVED":
+        value["resolution"] = {
+            "source": source,
+            "decision": "boundary-a",
+            "locator": "decision:1",
+        }
+    return value
+
+
+def v4_capsule(scope: str, work_class: str) -> dict[str, object]:
+    value = authority_capsule(scope)
+    value["work_class"] = work_class
+    return value
+
+
+def compact_capsule(
+    scope: str,
+    work_class: str,
+    *,
+    write_set: list[str] | None = None,
+) -> dict[str, object]:
+    writes = list(write_set or [])
+    return {
+        "profile": "compact",
+        "objective": f"Complete the bounded {scope} slice",
+        "decision": f"Whether the {scope} slice satisfies its acceptance signal",
+        "allowed_scope": [scope],
+        "acceptance": ["slice behavior verified"],
+        "permissions": {"read": [scope], "write": writes},
+        "directive_revision": "directive-r1",
+        "work_class": work_class,
+        "source_fingerprint": "abc",
+    }
+
+
+def scout_capsule(scope: str, axis: str, *, round_number: int = 1,
+                  expansion_reason: str | None = None) -> dict[str, object]:
+    value = v4_capsule(scope, "evidence_scout")
+    value.update({
+        "decision": "Which boundary owns the behavior?",
+        "hypothesis": f"{scope} owns the behavior",
+        "discriminator": f"Find direct ownership evidence in {scope}",
+        "evidence_axis": axis,
+        "scout_round": round_number,
+    })
+    if expansion_reason is not None:
+        value["expansion_reason"] = expansion_reason
+    return value
+
+
+def v4_program(*, stage_kind: str = "implementation",
+               contract_state: str = "frozen") -> dict[str, object]:
+    stages: list[dict[str, object]] = [
+        {
+            "stage_id": "decision",
+            "stage_kind": "semantic_decision_contract_freeze",
+            "objective": "Resolve semantics and freeze contract",
+            "depends_on": [],
+            "required_contracts": [],
+            "entry_gate": "decision question known",
+            "route_mode": "SINGLE_OWNER",
+            "exit_gate": "semantic decision and contract revision recorded",
+            "status": "completed" if stage_kind != "semantic_decision_contract_freeze" else "active",
+        }
+    ]
+    if stage_kind == "implementation":
+        stages.append({
+            "stage_id": "implementation",
+            "stage_kind": "implementation",
+            "objective": "Implement accepted slices",
+            "depends_on": ["decision"],
+            "required_contracts": ["feature-api"],
+            "entry_gate": "semantic fork resolved and contract frozen",
+            "route_mode": "BOUNDED_WORKER",
+            "exit_gate": "accepted artifacts integrated",
+            "status": "active",
+        })
+    return {
+        "program_id": "admission-program",
+        "primary_role": "ORCHESTRATOR_INTEGRATOR",
+        "current_stage": "implementation" if stage_kind == "implementation" else "decision",
+        "stages": stages,
+        "shared_contracts": [
+            {"contract_id": "feature-api", "revision": "r1", "state": contract_state,
+             "owner": "primary"},
+        ],
+    }
+
+
+def compact_cross_module_trace() -> dict[str, object]:
+    backend = compact_capsule(
+        "backend", "implementation", write_set=["backend/service.py"]
+    )
+    frontend = compact_capsule(
+        "frontend", "implementation", write_set=["frontend/page.ts"]
+    )
+    for value in (backend, frontend):
+        value.update({"depends_on": ["decision"], "contract_revisions": {"feature-api": "r1"}})
+    return {
+        "schema_version": 5,
+        "semantic_fork": semantic_fork(),
+        "program": v4_program(),
+        "budget": {"max_active": 2, "max_depth": 1},
+        "events": [
+            {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
+             "decision_question": "Which boundary owns the behavior?",
+             "rationale": "two disjoint slices consume one frozen contract"},
+            {"type": "delegate", "stage_id": "implementation", "agent": "backend-worker",
+             "assignment_id": "backend-r1", "tier": "balanced", "depth": 1,
+             "dispatch_receipt": "host:backend-r1", "write_set": ["backend/service.py"],
+             "capsule": backend},
+            {"type": "delegate", "stage_id": "implementation", "agent": "frontend-worker",
+             "assignment_id": "frontend-r1", "tier": "balanced", "depth": 1,
+             "dispatch_receipt": "host:frontend-r1", "write_set": ["frontend/page.ts"],
+             "capsule": frontend},
+            {"type": "result", "stage_id": "implementation", "agent": "backend-worker",
+             "assignment_id": "backend-r1", "status": "success",
+             "directive_revision": "directive-r1", "contract_revisions": {"feature-api": "r1"},
+             "changed_artifacts": ["backend/service.py"], "evidence": ["backend:test"],
+             "unverified_items": [], "scope_or_contract_conflicts": [],
+             "source_fingerprint": "abc"},
+            {"type": "result", "stage_id": "implementation", "agent": "frontend-worker",
+             "assignment_id": "frontend-r1", "status": "success",
+             "directive_revision": "directive-r1", "contract_revisions": {"feature-api": "r1"},
+             "changed_artifacts": ["frontend/page.ts"], "evidence": ["frontend:typecheck"],
+             "unverified_items": [], "scope_or_contract_conflicts": [],
+             "source_fingerprint": "abc"},
+            acceptance("backend-r1", artifacts_checked=True,
+                       signals={"slice behavior verified": ["backend:test"]},
+                       stage_id="implementation"),
+            acceptance("frontend-r1", artifacts_checked=True,
+                       signals={"slice behavior verified": ["frontend:typecheck"]},
+                       stage_id="implementation"),
+            {"type": "integrate", "stage_id": "implementation",
+             "acceptance": ["both slices accepted against feature-api:r1"],
+             "evidence": ["backend:test", "frontend:typecheck"]},
+        ],
+    }
+
+
+def review_disposition_trace(reason: str) -> dict[str, object]:
+    review_program = {
+        "program_id": "review-program",
+        "primary_role": "ORCHESTRATOR_INTEGRATOR",
+        "current_stage": "review",
+        "stages": [
+            {"stage_id": "integration", "stage_kind": "integration",
+             "objective": "Integrate accepted work", "depends_on": [],
+             "required_contracts": [], "entry_gate": "accepted work", "route_mode": "SINGLE_OWNER",
+             "exit_gate": "candidate retained", "status": "completed"},
+            {"stage_id": "review", "stage_kind": "review", "objective": "Review material risk",
+             "depends_on": ["integration"], "required_contracts": [],
+             "entry_gate": "retained candidate", "route_mode": "INDEPENDENT_REVIEW",
+             "exit_gate": "findings integrated", "status": "active",
+             "review_targets": ["artifact-r1"], "material_risks": ["security"]},
+        ],
+        "shared_contracts": [],
+    }
+    reviewer = v4_capsule("artifact-r1", "review")
+    reviewer.update({
+        "review_targets": ["artifact-r1"],
+        "material_risks": ["security"],
+        "depends_on": ["integration"],
+        "contract_revisions": {},
+    })
+    return {
+        "schema_version": 4,
+        "semantic_fork": semantic_fork(),
+        "artifacts": [{"artifact_id": "artifact-r1", "status": "retained"}],
+        "program": review_program,
+        "events": [
+            {"type": "route", "stage_id": "review", "mode": "INDEPENDENT_REVIEW",
+             "decision_question": "Which boundary owns the behavior?",
+             "rationale": "retained artifact has material security risk"},
+            {"type": "delegate", "stage_id": "review", "agent": "reviewer",
+             "assignment_id": "review", "tier": "strong", "depth": 1,
+             "dispatch_receipt": "host:review", "write_set": [], "capsule": reviewer},
+            {"type": "result", "stage_id": "review", "agent": "reviewer",
+             "assignment_id": "review", "status": "success", "evidence": ["finding:1"],
+             "source_fingerprint": "abc"},
+            acceptance("review", stage_id="review"),
+            {"type": "artifact_disposition", "artifact_id": "artifact-r1",
+             "status": "discarded", "reason": reason, "evidence": ["decision:2"]},
+            {"type": "integrate", "stage_id": "review", "acceptance": ["finding recorded"],
+             "evidence": ["finding:1"]},
+        ],
+    }
+
+
 class EvaluateOrchestrationTraceTest(unittest.TestCase):
     def test_accepts_legacy_single_stage_trace_without_v2_receipts(self) -> None:
         legacy_capsule = capsule("backend")
@@ -147,6 +354,64 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
             "events": [{"type": "route", "mode": "SINGLE_OWNER", "rationale": "short coupled task"}]
         })
         self.assertTrue(result["passed"], result["errors"])
+
+    def test_accepts_v5_low_risk_single_owner_without_control_plane_ceremony(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 5,
+            "events": [
+                {"type": "route", "mode": "SINGLE_OWNER",
+                 "rationale": "one private-symbol rename with an existing deterministic test"},
+                {"type": "primary_action", "action_class": "leaf_implementation",
+                 "write_set": ["module/private_symbol.py"]},
+                {"type": "primary_action", "action_class": "validation", "write_set": []},
+            ],
+        })
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(0, result["metrics"]["delegations"])
+        self.assertEqual(0, result["metrics"]["compact_assignments"])
+
+    def test_accepts_v5_compact_cross_module_simulation(self) -> None:
+        result = EVALUATOR.evaluate_trace(compact_cross_module_trace())
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(2, result["metrics"]["compact_assignments"])
+        self.assertEqual(2, result["metrics"]["accepted_assignments"])
+        self.assertEqual(0, result["metrics"]["contract_gate_violations"])
+
+    def test_rejects_v5_compact_result_without_disclosure_fields(self) -> None:
+        trace = compact_cross_module_trace()
+        events = trace["events"]
+        assert isinstance(events, list)
+        backend_result = events[3]
+        assert isinstance(backend_result, dict)
+        backend_result.pop("unverified_items")
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any(
+            "compact result unverified_items must be a list" in error
+            for error in result["errors"]
+        ))
+
+    def test_rejects_v5_read_only_role_with_write_scope(self) -> None:
+        read_only = compact_capsule(
+            "validation", "validation", write_set=["module/service.py"]
+        )
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 5,
+            "semantic_fork": semantic_fork(),
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "invalid validation worker write"},
+                {"type": "delegate", "agent": "validator", "assignment_id": "validation-r1",
+                 "tier": "balanced", "depth": 1, "dispatch_receipt": "host:validation-r1",
+                 "write_set": ["module/service.py"], "capsule": read_only},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any(
+            "work_class 'validation' must be read-only" in error
+            for error in result["errors"]
+        ))
 
     def test_accepts_v3_leaf_with_denied_delegation(self) -> None:
         result = EVALUATOR.evaluate_trace({
@@ -549,6 +814,58 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertTrue(any("must cover program shared contracts" in error for error in result["errors"]))
 
+    def test_contract_update_stops_old_workers_and_rejects_stale_results(self) -> None:
+        stale = EVALUATOR.evaluate_trace({
+            "program": program(),
+            "events": [
+                {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
+                 "rationale": "frozen API"},
+                {"type": "delegate", "stage_id": "implementation", "agent": "backend",
+                 "assignment_id": "backend-r1", "tier": "balanced", "dispatch_receipt": "host:backend-r1",
+                 "write_set": ["service.py"], "capsule": program_capsule("backend", "service.py")},
+                {"type": "contract_update", "owner": "primary",
+                 "contract_revisions": {"feature-api": "r2"}, "stopped_assignment_ids": [],
+                 "evidence": ["user-decision:r2"]},
+                {"type": "result", "stage_id": "implementation", "agent": "backend",
+                 "assignment_id": "backend-r1", "status": "success", "evidence": ["service.py:test"],
+                 "source_fingerprint": "abc"},
+                acceptance("backend-r1", artifacts_checked=True, stage_id="implementation"),
+                {"type": "integrate", "stage_id": "implementation", "acceptance": ["accepted"],
+                 "evidence": ["service.py:test"]},
+            ],
+        })
+        self.assertFalse(stale["passed"])
+        self.assertEqual(1, stale["metrics"]["stale_contract_results"])
+        self.assertTrue(any("did not stop affected active assignments" in error for error in stale["errors"]))
+        self.assertTrue(any("superseded contracts" in error for error in stale["errors"]))
+
+    def test_contract_update_allows_new_assignment_at_current_revision(self) -> None:
+        trace = {
+            "program": program(),
+            "events": [
+                {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
+                 "rationale": "frozen API"},
+                {"type": "delegate", "stage_id": "implementation", "agent": "backend-old",
+                 "assignment_id": "backend-r1", "tier": "balanced", "dispatch_receipt": "host:backend-r1",
+                 "write_set": ["service.py"], "capsule": program_capsule("backend", "service.py")},
+                {"type": "contract_update", "owner": "primary",
+                 "contract_revisions": {"feature-api": "r2"},
+                 "stopped_assignment_ids": ["backend-r1"], "evidence": ["user-decision:r2"]},
+                {"type": "delegate", "stage_id": "implementation", "agent": "backend-new",
+                 "assignment_id": "backend-r2", "tier": "balanced", "dispatch_receipt": "host:backend-r2",
+                 "write_set": ["service.py"],
+                 "capsule": program_capsule("backend", "service.py", revision="r2")},
+                {"type": "result", "stage_id": "implementation", "agent": "backend-new",
+                 "assignment_id": "backend-r2", "status": "success", "evidence": ["service.py:test"],
+                 "source_fingerprint": "abc"},
+                acceptance("backend-r2", artifacts_checked=True, stage_id="implementation"),
+                {"type": "integrate", "stage_id": "implementation", "acceptance": ["accepted"],
+                 "evidence": ["service.py:test"]},
+            ],
+        }
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+
     def test_rejects_primary_leaf_implementation_or_overlapping_write_while_worker_active(self) -> None:
         trace = {
             "program": program(),
@@ -580,6 +897,466 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
         })
         self.assertFalse(result["passed"])
         self.assertTrue(any("route.stage_id must match" in error for error in result["errors"]))
+
+    def test_accepts_v4_bounded_scout_round_and_freeze(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "evidence_budget": {
+                "round": 1, "scout_count": 2, "status": "STOPPED", "stop_reason": "FREEZE",
+            },
+            "budget": {"max_active": 2, "max_depth": 1},
+            "events": [
+                {"type": "route", "mode": "PARALLEL_SCOUTS",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "two complementary ownership axes"},
+                {"type": "delegate", "agent": "a", "assignment_id": "source", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:source", "write_set": [],
+                 "capsule": scout_capsule("source", "definitions")},
+                {"type": "delegate", "agent": "b", "assignment_id": "runtime", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:runtime", "write_set": [],
+                 "capsule": scout_capsule("runtime", "runtime-trace")},
+                {"type": "result", "agent": "a", "assignment_id": "source", "status": "success",
+                 "evidence": ["Owner.py:10"], "source_fingerprint": "abc"},
+                {"type": "result", "agent": "b", "assignment_id": "runtime", "status": "success",
+                 "evidence": ["trace.log:4"], "source_fingerprint": "abc"},
+                acceptance("source"),
+                acceptance("runtime"),
+                {"type": "evidence_gate", "round": 1, "status": "STOPPED",
+                 "stop_reason": "FREEZE", "result": "DISCRIMINATING",
+                 "evidence": ["Owner.py:10", "trace.log:4"]},
+                {"type": "integrate", "acceptance": ["boundary frozen"],
+                 "evidence": ["Owner.py:10", "trace.log:4"]},
+            ],
+        })
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(0, result["metrics"]["scout_budget_violations"])
+
+    def test_accepts_canonical_unknown_semantic_fork(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(
+                "OPEN", source="USER", evidence_can_decide="unknown"
+            ),
+            "evidence_budget": {
+                "round": 1, "scout_count": 0, "status": "STOPPED", "stop_reason": "ASK_USER",
+            },
+            "events": [
+                {"type": "route", "mode": "SINGLE_OWNER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "retain the decision with the primary while evidence scope is unknown"},
+            ],
+        })
+        self.assertTrue(result["passed"], result["errors"])
+
+    def test_v4_route_requires_native_nonempty_decision_question(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "events": [
+                {"type": "route", "mode": "SINGLE_OWNER", "decision_question": None,
+                 "rationale": "malformed adapter input"},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("route lacks decision_question" in error for error in result["errors"]))
+
+    def test_v4_rejects_duplicate_assignment_identity_without_overwriting_state(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "budget": {"max_active": 2, "max_depth": 1},
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "two claimed slices"},
+                {"type": "delegate", "agent": "a", "assignment_id": "same", "tier": "balanced",
+                 "depth": 1, "dispatch_receipt": "host:a", "write_set": [],
+                 "capsule": v4_capsule("a", "implementation")},
+                {"type": "delegate", "agent": "b", "assignment_id": "same", "tier": "balanced",
+                 "depth": 1, "dispatch_receipt": "host:b", "write_set": [],
+                 "capsule": v4_capsule("b", "implementation")},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("duplicates assignment_id" in error for error in result["errors"]))
+
+    def test_malformed_v4_lists_return_errors_instead_of_crashing(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "malformed adapter input"},
+                {"type": "delegate", "agent": "worker", "assignment_id": "work",
+                 "tier": "balanced", "depth": 1, "dispatch_receipt": "host:work",
+                 "write_set": [{}], "capsule": v4_capsule("work", "implementation")},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("write_set" in error for error in result["errors"]))
+
+    def test_invalid_observation_reopen_is_limited_to_one_round(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "evidence_budget": {
+                "round": 3, "scout_count": 0, "status": "STOPPED",
+                "stop_reason": "INVALID_OBSERVATION",
+            },
+            "events": [
+                {"type": "route", "mode": "PARALLEL_SCOUTS",
+                 "decision_question": "Which boundary owns the behavior?", "rationale": "claimed repair"},
+                {"type": "evidence_gate", "round": 1, "status": "STOPPED",
+                 "stop_reason": "INVALID_OBSERVATION", "result": "INVALID", "evidence": ["e:1"]},
+                {"type": "evidence_reopen", "round": 2, "reason": "INVALID_OBSERVATION",
+                 "locator": "e:1"},
+                {"type": "evidence_gate", "round": 2, "status": "STOPPED",
+                 "stop_reason": "INVALID_OBSERVATION", "result": "INVALID", "evidence": ["e:2"]},
+                {"type": "evidence_reopen", "round": 3, "reason": "INVALID_OBSERVATION",
+                 "locator": "e:2"},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("only one observation-apparatus" in error for error in result["errors"]))
+
+    def test_rejects_legacy_semantic_fork_shapes_in_v4(self) -> None:
+        legacy = semantic_fork()
+        legacy["options"] = ["boundary-a", "boundary-b"]
+        legacy["architectural_consequences"] = ["ownership"]
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": legacy,
+            "events": [
+                {"type": "route", "mode": "SINGLE_OWNER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "schema validation"},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("options[0] must be an object" in error for error in result["errors"]))
+        self.assertTrue(any("architectural_consequences must be an object" in error
+                            for error in result["errors"]))
+
+    def test_accepts_v4_expansion_only_after_invalid_observation(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "evidence_budget": {
+                "round": 2, "scout_count": 1, "status": "STOPPED", "stop_reason": "FREEZE",
+            },
+            "budget": {"max_active": 1, "max_depth": 1},
+            "events": [
+                {"type": "route", "mode": "PARALLEL_SCOUTS",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "replace one invalid observation"},
+                {"type": "delegate", "agent": "a", "assignment_id": "fixture", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:fixture", "write_set": [],
+                 "capsule": scout_capsule("fixture", "fixture")},
+                {"type": "result", "agent": "a", "assignment_id": "fixture", "status": "success",
+                 "evidence": ["fixture.log:invalid"], "source_fingerprint": "abc"},
+                acceptance("fixture"),
+                {"type": "evidence_gate", "round": 1, "status": "STOPPED",
+                 "stop_reason": "INVALID_OBSERVATION", "result": "INVALID",
+                 "evidence": ["fixture.log:invalid"]},
+                {"type": "evidence_reopen", "round": 2, "reason": "INVALID_OBSERVATION",
+                 "locator": "fixture.log:invalid"},
+                {"type": "delegate", "agent": "b", "assignment_id": "replacement", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:replacement", "write_set": [],
+                 "capsule": scout_capsule("source", "source", round_number=2,
+                                          expansion_reason="INVALID_OBSERVATION")},
+                {"type": "result", "agent": "b", "assignment_id": "replacement", "status": "success",
+                 "evidence": ["Owner.py:10"], "source_fingerprint": "abc"},
+                acceptance("replacement"),
+                {"type": "evidence_gate", "round": 2, "status": "STOPPED",
+                 "stop_reason": "FREEZE", "result": "DISCRIMINATING",
+                 "evidence": ["Owner.py:10"]},
+                {"type": "integrate", "acceptance": ["boundary frozen"],
+                 "evidence": ["fixture.log:invalid", "Owner.py:10"]},
+            ],
+        })
+        self.assertTrue(result["passed"], result["errors"])
+
+    def test_accepts_v4_new_candidate_reopen_after_stopped_gate(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "evidence_budget": {
+                "round": 2, "scout_count": 1, "status": "STOPPED", "stop_reason": "FREEZE",
+            },
+            "budget": {"max_active": 1, "max_depth": 1},
+            "events": [
+                {"type": "route", "mode": "PARALLEL_SCOUTS",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "a newly evidenced candidate changes the decision ledger"},
+                {"type": "delegate", "agent": "a", "assignment_id": "first", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:first", "write_set": [],
+                 "capsule": scout_capsule("source", "definitions")},
+                {"type": "result", "agent": "a", "assignment_id": "first", "status": "success",
+                 "evidence": ["Owner.py:10"], "source_fingerprint": "abc"},
+                acceptance("first"),
+                {"type": "evidence_gate", "round": 1, "status": "STOPPED",
+                 "stop_reason": "FREEZE", "result": "DISCRIMINATING",
+                 "evidence": ["Owner.py:10"]},
+                {"type": "evidence_reopen", "round": 2, "reason": "NEW_CANDIDATE",
+                 "locator": "Plugin.py:20"},
+                {"type": "delegate", "agent": "b", "assignment_id": "new-candidate",
+                 "tier": "economy", "depth": 1, "dispatch_receipt": "host:new-candidate",
+                 "write_set": [],
+                 "capsule": scout_capsule("plugin", "registration", round_number=2,
+                                          expansion_reason="NEW_CANDIDATE")},
+                {"type": "result", "agent": "b", "assignment_id": "new-candidate",
+                 "status": "success", "evidence": ["Plugin.py:20"],
+                 "source_fingerprint": "abc"},
+                acceptance("new-candidate"),
+                {"type": "evidence_gate", "round": 2, "status": "STOPPED",
+                 "stop_reason": "FREEZE", "result": "DISCRIMINATING",
+                 "evidence": ["Plugin.py:20"]},
+                {"type": "integrate", "acceptance": ["candidate ledger reconciled"],
+                 "evidence": ["Owner.py:10", "Plugin.py:20"]},
+            ],
+        })
+        self.assertTrue(result["passed"], result["errors"])
+
+    def test_rejects_scout_round_after_discriminating_evidence(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "evidence_budget": {
+                "round": 2, "scout_count": 1, "status": "STOPPED", "stop_reason": "BLOCKER",
+            },
+            "budget": {"max_active": 1, "max_depth": 1},
+            "events": [
+                {"type": "route", "mode": "PARALLEL_SCOUTS",
+                 "decision_question": "Which boundary owns the behavior?", "rationale": "claimed scan"},
+                {"type": "delegate", "agent": "a", "assignment_id": "first", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:first", "write_set": [],
+                 "capsule": scout_capsule("source", "source")},
+                {"type": "result", "agent": "a", "assignment_id": "first", "status": "success",
+                 "evidence": ["Owner.py:10"], "source_fingerprint": "abc"},
+                acceptance("first"),
+                {"type": "evidence_gate", "round": 1, "status": "STOPPED",
+                 "stop_reason": "FREEZE", "result": "DISCRIMINATING",
+                 "evidence": ["Owner.py:10"]},
+                {"type": "delegate", "agent": "b", "assignment_id": "extra", "tier": "economy",
+                 "depth": 1, "dispatch_receipt": "host:extra", "write_set": [],
+                 "capsule": scout_capsule("everything", "broad", round_number=2,
+                                          expansion_reason="HIGH_RISK_GAP")},
+                {"type": "result", "agent": "b", "assignment_id": "extra", "status": "success",
+                 "evidence": ["Other.py:2"], "source_fingerprint": "abc"},
+                acceptance("extra"),
+                {"type": "evidence_gate", "round": 2, "status": "STOPPED",
+                 "stop_reason": "BLOCKER", "result": "INCONCLUSIVE",
+                 "evidence": ["Other.py:2"]},
+                {"type": "integrate", "acceptance": ["recorded"],
+                 "evidence": ["Owner.py:10", "Other.py:2"]},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertEqual(1, result["metrics"]["scout_rounds_after_discriminating_evidence"])
+        self.assertTrue(any("after discovery stopped" in error for error in result["errors"]))
+
+    def test_rejects_more_than_two_scouts_in_one_round(self) -> None:
+        events: list[dict[str, object]] = [
+            {"type": "route", "mode": "PARALLEL_SCOUTS",
+             "decision_question": "Which boundary owns the behavior?", "rationale": "claimed scan"},
+        ]
+        for number in range(3):
+            assignment = f"scan-{number}"
+            events.append({
+                "type": "delegate", "agent": assignment, "assignment_id": assignment,
+                "tier": "economy", "depth": 1, "dispatch_receipt": f"host:{assignment}",
+                "write_set": [], "capsule": scout_capsule(assignment, f"axis-{number}"),
+            })
+        for number in range(3):
+            assignment = f"scan-{number}"
+            events.append({"type": "result", "agent": assignment, "assignment_id": assignment,
+                           "status": "success", "evidence": [f"evidence:{number}"],
+                           "source_fingerprint": "abc"})
+            events.append(acceptance(assignment))
+        events.extend([
+            {"type": "evidence_gate", "round": 1, "status": "STOPPED",
+             "stop_reason": "FREEZE", "result": "DISCRIMINATING",
+             "evidence": ["evidence:0"]},
+            {"type": "integrate", "acceptance": ["recorded"], "evidence": ["evidence:0"]},
+        ])
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "evidence_budget": {
+                "round": 1, "scout_count": 3, "status": "STOPPED", "stop_reason": "FREEZE",
+            },
+            "budget": {"max_active": 3, "max_depth": 1},
+            "events": events,
+        })
+        self.assertFalse(result["passed"])
+        self.assertGreater(result["metrics"]["scout_budget_violations"], 0)
+
+    def test_rejects_scout_without_decision_question_or_hypothesis(self) -> None:
+        scout = scout_capsule("source", "source")
+        scout.pop("hypothesis")
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "evidence_budget": {
+                "round": 1, "scout_count": 1, "status": "STOPPED", "stop_reason": "FREEZE",
+            },
+            "events": [
+                {"type": "route", "mode": "PARALLEL_SCOUTS", "rationale": "claimed scan"},
+                {"type": "delegate", "agent": "scout", "assignment_id": "scout",
+                 "tier": "economy", "depth": 1, "dispatch_receipt": "host:scout",
+                 "write_set": [], "capsule": scout},
+                {"type": "result", "agent": "scout", "assignment_id": "scout",
+                 "status": "success", "evidence": ["Owner.py:10"], "source_fingerprint": "abc"},
+                acceptance("scout"),
+                {"type": "evidence_gate", "round": 1, "status": "STOPPED",
+                 "stop_reason": "FREEZE", "result": "DISCRIMINATING",
+                 "evidence": ["Owner.py:10"]},
+                {"type": "integrate", "acceptance": ["recorded"], "evidence": ["Owner.py:10"]},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("route lacks decision_question" in error for error in result["errors"]))
+        self.assertTrue(any("requires nonempty hypothesis" in error for error in result["errors"]))
+
+    def test_rejects_design_implementation_and_review_while_fork_open(self) -> None:
+        for work_class in ("documentation", "contract_design", "implementation", "review"):
+            with self.subTest(work_class=work_class):
+                work = v4_capsule("candidate", work_class)
+                if work_class == "review":
+                    work.update({"review_targets": ["candidate"], "material_risks": ["security"]})
+                result = EVALUATOR.evaluate_trace({
+                    "schema_version": 4,
+                    "semantic_fork": semantic_fork("OPEN", source="USER"),
+                    "artifacts": [{"artifact_id": "candidate", "status": "retained"}],
+                    "events": [
+                        {"type": "route", "mode": "BOUNDED_WORKER",
+                         "decision_question": "Which boundary owns the behavior?",
+                         "rationale": "claimed premature work"},
+                        {"type": "delegate", "agent": "worker", "assignment_id": "work",
+                         "tier": "strong", "depth": 1, "dispatch_receipt": "host:work",
+                         "write_set": [], "capsule": work},
+                        {"type": "result", "agent": "worker", "assignment_id": "work",
+                         "status": "success", "evidence": ["candidate:1"],
+                         "source_fingerprint": "abc"},
+                        acceptance("work"),
+                        {"type": "integrate", "acceptance": ["claimed"], "evidence": ["candidate:1"]},
+                    ],
+                })
+                self.assertFalse(result["passed"])
+                self.assertGreater(
+                    result["metrics"]["semantic_fork_admission_violations"], 0
+                )
+
+    def test_rejects_v4_implementation_before_relevant_contract_freeze(self) -> None:
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "program": v4_program(contract_state="proposed"),
+            "events": [
+                {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "claimed implementation readiness"},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("requires contract 'feature-api' to be frozen" in error
+                            for error in result["errors"]))
+        self.assertGreater(result["metrics"]["stage_admission_violations"], 0)
+
+    def test_accepts_v4_implementation_after_semantic_and_contract_gates(self) -> None:
+        worker = with_write_permission(v4_capsule("service.py", "implementation"), "service.py")
+        worker.update({
+            "depends_on": ["decision"],
+            "contract_revisions": {"feature-api": "r1"},
+        })
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(source="USER"),
+            "program": v4_program(),
+            "events": [
+                {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "resolved semantics and frozen relevant contract"},
+                {"type": "delegate", "stage_id": "implementation", "agent": "worker",
+                 "assignment_id": "implementation", "tier": "balanced", "depth": 1,
+                 "dispatch_receipt": "host:implementation", "write_set": ["service.py"],
+                 "capsule": worker},
+                {"type": "result", "stage_id": "implementation", "agent": "worker",
+                 "assignment_id": "implementation", "status": "success",
+                 "evidence": ["service.py:test"], "source_fingerprint": "abc"},
+                acceptance("implementation", artifacts_checked=True, stage_id="implementation"),
+                {"type": "integrate", "stage_id": "implementation",
+                 "acceptance": ["implementation accepted"], "evidence": ["service.py:test"]},
+            ],
+        })
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(0, result["metrics"]["stage_admission_violations"])
+
+    def test_rejects_review_when_disposition_invalidates_admission(self) -> None:
+        result = EVALUATOR.evaluate_trace(
+            review_disposition_trace("ADMISSION_PRECONDITION_INVALIDATED")
+        )
+        self.assertFalse(result["passed"])
+        self.assertEqual(1, result["metrics"]["review_of_later_discarded_artifact"])
+        self.assertEqual(1, result["metrics"]["premature_review_admission_violations"])
+
+    def test_accepts_review_finding_that_discards_retained_artifact(self) -> None:
+        result = EVALUATOR.evaluate_trace(review_disposition_trace("REVIEW_FINDING"))
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(1, result["metrics"]["review_of_later_discarded_artifact"])
+        self.assertEqual(0, result["metrics"]["premature_review_admission_violations"])
+
+    def test_rejects_review_without_retained_target_or_material_risk(self) -> None:
+        reviewer = v4_capsule("candidate", "review")
+        reviewer.update({"review_targets": ["candidate"], "material_risks": []})
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "artifacts": [{"artifact_id": "candidate", "status": "candidate"}],
+            "events": [
+                {"type": "route", "mode": "INDEPENDENT_REVIEW",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "claimed review"},
+                {"type": "delegate", "agent": "reviewer", "assignment_id": "review",
+                 "tier": "strong", "depth": 1, "dispatch_receipt": "host:review",
+                 "write_set": [], "capsule": reviewer},
+                {"type": "result", "agent": "reviewer", "assignment_id": "review",
+                 "status": "success", "evidence": ["finding:1"], "source_fingerprint": "abc"},
+                acceptance("review"),
+                {"type": "integrate", "acceptance": ["recorded"], "evidence": ["finding:1"]},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertEqual(2, result["metrics"]["review_admission_violations"])
+
+    def test_rejects_duplicate_canonical_stage_kind(self) -> None:
+        duplicated = v4_program()
+        stages = duplicated["stages"]
+        assert isinstance(stages, list)
+        stages.insert(1, {
+            "stage_id": "decision-checklist-two",
+            "stage_kind": "semantic_decision_contract_freeze",
+            "objective": "Second checklist item",
+            "depends_on": ["decision"],
+            "required_contracts": [],
+            "entry_gate": "first checklist item",
+            "route_mode": "SINGLE_OWNER",
+            "exit_gate": "second checklist item",
+            "status": "completed",
+        })
+        result = EVALUATOR.evaluate_trace({
+            "schema_version": 4,
+            "semantic_fork": semantic_fork(),
+            "program": duplicated,
+            "events": [
+                {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
+                 "decision_question": "Which boundary owns the behavior?", "rationale": "claimed ready"},
+            ],
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("stage_kind duplicates" in error for error in result["errors"]))
 
 
 if __name__ == "__main__":

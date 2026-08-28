@@ -21,8 +21,11 @@ The following are operational guardrails derived from the combined evidence, not
 - Default delegation depth one and one or two active slices to cap coordination and fan-out.
 - Treat scope, permissions, write ownership and budget as monotonically decreasing capabilities. Allow nested delegation only when a host policy can enforce that attenuation before spawn; otherwise make delegated roles leaves.
 - Parallelize independent evidence collection before shared implementation.
+- Bind each evidence round to one decision question and stop after discriminating evidence; additional broad scouts add coordination and duplicated-reading cost without changing stage admission. The default limit of two scouts is an operational budget to tune by task class, not a benchmark claim.
 - Represent substantial cross-module delivery as a bounded sequence of stage-level routing decisions; keep one primary orchestrator responsible for shared contracts, integration and acceptance instead of creating recursive Agent teams.
 - Freeze the relevant cross-slice contract revision and satisfy dependency gates before concurrent implementation writes; otherwise use a sequential handoff.
+- Treat review as a conditional risk-control stage for a retained integration candidate, not a mandatory committee step for every provisional design.
+- Keep control-plane verification proportional to the activated risk. Central defaults may expand a compact depth-one assignment deterministically; do not spend model work restating them or create new evidence solely to populate orchestration records.
 - After one informative failure, stop cheap same-route retries and transfer a fresh escalation packet.
 - Keep public contracts, integration, external side effects and final acceptance under one primary owner.
 - Tune thresholds with task-class traces and compare against a single-owner baseline.

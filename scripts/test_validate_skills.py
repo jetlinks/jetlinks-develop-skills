@@ -75,10 +75,10 @@ class ValidateSkillsTest(unittest.TestCase):
             self.create_skill(root, "task-continuity")
             result = VALIDATOR.validate_repository(root)
             joined = "\n".join(result["errors"])
-            self.assertIn("missing required behavioral contract marker: READY", joined)
-            self.assertIn("required behavioral contract file missing", joined)
+            self.assertIn("missing required contract marker: READY", joined)
+            self.assertIn("required contract-marker file missing", joined)
 
-    def test_accepts_required_behavioral_contracts(self) -> None:
+    def test_rejects_marker_only_behavioral_contracts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "repo"
             root.mkdir()
@@ -90,14 +90,17 @@ class ValidateSkillsTest(unittest.TestCase):
                 "consecutive_matching_audits first_allowed_action "
                 "COMPACT_CONTINUATION COLD_HANDOFF EXTERNAL_RETRY "
                 "previous_productive_action_id pre_compaction_next_action_id "
-                "post_compaction_first_productive_action_id\n",
+                "post_compaction_first_productive_action_id SemanticFork EvidenceBudget "
+                "SCOPE_INVALID\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
                 "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
                 "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞 "
                 "resume_audit_tool_rounds <= 1 unmanaged_manifest_digest "
-                "instruction_revision_at_snapshot do_not_reopen\n",
+                "conversation_cursor_at_snapshot directive_revision_at_snapshot MainlineReturnAnchor "
+                "do_not_reopen semantic_fork: evidence_budget: "
+                "latest_discriminating_evidence\n",
                 encoding="utf-8",
             )
             (continuity / "references" / "evaluation-cases.md").write_text(
@@ -105,12 +108,15 @@ class ValidateSkillsTest(unittest.TestCase):
                 "空泛 Next 规则 revision 未变化 Continuation 对比协议 "
                 "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交 "
                 "无关代码图注入 scripts/evaluate_continuity_trace.py 压缩续跑单批次 外部重试 "
-                "压缩前后动作身份连续 正确动作前的恢复入口偏航\n",
+                "压缩前后动作身份连续 正确动作前的恢复入口偏航\n"
+                "未解决语义分叉后压缩 已解决语义分叉后压缩 已停止取证预算后压缩\n",
                 encoding="utf-8",
             )
             (continuity / "scripts").mkdir()
             (continuity / "scripts" / "validate_continuity_state.py").write_text(
+                "def _validate_evidence_budget():\n    return None\n"
                 "def validate_state():\n    pre_compaction_next_action_id = None\n"
+                "    marker = 'semantic_fork.open_blocks_solution'\n"
                 "    return {'suggested_gate': 'SNAPSHOT_REQUIRED'}\n",
                 encoding="utf-8",
             )
@@ -119,11 +125,22 @@ class ValidateSkillsTest(unittest.TestCase):
                 "'irrelevant_graph_injection_count': 0, 'full_thread_reads': 0, "
                 "'unchanged_reference_reads': 0, 'compact_continuation_fast_path_passed': True, "
                 "'post_compaction_first_productive_action_id': None, "
-                "'recovery_route_deviation_count': 0}\n",
+                "'recovery_route_deviation_count': 0, "
+                "'post_compaction_full_skill_reload_count': 0, "
+                "'scope_invalid_observation_count': 0}\n",
+                encoding="utf-8",
+            )
+            (continuity / "scripts" / "prepare_resume_context.py").write_text(
+                "def project_context():\n    return {'gate': 'SNAPSHOT_REQUIRED', "
+                "'first_allowed_action': None}\n"
+                "MARKERS = 'SNAPSHOT_REQUIRED first_allowed_action do not reload unchanged "
+                "references semantic_fork evidence_budget'\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
-            self.assertEqual([], result["errors"])
+            joined = "\n".join(result["errors"])
+            self.assertIn("structurally incomplete", joined)
+            self.assertIn("required executable contract file missing", joined)
 
     def test_rejects_missing_anti_idle_resume_contract(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -145,9 +162,9 @@ class ValidateSkillsTest(unittest.TestCase):
             )
             result = VALIDATOR.validate_repository(root)
             joined = "\n".join(result["errors"])
-            self.assertIn("missing required behavioral contract marker: consecutive_matching_audits", joined)
-            self.assertIn("missing required behavioral contract marker: audit_fingerprint", joined)
-            self.assertIn("missing required behavioral contract marker: 同一恢复切片连续五次压缩", joined)
+            self.assertIn("missing required contract marker: consecutive_matching_audits", joined)
+            self.assertIn("missing required contract marker: audit_fingerprint", joined)
+            self.assertIn("missing required contract marker: 同一恢复切片连续五次压缩", joined)
 
     def test_rejects_missing_continuation_evaluation_contract(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -172,8 +189,8 @@ class ValidateSkillsTest(unittest.TestCase):
             )
             result = VALIDATOR.validate_repository(root)
             joined = "\n".join(result["errors"])
-            self.assertIn("missing required behavioral contract marker: Continuation 对比协议", joined)
-            self.assertIn("missing required behavioral contract marker: Ablation continuation", joined)
+            self.assertIn("missing required contract marker: Continuation 对比协议", joined)
+            self.assertIn("missing required contract marker: Ablation continuation", joined)
 
     def test_rejects_superseded_continuity_schema(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -278,6 +295,23 @@ class ValidateSkillsTest(unittest.TestCase):
             (agents / "mechanical-worker.toml").unlink()
             errors = VALIDATOR.validate_codex_adapter(root)
             self.assertTrue(any("mechanical-worker.toml: required Codex Agent profile missing" in error for error in errors))
+
+    def test_codex_adapter_is_optional_without_project_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "agent-orchestration"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\nname: agent-orchestration\ndescription: Host-neutral test.\n---\n",
+                encoding="utf-8",
+            )
+            self.assertEqual([], VALIDATOR.validate_codex_adapter(root))
+            self.assertTrue(
+                any(
+                    "Codex adapter config missing" in error
+                    for error in VALIDATOR.validate_codex_adapter(root, required=True)
+                )
+            )
 
     def test_accepts_current_codex_agent_concurrency_schema(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

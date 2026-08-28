@@ -20,7 +20,7 @@
    - 历史取舍只有在理解当前决策仍必需时才保留；ADR 的状态和替代关系遵循仓库既有 ADR 规范，但不记录执行流水。
 
 3. **待确认设计和实时计划先进入任务运行态**
-   - 设计尚未被用户接受时，写入 Trellis task artifact；无 Trellis 时写入经 Git 忽略验证的单一运行态文件，不先修改权威 docs。
+   - 设计尚未被用户接受时，写入宿主已有 task / runtime store 或 Trellis task artifact；仅在 VCS 与 ignore 校验可用时使用经验证的单一 ignored 文件。无安全载体时保留在 active task context 并准备 portable capsule，不创建 docs 或修改 ignore 规则。
    - 实时执行顺序、checkbox、扫描记录、调试尝试、失败日志、临时下一步、阶段总结和会话恢复信息永不进入权威文档。
    - 计划是当前状态投影，不是历史账本：阶段切换时原位改写并压缩，移除已失效步骤和假设，不逐轮追加完成记录。
    - 当前计划只保留任务契约引用、当前阶段、一个有效工作假设、尚未完成的阶段及其验收信号、唯一下一步和一个阻塞区块。已完成 checkbox 不保留也不汇总计数；最近已验证阶段只在 Recovery Capsule 的 `Checkpoint.Validated` 中保留一个 commit / evidence 指针。

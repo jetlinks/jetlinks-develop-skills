@@ -26,6 +26,48 @@ OpenAI 官方 Hooks 已提供 `PreCompact`、`PostCompact`、`SessionStart`、`P
 
 官方文档：[OpenAI Codex Hooks](https://learn.chatgpt.com/docs/hooks)。
 
+### 通用三事件适配契约
+
+宿主可以把原生事件映射为下列最小协议；字段名可适配，语义不能省略：
+
+1. `PreCompact`：在当前边界覆盖写 `Recovery Capsule`、`Continuity Metadata` 和 `Source Snapshot`，记录 `pre_compaction_next_action_id`、`previous_productive_action_id`、`instruction_revision_at_snapshot` 及 `LoadedRules` / 引用 revisions；存在 material semantic fork 时同时保存其 decision question、`OPEN / RESOLVED`、resolution locator、evidence budget、stage admission 和 latest discriminating evidence。若任一视图无法形成一致边界，保存 `SNAPSHOT_REQUIRED`，不要生成猜测性的 Next。
+2. `SessionStart(source=compact)`：先独立比较用户指令 revision，再用一个并行批次比较 source / contract / references / rules。匹配时只输出有界 capsule、比较结果和 `first_allowed_action`；投影保留已存在的 fork / evidence budget，但不重新选择契约、重开 Scout 或重新分类阶段。失配时只输出失配 locator、残余身份风险和 `SNAPSHOT_REQUIRED`。不得在该事件中加载完整 skill、完整任务线程、仓库总览或原始日志。
+3. `PreToolUse`（若宿主支持）：在匹配恢复切片的首个生产动作前拒绝 full skill reload、unchanged full-history read、workspace-wide scan、`do_not_reopen` 动作和 `previous_productive_action_id` 回放；允许一次保存的 `first_allowed_action`，并把拒绝写入轨迹。对未覆盖的工具路径仍依赖语义 gate 与轨迹评测。
+
+适配器输出应保持有界，优先调用 `scripts/prepare_resume_context.py` 生成投影。把完整事件库留在 reference backend，不把 FTS 命中、原始 transcript 或 hook 调试输出拼进恢复上下文。
+
+### 可选执行收据适配器
+
+仓库提供 `scripts/codex_execution_adapter.py` 作为 Codex 的薄适配层。它不是新的 task store，也不改变核心协议；只有显式配置下列运行态路径时才启用相应能力：
+
+```text
+TASK_CONTINUITY_STATE=<portable-state.json>
+TASK_CONTINUITY_RECEIPTS=<execution-receipts.jsonl>
+TASK_CONTINUITY_WORKSPACE=<source-workspace>
+TASK_CONTINUITY_GRAPH_DIRTY=<optional-index-marker.json>
+```
+
+运行态应使用宿主、Trellis 或组织已有的不受普通 Git 交付管理的位置。适配器不会修改 `.gitignore`，没有配置时所有 hook 都安全 no-op。若只配置 state，则只执行连续性 mutation gate 与 compact 投影；配置 receipts 时，若同目录已经存在 `continuity.json` 会自动复用但不会创建它，同时执行阶段 / 交付 gate；graph marker 也可单独使用。用 `doctor` 检查实际配置、source fingerprint、账本完整性和当前 gate，不能用“hook 已注册”代替生效验证。
+
+将原生 hook 分别映射到 `pretooluse`、`posttooluse`、`precompact` 和 `sessionstart` 子命令。`PostToolUse` 只对以下高价值事件计算 source fingerprint 并追加 JSONL 收据：
+
+- `apply_patch / Edit / Write` 源码变更，同时只把可选代码索引标记为 dirty；
+- 可识别且有确定退出码的 test / lint / typecheck / build 验证；
+- Agent dispatch 和 result observation；结果仍必须由主 Agent 显式 `accept-assignment`，spawn 成功不等于集成成功；
+- commit、push 和会修改 PR 状态 / 内容的实际工具结果。
+
+阶段结束时用已有的、覆盖当前 source fingerprint 的 passed evidence 执行一次 `checkpoint-stage`。所有验收覆盖、委派结果均由主 Agent 接受后，再执行一次 `complete-task`。门禁语义如下：
+
+| 动作 | 确定性前置条件 |
+| --- | --- |
+| `apply_patch / Edit / Write` | continuity state 为 `READY`；未配置 state 时不硬拦截 |
+| `git commit` | 当前源码存在通过证据和 coherent-stage checkpoint |
+| `git push` / `gh pr` 写操作（create、edit、ready、reopen、comment、merge） | 当前源码的最新 checkpoint 有效、所有 dispatch 已接受、whole-task completion 引用有效 acceptance evidence |
+
+源码变化会通过内容指纹使旧证据失效；单纯 stage / commit 不改变内容指纹，因此不会为了交付重复验证。适配器不尝试解析并阻断所有可能写盘的 shell 语句，也不能替代 sandbox、权限控制或语义审查。需要非命令型证据时可用 `record-evidence` 保存有 locator 的 review / inspection / artifact / runtime 结果；这仍须覆盖当前源码且由 checkpoint / completion 显式引用。
+
+代码图更新采用需求驱动协议：源码写入只置 dirty；当 `code-navigation` 已选择该图后端且当前 query envelope 确实需要它时，先运行增量更新，再调用 `graph-refreshed`。不能再把 `code-review-graph update` 或其他整图刷新绑定到每次 Bash、每次编辑、压缩或 session start。
+
 ## 可复用第三方后端
 
 ### context-mode

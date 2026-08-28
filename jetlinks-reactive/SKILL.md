@@ -10,7 +10,7 @@ Read [`references/reactive-practice.md`](references/reactive-practice.md) first.
 ## Workflow
 
 1. Inspect adjacent code to confirm whether the target module is reactive or blocking.
-2. If this is a new backend feature or large reactive behavior change, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in Trellis or the chosen Git-ignored runtime artifact, wait for explicit user confirmation, then update authoritative docs only for accepted durable reactive contracts.
+2. If this is a new backend feature or large reactive behavior change, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in the selected host runtime carrier, wait for explicit user confirmation, then update authoritative docs only for accepted durable reactive contracts.
 3. If the module is reactive, keep `Mono` or `Flux` end-to-end and avoid imperative fallbacks.
 4. If blocking I/O is unavoidable, isolate it explicitly and only use the scheduler pattern already accepted by the codebase.
 5. Before editing non-trivial reactive code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): async boundaries, backpressure or collection limits, cancellation / retry / timeout behavior, lifecycle cleanup, tracing context propagation, compatibility, and extracted business stages whose purpose is not obvious from the method name.

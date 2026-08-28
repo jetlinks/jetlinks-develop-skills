@@ -53,7 +53,7 @@ jetlinks-develop-skills/
 
 ### `task-continuity`
 
-用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`，源码指纹、引用 / 规则 revisions 和完整证据 locator 留在机器 Continuity Metadata / Source Snapshot；并用 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 门禁阻止陈旧状态下继续修改。恢复区分压缩续跑、冷接管和外部重试；匹配的压缩续跑最多一个核验批次，并在同一恢复轮执行精确 `first_allowed_action`。真实 continuation 对比和关键字段消融用于检验压缩是否丢失约束或决策证据。不要求 Trellis、Git、GitHub、本地文件或 hooks。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
+用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`，源码指纹、引用 / 规则 revisions 和完整证据 locator 留在机器 Continuity Metadata / Source Snapshot；并用 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 门禁阻止陈旧状态下继续修改。恢复区分压缩续跑、冷接管和外部重试；匹配的压缩续跑最多一个核验批次，并在同一恢复轮执行精确 `first_allowed_action`。真实 continuation 对比和关键字段消融用于检验压缩是否丢失约束或决策证据。不要求 Trellis、Git、GitHub、本地文件或 hooks。Codex 宿主可显式启用可选 execution adapter，以机器收据约束当前源码的阶段验证、Agent 结果接受和 whole-task 发布；未配置时保持 no-op。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
 
 ### `code-navigation`
 
@@ -149,6 +149,8 @@ jetlinks-develop-skills/
 
 `$task-continuity` 本身不安装状态服务。若宿主已有 task store、Trellis、memory、event index 或 lifecycle hooks，优先把它们映射为运行态 / reference backend。Codex 需要自动会话事件恢复时，可评估 [context-mode](https://github.com/mksglu/context-mode)；它已经实现 Codex `PreCompact` / `SessionStart`、SQLite/FTS5 和按需检索，避免重复建设数据库与 hook installer。它不提供复合源码指纹、reference cursor、证据 freshness 或 `first_allowed_action`，因此仍由 `$task-continuity` 负责是否可以继续执行。
 
+若需要把“已验证 / 已接收 / 可提交 / 可发布”从模型声明提升为宿主门禁，可显式配置 [`task-continuity/scripts/codex_execution_adapter.py`](task-continuity/scripts/codex_execution_adapter.py)。它复用原生 hooks，自动记录少量 source / validation / delegation / delivery receipts，并在 source fingerprint 变化后让旧证据失效；stage / commit 不改变内容指纹，因此不会在交付时重复测试。源码写入只给代码索引置 dirty，实际选择图后端并发生真实查询时才刷新，避免每次 Bash 更新整图。运行态路径应位于宿主、Trellis 或其他不进入普通 Git 交付的位置；安装与配置见 [`task-continuity/references/host-adapters.md`](task-continuity/references/host-adapters.md)。
+
 需要跨任务长期语义记忆时可单独评估 [MemPalace](https://github.com/MemPalace/mempalace)。第三方插件会新增本地数据、依赖、hook trust 和模型上下文，必须显式安装并做真实 compaction continuation 测试；MCP 已连接或快照出现不等于恢复有效。详细选择边界见 [`task-continuity/references/host-adapters.md`](task-continuity/references/host-adapters.md)。
 
 ## Install
@@ -235,7 +237,7 @@ Use $jetlinks-router to classify this JetLinks scaffold task, choose the right f
 Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
-- 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
+- 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与按变化选择的验证范围；运行时校验只放在唯一信任 / 安全 / 状态 / 危险操作 owner，不为测试清单或假设未来调用者增加 guard。
 - 使用 `$agent-orchestration` 先判断是否值得委派，再按不确定性、影响面、耦合度和可验证性选择 `SINGLE_OWNER`、只读 scouts、有界 worker、顺序 handoff或独立 reviewer；对于确有多个独立工作流的复杂跨模块任务，可由主智能体建立阶段化 `OrchestrationProgram`，冻结共享契约后把互斥叶子实现交给 workers，主智能体保留架构、协调、集成、验收和交付责任；当前执行选择非 `SINGLE_OWNER` 且宿主允许时必须真实 dispatch、收集并集成，每个切片使用 Assignment Capsule，叶子不继续委派，范围不足时向主智能体升级，弱模型一次有效失败后升级而不是反复换提示词重试。
 - 使用 `$task-continuity` 原位压缩实时计划，将模型恢复视图收敛为 `Contract / Checkpoint / DecisionState / Resume`，把完整 digest / revision / evidence ledger 留在机器元数据；验证改变路线时先刷新，压缩恢复时完成 `RESUME_AUDIT -> READY` 后从少量锚点和执行级 `Next` 继续，连续匹配恢复不重读完整技能集或重建同一系统图，并复用仍覆盖当前验收矩阵的验证证据；维护技能时用 full-context / capsule / ablation continuation 评测实际恢复质量；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
 - 使用 `$code-navigation` 先发现当前环境可用的检索能力，再从精确 symbol 或 changed items 出发，有界查询定义、引用、调用、组件 / 领域关系和候选测试；保留关系来源与置信度，不把语义相似度或作者机器上的工具当成精确事实或必需依赖。
@@ -309,7 +311,7 @@ Focused skill 示例：
 
 ```text
 这个问题已经尝试修过一次，但验收仍失败或失败转移到了同类场景。
-请停止继续加条件、fallback、retry、mock 或兼容分支，重新列出已验证事实、被否定假设、竞争根因和最小区分检查；确认共同不变量和完整验证矩阵后再实现。
+请停止继续加条件、fallback、retry、mock 或兼容分支，重新列出已验证事实、被否定假设、竞争根因和最小区分检查；确认共同不变量和按实际行为变化选择的验证范围后再实现。
 ```
 
 ### 代码结构与影响面
@@ -448,20 +450,20 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 - 涉及 CRUD 查询、详情、更新、删除、批量操作、导出或自定义接口时，必须按 `$jetlinks-assets-permission` 分析是否需要 AssetsHolder 数据权限控制；资产类型、关联字段、权限动作、绑定关系或例外规则拿不准时先询问用户。
 - 涉及关键后端业务链路、状态流转、命令执行、事件 / 订阅、协议链路、批处理或外部 I/O 时，必须说明 TraceHolder / MonoTracer / FluxTracer 埋点目标、关键属性、上下文传播和敏感信息排除；不新增埋点时说明已有平台自动追踪或不适用依据。
 - 涉及常驻内存任务、缓存、队列、buffer、重试池、会话 / 连接 / 订阅管理器或后台执行器时，必须说明 MBean 运维可观测性决策、统计指标、监控字段、安全内部操作、生命周期和敏感信息排除；不新增 MBean 时说明已有覆盖或不适用依据。
-- 本次提交必须经过相关单元测试，并按触发条件完成集成测试，至少覆盖本次改动涉及的核心路径。
-- 后端新增功能或既有功能变动必须补充或更新对应单元测试，覆盖正常路径、关键异常路径和回归场景。
-- 涉及数据库、消息、事件、协议联调、跨模块边界、外部依赖或启动装配时，PR 中必须提供集成测试结果；无法执行时只能作为阻塞或 draft 风险说明。
-- 未触发集成测试条件时，PR 中必须写明不适用原因，不能留空。
+- 后端新增功能或既有功能变动必须在 owning boundary 有可核验行为证据；先复用仍有效证据，只对新增 / 改变行为的缺口补最合适层级的测试。
+- 正常、异常、边界、权限、性能和集成是按本次行为 / 风险变化选择的候选，不是必须填满的 checklist；测试不能为凑分类反向创造生产校验。
+- 只有跨边界交互契约、真实装配、序列化 / 持久化或传播语义发生变化，且低层测试不能观察时才要求集成测试；数据库、消息、事件、协议或跨模块等关键词本身不触发。
+- 新增运行时 guard 只允许在不可信输入、权威安全 / 权限、状态或持久化不变量、危险操作、已确认错误转换的唯一 owner 边界；DTO、框架、AssetsHolder 或上游已保证时不重复校验，也不建立逐 guard 证明台账。
 - 如果仓库已配置覆盖率阈值，提交前必须满足阈值。
-- 如果仓库没有统一阈值，也必须在 PR 中给出可验证的覆盖证据，而不是只写“已测试”。
-- 不能提供测试结果、覆盖率结果或失败原因的提交，不应进入待合并状态。
+- 如果仓库没有统一阈值，覆盖率只是可选诊断信息；仍必须给出变化行为的可验证证据，而不是只写“已测试”。
+- 不能提供变化行为的验证结果或明确剩余风险的提交，不应进入待合并状态。
 
 ### Documentation Placement
 
 - README 只作为仓库或模块的长期总览，放定位、能力索引、入口说明和长期链接。
 - 不要把单次任务过程、测试报告、PR 描述、临时计划、排查流水或总结放进 README。
 - 权威 `docs` / ADR / API / 模块文档只保留当前已接受的设计与契约；更新时原位替换过时结论，不追加阶段总结、完成清单、验证摘要或时间线。
-- 实时任务拆分、checkbox、假设账本、尝试、失败、临时下一步和会话恢复信息放 Trellis 的非版本化 runtime / checkpoint；没有这种载体或无 Trellis 时放单一 Git-ignored runtime file，不默认修改共享 `.gitignore`。
+- 实时任务拆分、checkbox、假设账本、尝试、失败、临时下一步和会话恢复信息优先放宿主已有 task / runtime store 或 Trellis 的非版本化 runtime / checkpoint；仅在 VCS 与 ignore 校验可用时使用单一 ignored artifact。无安全载体时保留有界 active-context / portable capsule，不创建可提交工作日志，也不修改共享 `.gitignore`。
 - 测试命令、覆盖率、集成测试结果等证据优先放 PR 描述或 CI 报告，不为每次运行新增测试报告文档。
 - 经验沉淀先判断是否跨任务稳定；优先更新已有 canonical 来源，不把单次总结转换成 `worklog`，稳定通用后再考虑 knowledge、playbook、prompt 或 skill。
 - 同一主题只维护一个权威来源，避免拆出多个 plan、summary、test-report、worklog 碎片。
@@ -469,12 +471,13 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 
 PR 中至少应提供这些数据：
 
-- 执行过的测试命令
+- 阶段 / CI 证据 locator、覆盖的变化行为和 source / checkpoint identity；原证据已有命令时不重复抄写
+- 本轮实际补跑的命令（若有）
 - 较大后端改动或新功能的任务契约路径、用户确认状态、权威文档同步结论和测试目标达成情况
-- 新增或更新的测试类和核心覆盖点
-- 测试类型：单元测试、集成测试、端到端测试中的哪些
-- 通过数量、失败数量、跳过数量
-- 覆盖率数据，例如 line、branch、changed files 或 changed classes 的覆盖结果
+- 实际复用、新增或更新的检查及其核心覆盖点
+- 所选测试边界：单元、契约、集成、端到端、性能或其他直接证据
+- 工具可提供时的通过数量、失败数量、跳过数量
+- 仓库存在门槛或已有可靠数据时的覆盖率结果
 - 若存在限制或未覆盖项，明确列出风险边界
 
 ### PR Description
@@ -484,10 +487,10 @@ PR 描述必须聚焦事实和结果，至少包含：
 - 目的：为什么要做这次改动
 - 核心变动：改了哪些模块、行为和边界
 - 设计与测试目标：较大后端改动或新功能需列出任务契约路径、确认状态、权威文档同步结论、测试目标达成情况、CRUD / AssetsHolder 数据权限分析结论、注释 / 公共契约结论、链路追踪结论和 MBean 运维可观测性结论
-- 测试结果：命令、新增或更新的测试类、通过数、失败数、跳过数、覆盖率数据、集成测试结果或不适用原因
+- 测试结果：证据来源、命令、实际覆盖的变化行为、工具可提供的结果计数、必要的跨边界 / 性能验证和真实未覆盖风险
 - 文档同步情况：已同步哪些原始文档，或说明无需同步的原因
 - 兼容性与发布边界：说明是否为 PR 内未发布逻辑收敛；已发布、持久化或外部依赖的变更需写清兼容或迁移策略
-- 数据库兼容与 SQL 性能：涉及复杂 SQL / 原生 SQL 时说明标准 SQL、方言范围、索引 / 分页风险和压测结果
+- 数据库兼容与 SQL 性能：涉及方言变化时说明数据库范围；查询形态、规模、索引、分页、并发或批量风险变化时才说明相称的执行计划 / 压测结果
 - 风险与影响面：哪些场景受影响，哪些场景未覆盖
 
 推荐模板：
@@ -509,23 +512,22 @@ PR 描述必须聚焦事实和结果，至少包含：
 - 任务契约：`.trellis/tasks/<task>/...` / 本地忽略运行态文件
 - 权威文档：已原位同步 `<path>` / 不适用：长期契约未变
 - 用户确认：已确认 / 未确认，当前为 draft
-- 测试目标：真实场景、真实数据、正常路径、异常路径、回归路径和边界路径均已覆盖 / 列出未覆盖原因
+- 测试目标：列出本次新增 / 改变的行为、owning boundary、所选证据和真实未覆盖风险；不填固定分类
 - 注释 / 公共契约：适用 / 不适用；适用时说明类注释、SPI 方法注释、必要 `@since` / `@see` 和复杂逻辑注释已补齐
 - 数据权限：适用 / 不适用；适用时说明 `AssetType`、`CrudAssetPermission`、查询注入、操作校验和关联资产边界
 - 数据库兼容与性能：适用 / 不适用；适用时说明标准 SQL / 方言范围、索引与分页风险、压测结果或替代验证
 - 链路追踪：适用 / 不适用；适用时说明 TraceHolder / MonoTracer / FluxTracer 埋点位置、关键属性、上下文传播和敏感信息排除
 - MBean 运维可观测性：适用 / 不适用；适用时说明 MBean 名称、统计指标、运维操作、生命周期和敏感信息排除
-- 系统性求解：适用 / 不适用；适用时说明违反的不变量、共同根因或显式变化轴、已清理 / 保留的特殊处理，以及原场景 / 同类代表 / 反例边界 / 回归证据
+- 系统性求解：适用 / 不适用；适用时说明违反的不变量、共同根因或显式变化轴、已清理 / 保留的特殊处理；bug / 共享行为 / 边界风险发生对应变化时分别给出原场景 / 同类代表 / 反例证据
 
 ## 测试结果
 
-- 命令：`mvn -pl xxx -am test`
-- 证据来源与复用判断：阶段验证 / CI；对应 `<commit / tree / diff fingerprint>`；相关输入未变化，直接复用 / 因 `<变化>` 定向补跑 `<范围>`
-- 新增/更新测试：`XxxServiceTest` 覆盖新增规则、异常分支和回归场景
-- 单元测试：42 passed, 0 failed, 1 skipped
-- 集成测试：8 passed, 0 failed / 不适用：未涉及数据库、消息、事件、协议、跨模块边界、外部依赖或启动装配
-- 压力测试：适用 / 不适用；适用时给出数据规模、并发数、耗时阈值和结果
-- 覆盖率：line 81.4%, branch 73.2%
+- 证据来源与覆盖切片：阶段验证 / CI locator；对应 `<source / checkpoint identity>`；覆盖 `<变化行为>`
+- 本轮补跑命令（若有）与复用判断：相关输入未变化，直接复用 / 因 `<变化>` 定向补跑 `<范围>`
+- 复用/新增/更新的检查：`XxxServiceTest` 覆盖本次改变的规则和回归
+- 结果：42 passed, 0 failed, 1 skipped
+- 必要的跨边界 / 性能验证：列出实际结果和风险
+- 覆盖率：仓库门槛与结果 / 可选诊断数据
 
 ## 文档同步情况
 
@@ -549,7 +551,7 @@ PR 描述必须聚焦事实和结果，至少包含：
 
 - 用数据说话，不要只写“测试通过”
 - 交付前先把已有证据映射到验收矩阵；代码 / Git 指纹和相关输入仍有效时直接复用，只定向补跑缺失、失效或有时效性的检查
-- 没有覆盖率数据时，至少说明为什么缺失，以及提供了哪些替代证据
+- 仓库有覆盖率门槛时必须给出结果；无门槛时不为数字增加测试
 - 创建 PR 前先确认任务是否已完成：未完成默认继续本地开发，已完成且用户确认后再统一远程交付
 - 未完成任务默认继续本地开发，不主动 push 或创建 draft；只有用户明确要求共享中间分支、远端 CI 或提前评审时才维护一个 draft PR
 - 每个连贯阶段验证后允许一个本地 commit；整个任务完成后统一 push 并创建或更新一次 PR，禁止每个步骤推送、开 PR 或追加 PR 进度流水

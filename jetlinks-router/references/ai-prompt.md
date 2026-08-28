@@ -18,24 +18,25 @@
     - 计划至少包含目标、范围、不做什么、实施步骤、风险 / 待确认点和验证方式。
     - 简单低风险小任务可在给出简短计划后直接实施。
     - 计划只描述怎么推进，不能替代问题模型。复杂 / 高不确定任务还必须切通用 `$systematic-solving` 并加载 [`systematic-solving-jetlinks-rules.md`](systematic-solving-jetlinks-rules.md)，明确可观察目标、不变量、变化轴、竞争假设、区分证据、局部修补预算和验证矩阵，再映射到 JetLinks 制品与交付。
+    - plan-first 之前先识别 material semantic fork：若两个合理契约会改变所有权、持久化、安全、公共 API、迁移或发布方式，先记录唯一 decision question、选项和架构后果。证据能决定时做一轮有界区分；证据不能替用户选择时只问一个聚焦问题。在 fork `OPEN` 时不写权威设计、不深化 API / 持久化 / 权限架构、不派发实现，也不审查可能被丢弃的候选制品。
     - 同一根因假设的一次实现仍未通过验收、失败转移到同类场景，或下一步准备新增场景判断 / fallback / retry / mock / 兼容分支时，立即停止编辑并重构假设；下一次生产修改前先写前置 `Attempt`，并把失败分为生产契约、陈旧 oracle、无效 fixture、机械装配或 unresolved，不把整批失败都转成生产补丁。
     - 实时计划与长任务连续性切通用 [`$task-continuity`](../../task-continuity/SKILL.md)，把计划维护成当前状态投影：阶段切换时替换已失效步骤并压缩为当前阶段、剩余事项、有效假设、下一步和阻塞，不逐轮追加完成项或阶段总结。
-    - JetLinks 工作区再按 [`context-recovery-rules.md`](context-recovery-rules.md) 将模型主视图 `Contract / Checkpoint / DecisionState / Resume`、机器 Continuity Metadata 与 Git Source Snapshot 映射到 task ID / revision、branch / HEAD、tracked / untracked / nested 内容指纹和 expected paths。正常匹配恢复只注入主视图和 identity match summary；验证或证据改变 failure signature、acceptance、source identity 或唯一 `Next` 时先进入 `SNAPSHOT_REQUIRED` 并覆盖刷新；上下文压缩或恢复后进入 `RESUME_AUDIT`，匹配后显式转 `READY` 并执行 `first_allowed_action`。跨压缩保留审计指纹、连续匹配计数和规则账本；第二次相同恢复不得重读完整技能集 / PRD 或重建同一系统图，空泛 `Next` 不得进入实施。
+    - JetLinks 工作区再按 [`context-recovery-rules.md`](context-recovery-rules.md) 将模型主视图 `Contract / Checkpoint / DecisionState / Resume`、机器 Continuity Metadata 与 Source Snapshot 映射到当前宿主的 task / source identity；Git 存在时才增加 branch / HEAD、tracked / untracked / nested 内容指纹和 expected paths。正常匹配恢复只注入主视图和 identity match summary；验证或证据改变 failure signature、acceptance、source identity 或唯一 `Next` 时先进入 `SNAPSHOT_REQUIRED` 并覆盖刷新；上下文压缩或恢复后进入 `RESUME_AUDIT`，匹配后显式转 `READY` 并执行 `first_allowed_action`。跨压缩保留审计指纹、连续匹配计数和规则账本；第二次相同恢复不得重读完整技能集 / PRD 或重建同一系统图，空泛 `Next` 不得进入实施。
 
 3. 后端大改先设计与测试目标，再开发
     - 对较大的后端改动或新功能，必须遵循 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md)。
     - 文档落点遵循 [`document-placement-rules.md`](document-placement-rules.md)：README 只放长期总览，测试报告、任务流水和 PR 证据不放 README。
-    - 待确认设计先写 Trellis active task；无 Trellis 时写经 `git check-ignore -v` 验证的单一运行态文件，再等待用户明确确认，不先污染受 Git 管理的 `docs`。
+    - 待确认设计先写宿主已有 task / runtime store；Trellis 存在时复用 active task。仅在 VCS 与 ignore 校验能力存在时使用经验证的单一 ignored 运行态文件；无 VCS、只读或无安全载体时保留在有界 active task context，并在交接前给出 portable capsule。不得为运行态创建可提交 docs 或修改共享 ignore 规则。
     - 用户确认后，只有长期需求、稳定契约、架构 / API / 模块设计、验收语义或长期风险变化时，才原位更新权威 docs；删除过时描述，不追加“本轮总结”“完成情况”或时间线。
     - 实时任务拆分、checkbox、假设账本、步骤进度、调试尝试、失败轨迹、临时下一步、测试日志、PR 文案或会话总结留在任务运行态，不进入权威文档。
-    - 用户确认后，先按真实使用场景和数据制定测试目标，再实现代码，直到测试目标达成。
+    - 用户确认后，先把本次新增 / 改变的可观察行为与真实风险映射到已有证据；只对缺口制定测试目标，再实现代码。
     - 不允许为了让测试通过而删除测试、弱化断言、只跑无关测试、改低业务期望或绕过真实校验。
     - 兼容性是通用发布边界判断，不只限于 CRUD：API / DTO / Event / Topic / Command / 协议 / 配置 / 前端路由 / QueryParam / termType 等同一 PR 内未发布中间形态优先收敛到最佳实践；已合入、已发布、已有持久化数据或外部依赖时才设计兼容 / 迁移。
     - 添加兼容代码前必须说明兼容对象；拿不准是否已发布或外部依赖时，只问一个具体确认问题，不为了保险保留旧分支。
 
 4. 只切换必要 skill
     - 本文件只做路由。
-    - 进入某个场景后，只加载最少数量的 focused skill。
+    - 路由只保留 `current_decision / minimum_skills / user_confirmation_required / unique_next`。进入某个场景后，只加载能回答当前 decision 或执行唯一 Next 的最少 focused skill；领域关键词、已有工具或未来阶段都不能单独触发加载。
 
 5. 优先复用现有抽象
     - JetLinks 系项目通常已经提供 CRUD 基类、命令服务、事件、订阅、国际化约定。
@@ -53,6 +54,8 @@
     - 不额外生成示例实体、演示接口、假设性的扩展点。
     - 保持改动范围聚焦，不把无关重构、顺手修复或跨主题整理混进当前任务。
     - 涉及 CRUD 查询、详情、更新、删除、批量操作、导出或自定义接口时，必须分析是否需要 AssetsHolder 数据权限控制；具体实现切到 `$jetlinks-assets-permission`，不要手写租户 / 部门 / 创建人过滤替代统一资产权限；资产类型、关联字段、权限动作或例外规则拿不准时先询问用户。
+    - “涉及权限”只触发权限边界分析，不自动选择当前状态强校验、实时撤权、写入时快照、历史数据回算或其他产品契约；这些选择改变存储或系统责任时必须走 semantic-fork gate。
+    - 新增运行时校验属于业务行为变化。只在不可信输入、权威 AssetsHolder / 安全边界、状态或持久化不变量 owner、危险删除 / 无界 / 批量操作、已确认错误转换处校验一次；框架、DTO 或上游已保证时不在内部各层重复，也不为异常测试、未来假设或“更健壮”增加 guard。
 
 8. 软链接模块同样属于工作区事实
     - 如果模块、组件或聚合目录是符号链接，不要忽略。
@@ -95,19 +98,20 @@
 
 ## 标准工作流
 
-恢复 / 压缩 / 交接且已有 Recovery Capsule 时，先走 continuation fast path，再进入下面的普通分类：只比较 task contract、Git Source Snapshot、外部引用和 loaded rules 的 identity / revision。全部匹配且 `Next` 为执行级动作时，直接 `RESUME_AUDIT -> READY` 并执行 `first_allowed_action`；默认不重新加载 `$systematic-solving`、`$code-navigation`、交付规则、完整 PRD / research、仓库概览或代码图。只有对应失配确实改变假设、锚点 / owner、影响面或交付边界时，才加载该 focused skill。代码图还必须匹配当前 decision question、task anchor、source fingerprint、目标语言和 task scope。
+恢复 / 压缩 / 交接且已有 Recovery Capsule 时，先走 continuation fast path，再进入下面的普通分类：只比较 task contract、当前 Source Snapshot、外部引用和 loaded rules 的 identity / revision。全部匹配且 `Next` 为执行级动作时，直接 `RESUME_AUDIT -> READY` 并执行 `first_allowed_action`；默认不重新加载 `$systematic-solving`、`$code-navigation`、交付规则、完整 PRD / research、仓库概览或代码图。只有对应失配确实改变假设、锚点 / owner、影响面或交付边界时，才加载该 focused skill。代码图还必须匹配当前 decision question、task anchor、source fingerprint、目标语言和 task scope。
 
 1. 分类任务
     - 判断这是结构发现、模块创建、CRUD、复杂查询、跨服务调用、实时订阅、事件驱动、国际化、前端页面改造、代码注释、MBean 运维可观测性还是导入/注解确认。
 
 2. 判断是否进入 `plan-first`
     - 如果任务复杂、跨模块、需求仍在变化、涉及多个子任务，或存在多个方案 / 明显风险，先输出计划并等待用户确认。
+    - 多个方案若会改变所有权、持久化、安全、公共契约、迁移或发布方式，先用 `$systematic-solving` 判定 `SemanticFork`。`OPEN` 时只做有停止条件的一轮证据收集或提出一个聚焦问题，不能用 plan-first 文档替代契约选择。
     - 如果是较大的后端改动或新功能，先读取 [`backend-design-test-driven-rules.md`](backend-design-test-driven-rules.md) 和 [`document-placement-rules.md`](document-placement-rules.md)；有 `.trellis/` 再读 [`trellis-integration-rules.md`](trellis-integration-rules.md)。把待确认设计和测试目标落到任务运行态，等待用户确认后才能实现，再按需提升稳定结论到权威 docs。
 
 3. 判断是否进入系统性求解
     - 复杂、高不确定、跨边界、候选根因不唯一的任务，组合 [`$systematic-solving`](../../systematic-solving/SKILL.md) 与 [`systematic-solving-jetlinks-rules.md`](systematic-solving-jetlinks-rules.md)。
     - 任务即使起初简单，只要一次实现仍未通过验收、失败转移、继续需要特例 / fallback / retry / mock / 兼容分支，或连续操作没有得到新证据，也立即切入。
-    - 先冻结任务契约，建立完整执行路径、竞争假设、区分检查、解法层级和验证矩阵，再允许生产代码编辑。
+    - 先冻结任务契约，建立完整执行路径、竞争假设、区分检查、解法层级和按变化选择的验证范围，再允许生产代码编辑；不要把原始 / 同类 / 边界 / 回归机械填满。
 
 4. 检索当前工作区
     - 若已有 Recovery Capsule 或精确 symbol / changed path，先用 `$task-continuity` 核对身份和指纹，再从锚点开始，不重新全仓扫描；若是连续匹配恢复，先执行胶囊中的 mutation / discriminating check / blocker，不再次做相同结构检索。
@@ -138,10 +142,10 @@
 
 10. 交付
     - 如果任务包含提交、推送或发 PR，切换到 `$jetlinks-delivery`。
-    - 后端新增功能或既有功能变动必须先补或更新对应单元测试。
+    - 后端新增功能或既有功能变动必须有 owning boundary 的有效行为证据；已有证据有效时复用，只有缺口才补最合适层级的测试。
     - 较大后端改动或新功能的交付说明必须引用任务契约路径、用户确认状态、权威文档同步结论和测试目标达成情况。
-    - 运行改单涉及的单元测试；涉及数据库、消息、协议、跨模块边界、外部依赖、启动装配或事件链路时再跑集成测试，未触发时写明不适用原因。
-    - 输出测试命令、通过数、失败数、跳过数和覆盖率数据。
+    - 单元、契约、集成、端到端或性能检查按实际可观察边界选择；只有跨边界契约或真实装配语义变化且低层无法观察时才跑集成测试，不能由数据库 / 消息 / 协议等关键词触发。
+    - 输出实际证据、命令和工具可提供的通过 / 失败 / 跳过结果；覆盖率只按仓库已有门槛或可靠诊断数据处理。
     - 每个有独立验收信号的连贯阶段完成并验证后，若用户允许 checkpoint，再创建一个本地 commit，并用实际 commit hash 和下一步刷新 Recovery Capsule、Continuity Metadata 与 Source Snapshot；用户禁止提交时保留 `Checkpoint.In-flight(validation=passed)`，不要伪造 `Checkpoint.Validated`。不要为每个操作、文件或小步骤提交。
     - 所有阶段和总体验收矩阵完成后，才统一 push 分支并创建或更新一次 PR。未获用户明确要求时，不为中间步骤创建 draft PR，也不把 PR 描述 / 评论当进度流水。
 
@@ -381,8 +385,8 @@
 - 需要生成 shell 可执行的 git commit 命令
 - 需要整理提交信息、PR 标题或 PR 描述
 - 需要确认是否允许直接推送到目标分支
-- 需要给出测试和覆盖率证明
-- PR 包含后端新增功能或既有功能变动，需要补齐单元测试、覆盖率、集成测试结果或不适用原因
+- 需要给出变化行为的验证证据；覆盖率只按仓库门槛或已有可靠数据处理
+- PR 包含后端新增功能或既有功能变动，需要先复用有效证据，只对行为缺口选择最合适的单元 / 契约 / 集成 / 端到端 / 性能检查
 
 ## 常见组合
 
@@ -468,26 +472,22 @@
 ### 当用户要求先分析
 
 输出：
-1. 任务分类
-2. 需要切换的 focused skill
-3. 系统性求解触发、竞争假设与局部修补预算（如适用）
-4. 多 Agent RouteDecision、真实 dispatch / 终态或宿主阻断、切片依赖、写所有权、能力层级与升级条件（如适用）
-5. 代码检索问题、确认锚点、推断边和剩余不确定性（如适用）
-6. 需要先确认的工作区事实
-7. 建议落点和实现边界
-8. 如果当前仓库参考实现很少，明确说明将切换到模板仓库模式
+1. `current_decision`：当前唯一决策或交付物；必要时带 semantic-fork 状态
+2. `minimum_skills`：当前必须加载的最小 focused-skill 集合及准入理由
+3. `user_confirmation_required`：唯一待确认选择或 `none`
+4. `unique_next`：一个可执行检查、修改、真实 dispatch / collect 动作或 blocker；只有会影响该动作时才附带锚点、写所有权、落点和风险
 
 ### 当用户要求直接实现
 
 执行顺序：
 1. 静默完成分类
-2. 复杂或停滞任务先用 `$systematic-solving` 建立问题模型，并加载 JetLinks 扩展；同一假设下一次实现失败后停止编辑并重构。长任务同时用 `$task-continuity` 管理计划、恢复与阶段性交付
+2. 复杂或停滞任务先用 `$systematic-solving` 建立问题模型、SemanticFork 与 evidence budget，并加载 JetLinks 扩展；`OPEN` fork 只允许有界区分证据或聚焦用户问题。同一假设下一次实现失败后停止编辑并重构。长任务同时用 `$task-continuity` 管理计划、恢复与阶段性交付
 3. 没有精确 ownership / consumer / impact 锚点时，用 `$code-navigation` 按当前环境可用能力建立有界且带置信度的最小执行路径；需要时加载 JetLinks 领域扩展
 4. 只有问题模型和依赖稳定且委派有明确收益时，用 `$agent-orchestration` 分配有界读切片、互斥写切片或独立审查，并在宿主允许时立即真实 dispatch、收集和集成；否则保持 `SINGLE_OWNER` 并记录宿主阻断
 5. 切换最少 domain-focused skill
 6. 查看路径锚点和必要相邻代码
 7. 实现最小完整闭环
-8. 如果任务要求交付，再补原场景 / 同类代表 / 反例边界 / 回归证据、测试、提交与 PR 规范检查
+8. 如果任务要求交付，再按实际变化补证据：bug 对应原场景，共享行为对应同类代表，边界风险对应反例，并覆盖受影响回归；随后完成提交与 PR 规范检查
 9. 如果任务产出了跨任务稳定经验，再建议应更新的 canonical 来源或合理的新知识路径；单次完成总结不落档
 10. 如果结论已成熟到可抽成通用 skill，再询问是否并入 `jetlinks-develop-skills` 并准备官方 PR
 11. 只汇报最终规则结论、验证结果和风险，不输出操作流水
