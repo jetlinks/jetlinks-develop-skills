@@ -1,4 +1,0 @@
-interface:
-  display_name: "JetLinks Web Style"
-  short_description: "JetLinks 前端交互方案档案、结构选型与风格约束"
-  default_prompt: "使用 $jetlinks-web-style 为当前页面形成一个可交付的推荐交互方案档案和必要替代方案。"

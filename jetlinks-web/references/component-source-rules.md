@@ -1,22 +1,41 @@
 # JetLinks Web Component Source Rules
 
-本文件用于确认前端组件、hooks、utils 和交互样例的来源优先级，避免把外部组件库或业务局部组件误当成当前项目通用能力。
+本文件用于确认前端组件、hooks、utils 和交互样例的来源优先级，避免混淆共享基础组件、项目级业务组件、业务局部组件和外部参考。
 
-## 来源优先级
+## 两层组件事实源
 
-1. 当前 workspace 的 `jetlinks-web-core/src/components/index.ts`
-   - 这是通用组件第一事实源。
-   - 先确认组件是否被当前项目注册或导出，再决定是否使用。
-2. 当前 workspace 的 `jetlinks-web-core/src/components/*`
-   - 用于核验 props、emits、slot、样式约束和真实能力边界。
-3. 当前业务模块或相邻模块对 `jetlinks-web-core` 组件的真实用法
-   - 用于确认本项目如何组合组件、处理权限、i18n、路由和状态。
-4. 新版交互样例
-   - 当本地可访问 `/Users/zhouhao/IdeaProjects/cloud.jetlinks/ui` 或 `/Users/zhouhao/IdeaProjects/cloud.jetlinks/runtime-ui` 时，可参考其中的新设计页面。
-   - 只提取方案、布局、组件组合和交互节奏。
-5. 用户明确指定的外部参考
-   - `jetlinks-project-ui-cli` 只在用户明确要求参考时查看。
-   - 它不能作为默认依赖、默认导入来源或当前项目组件存在性的证据。
+### 1. `@jetlinks-web/components`：共享基础组件层
+
+1. 先定位当前 workspace 的 `packages/components/src/components.md`。
+   - 它是 AI 的轻量导航入口：按业务场景找到候选组件，再只打开候选目录中的 `组件名.md`。
+   - 不一次性加载全部组件文档，不把文档目录名直接当作根导出名。
+2. 再核验 `packages/components/src/components.ts`。
+   - 只有这里的导出才能证明组件可从 `@jetlinks-web/components` 根入口具名导入。
+   - 目录存在、组件有文档或自身有 `install`，都不能证明根入口或整包插件可达。
+3. 需要确认 Props、emits、slots、默认值或内部边界时，再读对应组件源码。
+4. 核验目标项目实际安装的 `@jetlinks-web/components` 版本和相邻生产导入；源码工作区与目标依赖版本不一致时，以目标项目实际可用契约为准。
+5. 深层 `@jetlinks-web/components/es/...` 导入必须同时有目标版本构建产物和相邻生产代码证据，不根据源码目录自行拼接路径。
+
+### 2. `@jetlinks-web-core/components`：项目级组件层
+
+1. 核验当前 workspace 的 `jetlinks-web-core/src/components/index.ts`。
+   - 这是项目级业务组件、业务壳、共享组合和适配组件的导出事实源。
+2. 再读 `jetlinks-web-core/src/components/*`。
+   - 用于核验 Props、emits、slots、权限、i18n、路由、注册机制和真实能力边界。
+3. 查看当前业务模块或相邻模块的真实用法。
+   - 用于确认本项目如何组合基础组件与项目级组件，以及如何处理状态和交互反馈。
+
+### 3. 两层选择原则
+
+- `@jetlinks-web/components` 适合跨项目共享的输入、展示、表格、搜索、图标、布局、权限按钮等基础能力。
+- `@jetlinks-web-core/components` 适合 JetLinks 项目级业务组件、共享业务壳，以及带权限、i18n、路由、注册和跨组件组合约定的封装。
+- 两层都能满足需求时，优先使用当前项目已稳定使用的 `@jetlinks-web-core` 封装，不绕过项目级契约。
+- 项目级没有对应封装时，直接复用 `@jetlinks-web/components`；不要为换名称或转发 Props 再造一层无职责包装。
+
+### 4. 用户明确指定的外部参考
+
+- `jetlinks-project-ui-cli` 只在用户明确要求参考时查看。
+- 它不能作为默认依赖、默认导入来源或当前项目组件存在性的证据。
 
 ## 新版样例提取规则
 
@@ -30,13 +49,17 @@
 
 - 不要在技能默认流程中要求读取或安装 `jetlinks-project-ui-cli`。
 - 不要假设外部组件库中的组件在目标 workspace 存在。
-- 不要在业务模块中重复手写 `jetlinks-web-core` 已经提供的通用组件。
-- 不要因为某个业务模块里有一个局部组件，就把它复制到另一个业务模块；先判断是否应复用 `jetlinks-web-core` 或抽成共享组件。
-- 如果没有复用现有能力，必须说明已核验的导出入口、相邻页面和不满足原因。
+- 不要把 `packages/components/src` 下“存在目录/文档”误判为 `@jetlinks-web/components` 根入口已公开；必须核验 `components.ts`。
+- 不要在没有目标版本与相邻生产代码证据时新增 `@jetlinks-web/components/es/...` 深层导入。
+- 不要在业务模块中重复手写 `@jetlinks-web/components` 或 `@jetlinks-web-core/components` 已提供的能力。
+- 不要因为某个业务模块里有一个局部组件，就把它复制到另一个业务模块；先判断应复用共享包、项目级组件，还是沉淀为稳定公共能力。
+- 如果没有复用现有能力，必须说明已核验的映射文档、导出入口、相邻页面和不满足原因。
 
 ## 自检清单
 
-- 是否已从当前 workspace 的 `jetlinks-web-core` 核验组件真实存在。
-- 是否区分了“通用组件事实源”和“业务页面参考样例”。
+- 是否已区分 `@jetlinks-web/components` 共享基础组件层与 `@jetlinks-web-core/components` 项目级组件层。
+- 是否从 `packages/components/src/components.md` 按需定位文档，并用 `components.ts` 核验根导出。
+- 是否核验目标项目的实际依赖版本与相邻生产用法。
+- 是否避免把深层源码路径当作稳定公共 API。
 - 是否避免把 `jetlinks-project-ui-cli` 作为默认依赖或导入来源。
 - 是否只借鉴了相似业务中的结构和交互节奏，而不是复制字段、接口或指标。
