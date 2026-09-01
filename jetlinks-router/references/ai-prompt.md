@@ -2,7 +2,7 @@
 
 本文件是 JetLinks 系脚手架的总路由，用来帮助智能体先判断任务类型，再切换到最合适的 focused skill，最后按当前工作区的真实实现落地。
 
-**上下文**：本文件较长；日常可先读 `../agents/openai.yaml` 的默认提示词，再按需打开本文件的对应章节。前端交互细则在 `jetlinks-web-style` 分片（`style-catalog-core-base.md` / `style-catalog-core-detail-shell.md` / `style-catalog-templates.md` 等），不要在 router 内复制前端规则正文。
+**上下文**：本文件较长；日常可先读 `../agents/openai.yaml` 的默认提示词，再按需打开本文件的对应章节。前端交互细则由 `$jetlinks-web` 及其本地 references 承载，不要在 router 内复制前端规则正文。
 
 它不提供仓库快照，不硬编码模块清单、包名、版本号或固定目录结构。所有这类信息都必须从当前工作区现有代码、`pom.xml`、资源目录和相邻模块中发现。
 
@@ -38,7 +38,7 @@
 6. 以当前模块风格为准
     - 响应式或阻塞式、`javax` 或 `jakarta`、控制器基类、服务基类、i18n 路径，都以目标模块现状为准。
     - 仅在新建模块且没有可参考实现时，才基于通用规则做最小决策。
-    - 前端任务也以当前 workspace 为准：先路由到 `$jetlinks-web`；除局部调整白名单外，同时组合 `$jetlinks-web-style` 建立页面交互方案档案。
+    - 前端任务也以当前 workspace 为准：路由到 `$jetlinks-web`；新增页面、页面壳层重构或信息架构调整时，由其先建立页面交互方案档案再实现。
     - 前端通用组件、hooks、utils 以当前 workspace 的 `jetlinks-web-core` 和相邻页面真实用法为准；详细前端约束不在 router 中重复维护。
 
 7. 生成最小可用实现
@@ -253,8 +253,8 @@
 
 切换：
 - [`$jetlinks-web`](../../jetlinks-web/SKILL.md)
-- 除局部调整白名单外，组合 [`$jetlinks-web-style`](../../jetlinks-web-style/SKILL.md) 先建立方案档案；结构不确定时再让用户选择
-- 如任务明确包含页面美化、交互优化、信息层级梳理或状态反馈打磨，在抽取本地样式锚点后再结合 `$frontend-design`
+- 新增页面、页面壳层重构或信息架构调整时，由其先建立方案档案；结构不确定时再让用户选择
+- 如任务明确包含页面美化、交互优化、信息层级梳理或状态反馈打磨，在抽取本地样式锚点后按 `$jetlinks-web` 的交互与视觉优化规则执行
 
 适用：
 - Vue3 页面、弹窗、列表、详情改造
@@ -326,23 +326,19 @@
 
 - 前端页面改造并保持能力复用
     - `$jetlinks-web`
-    - 除局部调整白名单外，同时加 `$jetlinks-web-style` 先建立方案档案
+    - 涉及页面壳层或信息架构调整时，由其先建立方案档案
     - 如命名/导入/i18n 有约束，再加 `$jetlinks-conventions`
 
 - 前端页面交互优化并保持当前框架风格
     - `$jetlinks-web`
-    - `$frontend-design`
     - 如命名/导入/i18n 有约束，再加 `$jetlinks-conventions`
 
 - 前端页面业务流复杂且结构未定
     - `$jetlinks-web`
-    - `$jetlinks-web-style`
     - 先建立业务交互方案档案；事实清楚时默认采用推荐方案，结构不确定时让用户在少量方案中选择；必要时先输出线框图或效果草图，再进入实现
 
 - 前端页面需要参考相似业务并统一 Ant Design 风格
     - `$jetlinks-web`
-    - 除局部调整白名单外加 `$jetlinks-web-style`
-    - `$frontend-design`
     - 参考案例只辅助业务方案和交互节奏，组件仍以当前 workspace 的 `jetlinks-web-core` 为准
 
 - 提交并发起 PR

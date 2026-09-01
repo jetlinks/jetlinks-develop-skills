@@ -1,28 +1,28 @@
 interface:
   display_name: "JetLinks Web"
-  short_description: "JetLinks 前端模版选择、能力复用与质量约束"
+  short_description: "JetLinks 前端方案、能力复用、代码组织与质量约束"
   default_prompt: >-
-    使用 $jetlinks-web 处理 JetLinks 前端任务：业务分析 → 方案锁定 → 组件复用 → 实现 → 文案 → 交付。本 prompt 只做实现侧约束；方案与硬约束事实源为 $jetlinks-web-style 的 `references/style-catalog.md`（索引）+ `style-catalog-routing.md` + `style-catalog-core-base.md`（必选）+ 详情/侧栏任务再带 `style-catalog-core-detail-shell.md`，模版细则只读 `style-catalog-templates.md` 中与候选对应的 `###` 小节，禁止整篇加载 templates。
+    使用 $jetlinks-web 处理 JetLinks 前端任务：业务分析 → 方案锁定 → 组件复用 → 代码组织 → 实现 → 文案 → 交付。本 prompt 只做实现侧约束；方案、代码组织与硬约束事实源为 `references/page-pattern-decision-rules.md`、`references/component-reuse-patterns.md`、`references/code-organization-rules.md` 及其他按场景加载的本地参考文档。
 
     一、工作流：
     1)业务分析：业务目标、目标用户、进入后的第一任务、成功标准、单对象 / 多对象、关键指标数据源；缺 1 项且影响结构就先问，缺 2 项及以上或页面分型摇摆时必须先澄清。
-    2)交互方案档案：除非命中"局部调整白名单"（仅改一个表单字段 / 筛选条件 / 弹窗内容 / 样式与文案与组件 props 微调），必须结合 $jetlinks-web-style 形成方案档案（推荐方案 + 最多 3 个替代；从 `style-catalog-templates.md` 只读对应 `###` 节正文，勿全文），每个候选含业务任务匹配理由 / 首屏 ASCII / 信息密度 / 编辑梯度 / 核心组件族 / 状态锚点 / 主要动作 / 不借鉴清单；事实清楚且只有一个可信推荐时记录"默认采用推荐方案"并继续实现，关键事实缺失或 2 个以上方案同样合理时先让用户选择。interaction-solution-catalog.md 只是薄索引；路由表与统一字段见 `style-catalog-routing.md`，§1–§6 硬约束见 `style-catalog-core-base.md`，详情/侧栏见 `style-catalog-core-detail-shell.md`。
-    3)组件来源核验：组件 / hooks / utils 最终以当前 workspace 的 jetlinks-web-core 为准——先核验 jetlinks-web-core/src/components/index.ts，再看组件实现与相邻页面用法；jetlinks-project-ui-cli 只在用户明确要求时作为外部参考，不作为默认依赖、导入来源或组件存在性证据。
-    4)实现：把卡片 / 列表 / 筛选 / 详情分区 / 轻量编辑 / 完整编辑 / 抽屉 / 底部操作 / 标签状态 / 图标 / 动态扩展 / 资源选择映射到 jetlinks-web-core 通用组件；不复用必须说明查过的导出入口、相邻页面和能力缺口。
-    5)拆分：超过 300 行、重复结构 ≥ 2 次、API / 业务编排进入组件时当场拆到子组件 / hook / service / api / util；不为了降行数抽无职责包装组件；UI 组件保持无副作用。
+    2)交互方案档案：除非命中"局部调整白名单"（仅改一个表单字段 / 筛选条件 / 弹窗内容 / 样式与文案与组件 props 微调），必须先按 `page-pattern-decision-rules.md` 形成方案档案（推荐方案 + 最多 3 个替代），每个候选含业务任务匹配理由 / 首屏骨架 / 信息密度 / 编辑梯度 / 核心组件族 / 状态锚点 / 主要动作 / 不借鉴清单；事实清楚且只有一个可信推荐时记录"默认采用推荐方案"并继续实现，关键事实缺失或 2 个以上方案同样合理时先让用户选择。
+    3)组件来源核验：区分两层事实源。@jetlinks-web/components 是共享基础组件层，先读当前 workspace 的 packages/components/src/components.md 按场景定位候选，只打开匹配的组件文档，再用 packages/components/src/components.ts 核验根导出与目标项目安装版本；@jetlinks-web-core/components 是项目级组件层，核验 jetlinks-web-core/src/components/index.ts、组件实现与相邻页面用法。目录/文档存在不等于根导出，深层 @jetlinks-web/components/es/... 导入必须有目标版本和相邻生产代码证据；jetlinks-project-ui-cli 只作用户明确指定的外部参考。
+    4)实现：把卡片 / 列表 / 筛选 / 详情分区 / 轻量编辑 / 完整编辑 / 抽屉 / 底部操作 / 标签状态 / 图标 / 动态扩展 / 资源选择映射到 @jetlinks-web/components 共享基础组件或 @jetlinks-web-core/components 项目级组件；两层都有能力时优先当前项目已稳定使用并承载权限/i18n/路由/组合约定的 core 封装；不复用必须说明查过的映射文档、导出入口、相邻页面和能力缺口。
+    5)代码组织：遇到职责混杂、语义相同的结构需要复用、API / 业务编排进入展示组件时，读取 `references/code-organization-rules.md`，按页面/容器、展示组件、composable/hook、service/api、util/mapper 的职责边界拆分；不为了降行数抽无职责包装组件，禁止 a > b > c > d > e 式超长调用链；展示组件无外部副作用，页面/容器通过 composable 或 service 编排副作用；props 数量和组件层级都不是硬门槛，关键是每层是否增加独立职责。
     6)通用条件搜索：优先核验 ConditionFilter 及其编码 / 回显、字段定义、loadOptions / loadSelectedOptions / rename / routeAlias / handleParamsItem 等能力；只有相邻页面稳定沿用或筛选确实很轻时才回退 ProSearch。
-    7)视觉语言以 Ant Design / Ant Design Vue 和当前项目样式锚点为准，$frontend-design 只做本地体系内的层级、反馈与微交互润色，不引入新品牌 / 字体 / 配色 / 装饰元素。
+    7)视觉语言以 Ant Design / Ant Design Vue 和当前项目样式锚点为准，只在本地体系内优化层级、反馈与微交互，不引入新品牌 / 字体 / 配色 / 装饰元素。
 
-    二、按 `style-catalog-core-base.md` + 按需 `style-catalog-core-detail-shell.md`「反传统后台感硬约束」执行（实现侧只点名，细则打开对应文件）：
+    二、按 `component-reuse-patterns.md` 的基线硬约束执行，实现侧只点名：
     - 编辑触发梯度 inline > sectional > drawer > modal > page（轻量字段禁默认打开完整编辑弹窗）
     - 首屏不允许默认"4 KPI 卡 + 顶部搜索 + 大表格"套壳；一屏一主视觉锚点
     - 列表 / 卡片首屏状态先于字段；禁单侧彩色线条作为主要状态信号（列表已有 status pill 时行本身只用 hover / selected 弱底 + 完整描边）
-    - 按模版给的信息密度目标落地
+    - 按方案给的信息密度目标落地
     - 弹窗不是唯一编辑路径
-    - 单对象详情头部 → catalog 第 7 节（详情页头部摘要区）
-    - 编辑控件 / 触发 / 反馈 → catalog 第 8 节（编辑交互样式统一）
-    - 对象详情整页 → 详情页 10 条硬规则 + AI 味 7 条不要 + 反向引用做主区段不放右栏 sticky
-    - 侧栏 → active 态浅嵌套去染色 / 深嵌套 Linear 风左条分档 + 折叠 8 条精美规则
+    - 单对象详情头部：名称 / 说明 inline 可改、标签就近增删、状态徽标 + 快捷动作切换；禁"编辑按钮 → 基本信息表单"
+    - 同名字段跨模块统一编辑控件 / 触发方式 / 保存反馈
+    - 对象详情整页遵循相邻详情页和 `component-reuse-patterns.md` 的详情页规则；反向引用做主区段不放右栏 sticky
+    - 侧栏 active 态与折叠分组遵循项目既有约定；折叠分组复用共享组件，折叠态 v-if/v-else 切平铺
     - 顶级路由不渲染 PageHead；浮动元素 z-index token 化 + 单页一个 FAB
 
     三、文案（统一走当前 i18n，可用中文作默认值）：
@@ -32,6 +32,6 @@ interface:
     4)空 / 错 / 载态文案要具体到对象与下一步，校验要带限制与示例，成功反馈要带对象名与影响范围。
     5)不展示无意义统计、假图表、装饰数据。
 
-    四、交付前报告：已锁定方案档案、确认模式、相关文件行数、查过的复用范围（同 feature / 同模块 / 兄弟同域模块 / 共享包 / 公共导出）、任何新建抽象的理由。
+    四、交付前报告：已锁定方案档案、确认模式、相关文件职责划分与抽离决策、每个具名函数的封装落点、查过的复用范围（同 feature / 同模块 / 兄弟同域模块 / 共享包 / 公共导出）、任何新建抽象的理由。
 
-    五、协同：方案选择切 $jetlinks-web-style；后端 API 接入参数 / 错误体 / i18n 不一致切 $jetlinks-conventions；交付 / commit / PR 切 $jetlinks-delivery；沉淀切 $jetlinks-capture。
+    五、协同：后端 API 接入参数 / 错误体 / i18n 不一致切 $jetlinks-conventions；交付 / commit / PR 切 $jetlinks-delivery；沉淀切 $jetlinks-capture。

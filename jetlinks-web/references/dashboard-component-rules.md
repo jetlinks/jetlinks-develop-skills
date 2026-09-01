@@ -80,11 +80,13 @@ modules/<module>-ui/visDashboard/
 当前工作区里常见导出形态：
 
 ```ts
+// 运行组件：画布中实际渲染的组件，懒加载降低设计器首屏成本
 const DeviceCountCard = {
   name: 'deviceCountCard',
   component: defineAsyncComponent(() => import('./DeviceCountCard.vue'))
 }
 
+// 配置组件数组：右侧配置面板入口，一个组件可注册多个配置面板
 const DeviceCountCardConfig = [
   {
     name: 'deviceCountCard',
@@ -92,6 +94,7 @@ const DeviceCountCardConfig = [
   }
 ]
 
+// 配置元数据：默认配置与画布元信息（来自 config.ts），供扫描入口合并使用
 const DeviceCountCardConfigProps = {
   ...deviceCountCardConfig
 }

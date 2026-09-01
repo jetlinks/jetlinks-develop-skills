@@ -4,19 +4,21 @@
 
 ## 先确认的工作区事实
 
-- 组件导出入口优先核验 `jetlinks-web-core/src/components/index.ts`。
+- `@jetlinks-web/components` 共享基础组件：先读 `packages/components/src/components.md` 做场景导航，再用 `packages/components/src/components.ts` 核验根导出，最后只打开候选组件文档与源码。
+- `@jetlinks-web-core/components` 项目级组件：核验 `jetlinks-web-core/src/components/index.ts`，再看组件源码和相邻生产用法。
 - hooks 导出入口优先核验 `jetlinks-web-core/src/hooks/index.ts`。
 - utils 导出入口优先核验 `jetlinks-web-core/src/utils/index.ts`。
-- 如果目录或导入方式与本文不同，以当前工作区真实结构为准。
+- 如果目录、包版本或导入方式与本文不同，以目标项目当前依赖、真实导出和生产代码为准。
 - `jetlinks-project-ui-cli` 只能在用户明确要求时作为外部参考；不能作为当前 workspace 可用组件的证据。
 
 ## 包级能力复用优先级
 
-1. 页面搭建优先：`@jetlinks-web-core/components`
-2. 逻辑复用优先：`@jetlinks-web-core/hooks`，再看 `@jetlinks-web/hooks`
-3. 通用函数优先：`@jetlinks-web-core/utils`，再看 `@jetlinks-web/utils`
-4. 常量与底层能力按需使用：`@jetlinks-web/constants`、`@jetlinks-web/core`
-5. 基础交互控件优先评估 Ant Design Vue，再考虑原生标签。
+1. 共享基础组件：先从 `@jetlinks-web/components` 映射文档判断是否已有输入、展示、搜索、表格、图标、布局或权限控件。
+2. 项目级业务组件与稳定封装：再看 `@jetlinks-web-core/components`；若它已封装基础组件并承载权限、i18n、路由、注册或业务组合约定，优先使用该封装。
+3. 基础交互控件：两层都没有合适能力时评估 Ant Design Vue，再考虑原生标签。
+4. 逻辑复用：优先 `@jetlinks-web-core/hooks`，再看 `@jetlinks-web/hooks`。
+5. 通用函数：优先 `@jetlinks-web-core/utils`，再看 `@jetlinks-web/utils`。
+6. 常量与底层能力：按需使用 `@jetlinks-web/constants`、`@jetlinks-web/core`。
 
 ## Ant Design Vue 与原生标签边界
 
@@ -41,7 +43,7 @@
 1. 当前功能目录：目标页面附近的 `components/**`、`hooks/**`、`utils/**`、`api/**`、`services/**`、`types/**`、schema/config。
 2. 当前模块：`modules/<module>-ui/**` 下相似页面、组件、hook、工具函数、store、API/service。
 3. 同业务域或兄弟子模块：对象模型、流程、字典、权限、搜索、表格操作、表单弹窗、数据转换相同或高度相似的 `modules/*-ui/**` 实现。
-4. 共享层：`@jetlinks-web-core/*`、`@jetlinks-web/*` 及其源码导出入口。
+4. 共享层：先查 `@jetlinks-web/components`（`packages/components/src/components.md` → `components.ts` → 单组件文档/源码），再查 `@jetlinks-web-core/components`（`jetlinks-web-core/src/components/index.ts` → 组件源码），随后按需查其他 `@jetlinks-web-core/*`、`@jetlinks-web/*` 导出。
 5. 跨模块公开出口：模块 `index.ts`、`register.ts`、注册中心、运行时扩展位、文档化 API。
 
 原则：
@@ -54,7 +56,7 @@
 
 ## 页面组件组合
 
-以下名称是候选能力，使用前必须核验导出与契约。
+以下名称是候选能力，使用前必须核验导出与契约。表中的 `ProTable`、`Search`、`CardSelect`、`AIcon`、`BadgeStatus`、`TimeFormat`、`ValueItem` 等共享基础组件，先从 `packages/components/src/components.md` 定位其独立文档并核验 `components.ts` 根导出；`ConditionFilter`、`QuickFilterSidebar`、`EntityCard`、`SectionCard`、`JlDrawerShell` 等项目级组件，则核验 `jetlinks-web-core/src/components/index.ts` 和相邻生产用法。
 
 先完成业务分型，再让用户确认交互方案，再选组件组合。只有页面已明确判断为标准管理页时，才进入“搜索层 + 列表层 + 编辑层”的管理页组合判断；如果核心任务是监控、分析、处置、流程推进、对象详情理解或资源选择，应先选更贴近业务的交互方案，再回头挑组件。对管理页中的通用条件搜索，如果 workspace 已提供 `ConditionFilter` 及其编码/回显工具，默认先用它承接搜索层。
 
@@ -103,6 +105,7 @@
 ```ts
 import { defineAsyncComponent } from 'vue';
 
+// 非首屏关键组件异步加载：减小首屏包体积，组件首次渲染时才拉取 chunk
 const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 ```
 
@@ -129,7 +132,7 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 ### 查询编码与条件处理
 
 - `paramsEncodeQuery`：编码 `terms[]/sorts[]`
-- `encodeConditionFilterQuery` / `decodeConditionFilterQuery`：统一条件筛选路由编码与回显
+- `encodeConditionFilterQuery` / `decodeConditionFilterQuery`：统一条件筛选路由编码与回显（由 `ConditionFilter` 组件工具导出，见 `components/ConditionFilter/utils.ts`，不在公共 utils 中）
 - `encodeQuery`：兼容旧查询结构
 - `handleParamsToString`：固定分组条件字符串化
 - `modifySearchColumnValue`：查询列值处理
@@ -153,13 +156,15 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 ## 组件抽取决策流
 
+函数封装、设计模式与组件边界的完整规则见 [`code-organization-rules.md`](code-organization-rules.md)。这里仅保留能力复用时的最短决策流。
+
 出现重复结构时按以下路径判断：
 
 1. 是否被 2+ 处消费？
    - 否 → 留在原处，不抽
    - 是 → 继续判断
 2. 2+ 处的差异是"参数化可解"还是"语义根本不同"？
-   - 参数化可解 → 抽组件，通过 prop 控制差异
+   - 参数化可解 → 评估抽组件，通过最小 prop / slot / 配置契约控制差异
    - 语义不同 → 各留各的，注释说明"视觉相似但语义不同"
 3. 抽到哪里？
    - 同模块内 2+ 页面复用 → modules/<module>-ui/components/
@@ -176,12 +181,12 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 ## 重复结构抽取规则
 
 - 第 1 次出现的业务结构，优先留在当前页面或当前局部组件内。
-- 第 2 次出现相似结构时，优先提炼为局部组件、配置项、hook 或小型 utils。
-- 第 3 次出现相似结构时，必须评估是否沉淀为模块级公共组件、模块 hook、模块 constants，或上沉到公共能力。
+- 第 2 次出现相似结构时，先确认业务语义一致且差异可以通过 props、slots 或配置表达，再决定是否提炼为局部组件、配置项、hook 或小型 utils。
+- 第 3 次出现相似结构时，必须评估是否沉淀为模块级公共组件、模块 hook、模块 constants，或上沉到公共能力；评估不等于强制合并。
 - 抽取前必须判断差异是否能通过 props、slots、配置项或组合方式解决。
 - 差异只是展示字段、标题、操作按钮、状态映射时，优先配置化，不复制整块模板。
 - 差异涉及业务语义、接口上下文、权限体系或生命周期明显不同的，不要强行合并成复杂大组件。
-- 新增通用组件时避免 props 过多；如果 props 持续膨胀，应重新拆分职责或保留局部实现。
+- 新增通用组件时不以 props 数量作为硬门槛；如果 props / emits 代表多个不相关概念或泄漏父组件编排细节，应重新拆分职责或保留局部实现。
 - 不为了减少文件行数制造过深包装层，组件层级应保持可读和可调试。
 
 ## 网格 / 列表布局约束
@@ -196,8 +201,10 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 ## 约束
 
-- 不要把文档中的能力清单当作固定事实，必须先核验导出与签名。
-- 不要把外部组件库当成当前项目依赖；最终以当前 workspace 的 `jetlinks-web-core` 为准。
+- 不要把文档中的能力清单当作固定事实，必须先核验导出、签名和目标项目实际安装版本。
+- 不要把 `packages/components/src` 下存在的目录或文档直接当成 `@jetlinks-web/components` 根导出；根导出以 `components.ts` 为准。
+- 不要根据源码目录自行拼接 `@jetlinks-web/components/es/...` 深层导入；只有目标版本和相邻生产代码均证明稳定可用时才沿用。
+- 不要把外部组件库当成当前项目依赖；最终以当前 workspace 的 `@jetlinks-web/components` 与 `@jetlinks-web-core/components` 两层真实导出为准。
 - 不要绕过 `handleMenus`/`handleAuthMenu` 在页面硬编码权限映射。
 - 不要在多处手工拼接查询参数，优先复用编码工具。
 - 不要用组件内零散 watcher + 回调替代已有 hook 组合能力。
@@ -213,8 +220,9 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 ## 自检清单
 
 - 是否优先复用已存在的包级能力。
+- 是否先通过 `packages/components/src/components.md` 按需定位共享基础组件，并用 `components.ts` 核验根导出。
 - 是否复用了匹配场景的组件组合与 Hook 模式。
-- 是否按交互方案映射了 `jetlinks-web-core` 组件。
+- 是否按交互方案映射了 `@jetlinks-web/components` 共享基础组件和 `@jetlinks-web-core/components` 项目级组件。
 - 轻量字段是否优先使用单项编辑。
 - 是否避免了同类 utils 在页面侧重复实现。
 - 若未复用，是否提供了可验证的理由。

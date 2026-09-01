@@ -1,6 +1,6 @@
 # JetLinks Web Component Reuse Patterns
 
-本文件用于把常见前端场景映射到 `jetlinks-web-core` 通用组件，约束同类页面保持一致实现。交互模版的单一事实源按分片加载：[`../../jetlinks-web-style/references/style-catalog.md`](../../jetlinks-web-style/references/style-catalog.md)（索引）+ [`style-catalog-templates.md`](../../jetlinks-web-style/references/style-catalog-templates.md)（按需只读候选 `###`）+ [`style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)（§1–§6）+ 按需 [`style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)；本文件只给出组件级复用矩阵、编辑触发梯度表与短约束，详情头 / 10 条 / 侧栏等**见 detail-shell，下文不重复**。
+本文件用于把常见前端场景映射到 `@jetlinks-web/components` 共享基础组件与 `@jetlinks-web-core/components` 项目级组件，约束同类页面保持一致实现。共享组件先从当前 workspace 的 `packages/components/src/components.md` 定位独立文档，再用 `components.ts` 核验根导出；项目级组件核验 `jetlinks-web-core/src/components/index.ts`。本文件给出组件级复用矩阵、编辑触发梯度表与基线硬约束；页面分型以 [`page-pattern-decision-rules.md`](page-pattern-decision-rules.md) 为准，整页细节同时遵循相邻生产页面。
 
 ## 反传统后台感硬约束
 
@@ -29,16 +29,9 @@
 - 文案面向终端用户：禁出现"待接接口 / 这里以后接数据 / 模块说明 / 交互方式 / 设计意图"等开发态文字；统一走当前 i18n
 - 弹窗不是唯一编辑路径：详情页必须先评估能否走 inline / sectional 编辑，再决定是否需要弹窗
 
-## 详情页 / 编辑统一样式 / 整页版式 / 侧栏（不重复展开）
+## 详情页 / 编辑统一样式 / 整页版式 / 侧栏
 
-以下为 `jetlinks-web-style` 中与组件选型强相关、且正文很长的规范：**通用 §1–§6**见 [`../../jetlinks-web-style/references/style-catalog-core-base.md`](../../jetlinks-web-style/references/style-catalog-core-base.md)；**详情头 / §8 编辑统一 / 详情 10 条 / 侧栏 / FAB**见 [`../../jetlinks-web-style/references/style-catalog-core-detail-shell.md`](../../jetlinks-web-style/references/style-catalog-core-detail-shell.md)（单文件 ~16KB）。**入口表**见 [`../../jetlinks-web-style/references/style-catalog-core.md`](../../jetlinks-web-style/references/style-catalog-core.md)。
-
-- **§7** 详情页头部摘要区（名称 / 说明 inline、标签就地、状态快捷动作、反模式）
-- **§8** 编辑交互样式统一（字段 → 控件唯一映射、节奏、反模式）
-- **详情页 10 条硬规则** + AI 味 7 条不要 + **反向引用**做主区段
-- **侧栏与导航交互**（active 分两档、折叠 8 条、顶级路由不渲染 PageHead、FAB / z-index）
-
-本文件向下只保留**场景 → 组件矩阵**与短规则，避免与 core 双重占用上下文。
+这些整页级规范（详情页头部摘要区、全站编辑交互统一、详情页整页规则、侧栏与导航交互、PageHead、FAB / z-index）遵循相邻详情页与相邻模块的既有模式，并遵守本文件的基线硬约束与「详情页编辑规则」。本文件不重复维护这些整页规则正文。
 
 ## 场景组件矩阵
 
@@ -102,7 +95,8 @@
 实现前必须回答：
 
 - 当前场景属于矩阵中的哪一类。
-- `jetlinks-web-core/src/components/index.ts` 是否已导出对应组件。
+- 若为共享基础组件，是否已从 `packages/components/src/components.md` 打开对应文档，并由 `packages/components/src/components.ts` 证明根导出。
+- 若为项目级组件，`jetlinks-web-core/src/components/index.ts` 是否已导出对应组件。
 - 相邻页面如何使用该组件。
 - 复用时需要遵守哪些 props、slots、emits、权限或 i18n 约定。
 - 如果不复用，缺的是交互能力、数据契约、展示能力还是扩展能力。
@@ -113,7 +107,7 @@
 - 把轻量字段修改塞进完整编辑弹窗。
 - 为资源选择、能力选择、模型选择手写普通下拉，导致没有预览、筛选和说明。
 - 为了页面看起来完整，新增没有业务动作承接的介绍卡、统计卡或图标区。
-- 复制其他业务页面的局部组件，而不先判断是否应复用或沉淀到 `jetlinks-web-core`。
+- 复制其他业务页面的局部组件，而不先判断是否应复用 `@jetlinks-web/components`、`@jetlinks-web-core/components`，或沉淀为稳定公共能力。
 - 默认"4 KPI 卡 + 顶部搜索栏 + 大表格"的"经营分析"三段套壳；任何无来源、无动作承接的统计 / 趋势 / 排行都属于此类。
 - 把完整编辑弹窗当成唯一编辑路径，跳过 inline / sectional 编辑评估。
 - 用多 Tab 平铺同质化内容（每个 Tab 只是同一组字段的另一种分组），制造"信息丰富"假象。
@@ -123,7 +117,7 @@
 
 ## 自检清单
 
-- 是否已把场景映射到明确的 `jetlinks-web-core` 组件。
+- 是否已把场景映射到明确的 `@jetlinks-web/components` 共享基础组件或 `@jetlinks-web-core/components` 项目级组件。
 - 同类页面是否使用同一组件和交互骨架。
 - 轻量字段是否支持单项编辑。
 - 是否避免了重复手写卡片、列表、详情、图标和抽屉。
