@@ -4,10 +4,12 @@
 
 ## 先确认的工作区事实
 
+- 涉及 core 能力时，先读 [`core-capability-docs.md`](core-capability-docs.md)，再按任务读取 `jetlinks-web-core/src/README.md` 和对应分类 README；这些文档只做导航，最终仍以导出、源码和生产代码为准。
 - `@jetlinks-web/components` 共享基础组件：先读 `packages/components/src/components.md` 做场景导航，再用 `packages/components/src/components.ts` 核验根导出，最后只打开候选组件文档与源码。
-- `@jetlinks-web-core/components` 项目级组件：核验 `jetlinks-web-core/src/components/index.ts`，再看组件源码和相邻生产用法。
-- hooks 导出入口优先核验 `jetlinks-web-core/src/hooks/index.ts`。
-- utils 导出入口优先核验 `jetlinks-web-core/src/utils/index.ts`。
+- `@jetlinks-web-core/components` 项目级组件：先读 `jetlinks-web-core/src/components/README.md` 定位候选，再核验 `jetlinks-web-core/src/components/index.ts`、组件源码和相邻生产用法。
+- hooks：先读 `jetlinks-web-core/src/hooks/README.md`（若存在），再核验 `jetlinks-web-core/src/hooks/index.ts`。
+- utils：先读 `jetlinks-web-core/src/utils/README.md`（若存在），再核验 `jetlinks-web-core/src/utils/index.ts`。
+- store：先读 `jetlinks-web-core/src/store/README.md`（若存在），再核验 `jetlinks-web-core/src/store/index.ts` 和对应 Store 源码。
 - 如果目录、包版本或导入方式与本文不同，以目标项目当前依赖、真实导出和生产代码为准。
 - `jetlinks-project-ui-cli` 只能在用户明确要求时作为外部参考；不能作为当前 workspace 可用组件的证据。
 
@@ -111,6 +113,8 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 ## Hook 选型
 
+使用下列 Hook 前，先从 `jetlinks-web-core/src/hooks/README.md` 定位候选，再核验 `src/hooks/index.ts` 和相邻生产用法。
+
 | Hook | 用途 | 关键点 |
 | --- | --- | --- |
 | `useTabSaveSuccess` | 打开新页，保存后回传当前页 | `onOpen` 传上下文参数 |
@@ -122,6 +126,8 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 | `useRegistryVNodeMerge` | 合并默认节点与扩展节点 | `replace/before/after/append` |
 
 ## Utils 选型
+
+使用下列工具前，先从 `jetlinks-web-core/src/utils/README.md` 定位候选，再核验 `src/utils/index.ts`、源码和副作用边界。
 
 ### 路由与菜单
 
@@ -145,6 +151,12 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 - `getImageUrl` / `downloadJson`：资源展示与下载
 - `transformTree` / `mergeObjectArrays`：树与集合处理
 - `createScript`：动态加载外部脚本
+
+## Store 选型
+
+- 使用 Store 前先读取 `jetlinks-web-core/src/store/README.md`（若存在），判断状态是否跨页面共享，再核验 `src/store/index.ts` 和目标 Store 源码。
+- 只有 `index.ts` 明确导出的 Store 才能作为根入口事实；未导出的 Store、菜单辅助文件和覆盖工具必须沿用已有深层生产导入，不因文件存在而扩大公共 API。
+- 页面消费 Store 时优先使用 `storeToRefs` 读取响应式 state，动作直接调用 Store；请求、缓存、Scope 和持久化边界以 Store 与对应 utils 的真实实现为准。
 
 ## 推荐工作流
 

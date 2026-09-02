@@ -28,7 +28,7 @@
 ## 标准工作流
 
 1. 先查看目标模块相邻页面，确认真实技术栈、命名、交互风格，并提炼当前前端框架的样式锚点。
-2. 先核验工作区事实，再写代码：导出入口、依赖包、模块目录、已有示例。
+2. 先核验工作区事实，再写代码：导出入口、依赖包、模块目录、已有示例。涉及 `jetlinks-web-core` 的组件、hooks、utils、store 或 core 页面时，按 [`core-capability-docs.md`](core-capability-docs.md) 先读 core 总索引和对应分类索引，再打开少量候选说明。
 3. 先分析真实业务：目标用户是谁，最关键动作是什么，页面是在支撑录入、审核、监控、排障、运营还是配置，不要默认它只是“管理表”。
 4. 先确认两层组件事实源：`@jetlinks-web/components` 的共享基础组件从 `packages/components/src/components.md` 按场景定位、用 `components.ts` 核验根导出；`@jetlinks-web-core/components` 的项目级组件从 `jetlinks-web-core/src/components/index.ts` 核验。业务页面用于确认真实组合方式，外部组件库只能作为参考。
 5. 先做能力复用评估，再决定是否新增实现。
@@ -142,6 +142,7 @@
 ## 按场景加载文档
 
 - 能力复用与组件/Hook/utils 选型：[`capability-reuse-rules.md`](capability-reuse-rules.md)
+- `jetlinks-web-core` 能力说明读取：[`core-capability-docs.md`](core-capability-docs.md)
 - `@jetlinks-web/components` 共享组件映射：当前 workspace 的 `packages/components/src/components.md`（只按候选打开单组件文档）
 - 两层组件事实源和外部参考边界：[`component-source-rules.md`](component-source-rules.md)
 - 交互方案与页面分型：用 [`page-pattern-decision-rules.md`](page-pattern-decision-rules.md)

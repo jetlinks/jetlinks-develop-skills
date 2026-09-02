@@ -6,6 +6,7 @@
 
 - [web-development-rules.md](web-development-rules.md): 核心入口、任务分类、标准工作流与核心约束
 - [component-source-rules.md](component-source-rules.md): `@jetlinks-web/components` 共享基础组件与 `@jetlinks-web-core/components` 项目级组件的双事实源、外部参考边界
+- [core-capability-docs.md](core-capability-docs.md): `jetlinks-web-core` 组件、hooks、utils、store 与页面说明的按需读取和核验顺序
 - [component-reuse-patterns.md](component-reuse-patterns.md): 卡片、列表、详情、图标、动态编辑、抽屉、标签等场景的双层组件复用矩阵
 - [capability-reuse-rules.md](capability-reuse-rules.md): 组件/hooks/utils 与包级能力复用规则
 - [code-organization-rules.md](code-organization-rules.md): 函数封装、设计模式、组件边界、Props/Emits 契约与职责抽离流程
@@ -24,16 +25,17 @@
 
 1. 先明确任务类型和执行路径：`web-development-rules.md`
 2. 先确认双层组件事实源和外部参考边界：`component-source-rules.md`；涉及共享基础组件时，从当前 workspace 的 `packages/components/src/components.md` 按需打开单组件文档
-3. 页面结构或交互路径有多种可能：用 `page-pattern-decision-rules.md` 分型并记录方案档案
-4. 需要统一卡片、列表、详情、图标、动态编辑等组件：`component-reuse-patterns.md`
-5. 页面结构仍不知道该做成什么：`page-pattern-decision-rules.md`
-6. 不确定某个区块、统计卡或图表该不该存在：`block-admission-rules.md`
-7. 需要借鉴案例但怕抄错场景：`business-ui-example-rules.md`
-8. 需要表达式搜索、通用筛选或远程选项筛选：`condition-filter-rules.md`
-9. 接口字段来自 `EnumDict` / `I18nEnumDict` 或返回 `{ value, text }`：`enum-rendering-rules.md`
-10. 先判断复用能力再写代码：`capability-reuse-rules.md`
-11. 做 `visDashboard` 仪表盘组件：`dashboard-component-rules.md`
-12. 不确定代码放哪里：`directory-structure-rules.md`
-13. 状态边界不清晰：`state-management-rules.md`
-14. 交付前质量或类型风险检查：`quality-and-type-rules.md`
-15. 需要找真实实现样例：`example-locations.md`
+3. 涉及 core 公共能力时，按 `core-capability-docs.md` 读取总索引和对应分类 README，再核验真实导出与生产用法
+4. 页面结构或交互路径有多种可能：用 `page-pattern-decision-rules.md` 分型并记录方案档案
+5. 需要统一卡片、列表、详情、图标、动态编辑等组件：`component-reuse-patterns.md`
+6. 页面结构仍不知道该做成什么：`page-pattern-decision-rules.md`
+7. 不确定某个区块、统计卡或图表该不该存在：`block-admission-rules.md`
+8. 需要借鉴案例但怕抄错场景：`business-ui-example-rules.md`
+9. 需要表达式搜索、通用筛选或远程选项筛选：`condition-filter-rules.md`
+10. 接口字段来自 `EnumDict` / `I18nEnumDict` 或返回 `{ value, text }`：`enum-rendering-rules.md`
+11. 先判断复用能力再写代码：`capability-reuse-rules.md`
+12. 做 `visDashboard` 仪表盘组件：`dashboard-component-rules.md`
+13. 不确定代码放哪里：`directory-structure-rules.md`
+14. 状态边界不清晰：`state-management-rules.md`
+15. 交付前质量或类型风险检查：`quality-and-type-rules.md`
+16. 需要找真实实现样例：`example-locations.md`

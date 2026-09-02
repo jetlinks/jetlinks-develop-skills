@@ -14,8 +14,13 @@
 - 模块 API 参考：`modules/*-ui/api/**`
 - 模块 hooks/store 参考：`modules/*-ui/hooks/**`、`modules/*-ui/store/**`
 - 公共组件参考：`jetlinks-web-core/src/components/**`
+- 公共组件导航：`jetlinks-web-core/src/components/README.md`
 - 公共 hooks 参考：`jetlinks-web-core/src/hooks/**`
+- 公共 hooks 导航：`jetlinks-web-core/src/hooks/README.md`
 - 公共 utils 参考：`jetlinks-web-core/src/utils/**`
+- 公共 utils 导航：`jetlinks-web-core/src/utils/README.md`
+- 公共 store 参考与导航：`jetlinks-web-core/src/store/**`、`jetlinks-web-core/src/store/README.md`
+- Core 页面入口与导航：`jetlinks-web-core/src/views/**`、`jetlinks-web-core/src/views/README.md`
 - 模块入口与注册参考：`modules/*-ui/index.ts`、`modules/*-ui/register.ts`
 - 模块注册中心参考：`jetlinks-web-core/src/utils/module-registry.ts`
 

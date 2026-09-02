@@ -2,7 +2,7 @@ interface:
   display_name: "JetLinks Web"
   short_description: "JetLinks 前端方案、能力复用、代码组织与质量约束"
   default_prompt: >-
-    使用 $jetlinks-web 处理 JetLinks 前端任务：业务分析 → 方案锁定 → 组件复用 → 代码组织 → 实现 → 文案 → 交付。本 prompt 只做实现侧约束；方案、代码组织与硬约束事实源为 `references/page-pattern-decision-rules.md`、`references/component-reuse-patterns.md`、`references/code-organization-rules.md` 及其他按场景加载的本地参考文档。
+    使用 $jetlinks-web 处理 JetLinks 前端任务：业务分析 → 方案锁定 → 组件复用 → 代码组织 → 实现 → 文案 → 交付。涉及 `jetlinks-web-core` 公共能力时，按 `references/core-capability-docs.md` 读取总索引和对应分类 README，再核验真实导出、源码与相邻生产用法。本 prompt 只做实现侧约束；方案、代码组织与硬约束事实源为 `references/page-pattern-decision-rules.md`、`references/component-reuse-patterns.md`、`references/code-organization-rules.md` 及其他按场景加载的本地参考文档。
 
     一、工作流：
     1)业务分析：业务目标、目标用户、进入后的第一任务、成功标准、单对象 / 多对象、关键指标数据源；缺 1 项且影响结构就先问，缺 2 项及以上或页面分型摇摆时必须先澄清。
