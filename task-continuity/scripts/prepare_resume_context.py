@@ -35,7 +35,9 @@ def _text(value: Any, limit: int) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
     value = value.strip()
-    return value if len(value) <= limit else value[: max(0, limit - 1)] + "…"
+    # Never truncate an identity, a negation, an accepted constraint or an action.
+    # Size targets produce diagnostics in project_context; they are not permissions.
+    return value
 
 
 def _action(action: Any, limit: int) -> dict[str, Any] | None:
@@ -106,9 +108,33 @@ def project_context(document: dict[str, Any], max_anchors: int = 7, text_limit: 
     snapshot = document.get("source_snapshot") if isinstance(document.get("source_snapshot"), dict) else {}
     anchor_values = resume.get("anchors") if isinstance(resume.get("anchors"), list) else []
     projection_omissions: dict[str, int] = {}
+    projection_warnings = list(validation.get("warnings", []))
     if len(anchor_values) > max_anchors:
-        projection_omissions["resume.anchors"] = len(anchor_values) - max_anchors
-    projection_ready = bool(validation.get("ready")) and not projection_omissions
+        projection_warnings.append({"category": "efficiency", "path": "resume.anchors", "items_over_target": len(anchor_values) - max_anchors})
+    projection_ready = bool(validation.get("ready"))
+    observed = document.get("observed") if isinstance(document.get("observed"), dict) else {}
+    message_effect = observed.get("message_effect") if isinstance(observed.get("message_effect"), dict) else {}
+    accepted_constraints: dict[str, dict[str, Any]] = {}
+    saved_constraints = contract.get("accepted_constraints", [])
+    previous_constraint_texts = {
+        item["text"] for item in saved_constraints
+        if isinstance(item, dict) and isinstance(item.get("text"), str)
+    } if isinstance(saved_constraints, list) else set()
+    deltas = [saved_constraints]
+    if observed.get("message_class") == "NEW_CONSTRAINT":
+        deltas.append(message_effect.get("accepted_constraints", []))
+    for delta in deltas:
+        if isinstance(delta, list):
+            for item in delta:
+                if isinstance(item, dict) and isinstance(item.get("id"), str):
+                    if item.get("status") == "revoked":
+                        accepted_constraints.pop(item["id"], None)
+                    elif isinstance(item.get("text"), str):
+                        accepted_constraints[item["id"]] = {key: item[key] for key in ("id", "text", "scope") if key in item}
+    constraints = list(dict.fromkeys(
+        [item.strip() for item in contract.get("constraints", []) if isinstance(item, str) and item.strip() and item not in previous_constraint_texts]
+        + [item["text"] for item in accepted_constraints.values()]
+    ))
 
     observation_value = decision.get("active_observation")
     observation = None
@@ -213,7 +239,7 @@ def project_context(document: dict[str, Any], max_anchors: int = 7, text_limit: 
             if (short := _text(item, text_limit))
         ]
 
-    return {
+    projection = {
         "gate": (
             validation.get("suggested_gate", "SNAPSHOT_REQUIRED")
             if not projection_omissions
@@ -221,16 +247,15 @@ def project_context(document: dict[str, Any], max_anchors: int = 7, text_limit: 
         ),
         "ready": projection_ready,
         "projection_omissions": projection_omissions,
+        "projection_warnings": projection_warnings,
         "recovery_type": resume.get("recovery_type"),
         "contract": {
             "task_id": _text(contract.get("task_id"), text_limit),
             "revision": _text(contract.get("revision"), text_limit),
             "locator": _text(contract.get("locator"), text_limit),
             "objective": _text(contract.get("objective"), text_limit),
-            "constraints": [
-                short for item in contract.get("constraints", [])
-                if (short := _text(item, text_limit))
-            ],
+            "constraints": constraints,
+            "accepted_constraints": list(accepted_constraints.values()),
             "acceptance": [
                 short for item in contract.get("acceptance", [])
                 if (short := _text(item, text_limit))
@@ -267,17 +292,20 @@ def project_context(document: dict[str, Any], max_anchors: int = 7, text_limit: 
         "resume": {
             "boundary_id": _text(resume.get("boundary_id"), text_limit),
             "anchors": [
-                short for item in anchor_values[:max_anchors]
+                short for item in anchor_values
                 if (short := _text(item, text_limit))
             ],
             "next": _action(resume.get("next"), text_limit),
-            "first_allowed_action": _action(resume.get("first_allowed_action"), text_limit),
+            "first_allowed_action": _action(resume.get("first_allowed_action"), text_limit) if projection_ready else None,
             "mainline_return_anchor": return_anchor,
         },
         "identity": {
             "source_id": _text(snapshot.get("source_id"), text_limit),
             "source_fingerprint": _text(snapshot.get("source_fingerprint"), text_limit),
             "strength": _text(snapshot.get("strength"), text_limit),
+            "missing_layers": snapshot.get("missing_layers", []),
+            "missing_layer_scopes": snapshot.get("missing_layer_scopes"),
+            "residual_identity_risk": _text(snapshot.get("residual_identity_risk"), text_limit),
             "audit_fingerprint": _text(metadata.get("audit_fingerprint"), text_limit),
             "pre_compaction_next_action_id": _text(metadata.get("pre_compaction_next_action_id"), text_limit),
             "previous_productive_action_id": _text(metadata.get("previous_productive_action_id"), text_limit),
@@ -286,15 +314,37 @@ def project_context(document: dict[str, Any], max_anchors: int = 7, text_limit: 
                 metadata.get("directive_revision_at_snapshot", metadata.get("instruction_revision_at_snapshot")),
                 text_limit,
             ),
+            "current_directive_revision": observed.get("directive_revision", observed.get("instruction_revision")),
+            "current_conversation_cursor": observed.get("conversation_cursor"),
+            "message_class": observed.get("message_class"),
+            "affected_assignment_ids": message_effect.get("affected_assignment_ids", []),
             "comparisons": validation.get("comparisons", {}),
             "mismatches": validation.get("mismatches", []),
         },
         "instructions": (
-            "Identity matched: execute first_allowed_action in this resumed turn; do not reload unchanged references."
+            (
+                "Identity remains partial: preserve the original objective and accepted constraints; execute only the checked first_allowed_action within its scope. Missing layers and residual risk still apply; a recovery observation does not establish acceptance."
+                if snapshot.get("strength") == "partial"
+                else "Identity matched: preserve the original objective and accepted constraints, then execute first_allowed_action; do not reload unchanged references. A status question does not replace the task."
+            )
             if projection_ready
-            else "Identity or bounded projection is not ready: reconcile only the reported mismatches or omissions, refresh the capsule, and do not mutate production state."
+            else "Identity or action is not ready: preserve the original objective and accepted constraints; reconcile only reported missing identity layers, errors or mismatches with a bounded observation, and do not mutate production state or claim acceptance."
         ),
     }
+
+    def oversized(value: Any, path: str = "") -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key != "projection_warnings":
+                    oversized(item, f"{path}.{key}" if path else key)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                oversized(item, f"{path}[{index}]")
+        elif isinstance(value, str) and len(value) > text_limit:
+            projection_warnings.append({"category": "efficiency", "path": path, "characters_over_target": len(value) - text_limit})
+    oversized(projection)
+    projection["identity"]["errors"] = validation.get("errors", [])
+    return projection
 
 
 def _load(path: Path | None) -> Any:

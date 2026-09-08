@@ -5,12 +5,12 @@ description: 在当前 JetLinks 工作区中应用响应式与非阻塞实现实
 
 # JetLinks Reactive
 
-Read [`references/reactive-practice.md`](references/reactive-practice.md) first.
+Use [`references/reactive-practice.md`](references/reactive-practice.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
 
 ## Workflow
 
 1. Inspect adjacent code to confirm whether the target module is reactive or blocking.
-2. If this is a new backend feature or large reactive behavior change, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract and realistic test goals in the selected host runtime carrier, wait for explicit user confirmation, then update authoritative docs only for accepted durable reactive contracts.
+2. If this is a new backend feature or large reactive behavior change, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable reactive contracts when needed.
 3. If the module is reactive, keep `Mono` or `Flux` end-to-end and avoid imperative fallbacks.
 4. If blocking I/O is unavoidable, isolate it explicitly and only use the scheduler pattern already accepted by the codebase.
 5. Before editing non-trivial reactive code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): async boundaries, backpressure or collection limits, cancellation / retry / timeout behavior, lifecycle cleanup, tracing context propagation, compatibility, and extracted business stages whose purpose is not obvious from the method name.
@@ -33,13 +33,15 @@ Read [`references/reactive-practice.md`](references/reactive-practice.md) first.
 - Do not call `collectList()` on unbounded or potentially large streams; only collect when the source is clearly bounded by page, limit, batch, protocol size, or validated input size. Prefer pagination, bounded `buffer` / `window`, streaming, or existing query-composition helpers.
 - Keep lambdas as glue code. If a lambda contains validation plus query plus mutation plus side effect, nested branching, loops, `try/catch`, or multiple DB / remote calls, extract a named method and test that method through the reactive chain.
 - When the reactive API or library does not satisfy the requirement (signature mismatch, missing extension point, serialization error inside the chain), follow [`../jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../jetlinks-conventions/references/root-cause-and-no-hack-rules.md): solve at the root via official extension points / adjacent abstractions / dependency choice, or inform the user with concrete trade-offs; do not use reflection / visibility hacks / copied source / silent `catch` to make the chain compile.
-- When async behavior has competing timing / demand / cancellation / context hypotheses, or one attempted implementation still fails or shifts the symptom, switch to `$systematic-solving` before adding another operator, retry, timeout, scheduler, cache, or test wait.
-- Do not implement a large reactive change before the task contract, backpressure or batching expectations, failure behavior, and realistic test goals have been documented and confirmed.
+- Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
+- Do not implement a large reactive change until the relevant contract and validation goals are clear under the authorization rule in [backend design](../jetlinks-router/references/backend-design-test-driven-rules.md).
 - Do not make reactive tests pass by sleeping, swallowing errors, ignoring dropped signals, or weakening assertions; verify emitted values, completion or error signals, ordering, concurrency, retry, timeout, and side effects that match real usage.
 - Do not leave complex reactive chains or extracted reactive stages comment-free when they encode non-obvious async boundaries, batching / backpressure limits, retry / timeout policy, lifecycle cleanup, compatibility, or tracing context propagation. Add concise comments in the code; skip comments for direct `map` / `flatMap` glue with self-explanatory method names.
 - When reactive code changes are made, run relevant validation when possible; otherwise state the exact pending commands and residual blocking risks.
 
 ## Response Shape
+
+Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
 
 1. Current module execution model
 2. Reactive risks or blocking risks

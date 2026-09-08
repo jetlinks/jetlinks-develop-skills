@@ -583,8 +583,26 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
             and not recovery_route_deviations
         )
 
+    invariant_violations = []
+    for label, failed in (
+        ("action_identity", action_identity_continuity is False),
+        ("required_context", bool(missing_constraints or missing_evidence)),
+        ("stale_contract_action", bool(stale_contract_actions)),
+        ("wrong_mainline_return", bool(wrong_mainline_returns)),
+        ("missing_return_anchor", bool(missing_return_anchors)),
+        ("invalid_observation_evidence", bool(invalid_observation_used or scope_invalid_observation_used)),
+        ("solution_without_evidence", bool(solution_without_evidence)),
+        ("solution_before_snapshot", bool(solution_change_before_snapshot)),
+    ):
+        if failed:
+            invariant_violations.append(label)
     return {
         "event_count": len(events),
+        "observed_invariants_passed": not invariant_violations,
+        "invariant_violations": invariant_violations,
+        "acceptance_success": trace.get("acceptance_success"),
+        "efficiency_targets": {"compact_fast_path_met": compact_fast_path_passed},
+        "metric_semantics": "Efficiency targets and legacy compact_continuation_fast_path_passed do not determine correctness or business acceptance.",
         "first_productive_action_event": first_index,
         "first_productive_action_turn": first_turn,
         "first_action_id": first_action_id,

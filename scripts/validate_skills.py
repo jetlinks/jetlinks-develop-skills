@@ -15,266 +15,53 @@ from pathlib import Path
 NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 GENERIC_SKILLS = {"systematic-solving", "task-continuity", "code-navigation", "agent-orchestration"}
-REQUIRED_SKILL_CONTRACTS = {
-    "agent-orchestration": {
-        "SKILL.md": (
-            "RouteDecision",
-            "SINGLE_OWNER",
-            "Assignment Capsule",
-            "Result Packet",
-            "accepted dispatch receipt",
-            "at most two active delegated slices",
-            "After one failed attempt",
-            "overlapping files",
-            "Hard-disable multi-Agent tools",
-            "spawn broker",
-            "schema_version: 5",
-            "profile: compact",
-            "merely to populate",
-            "SemanticFork",
-            "EvidenceBudget",
-            "evidence_reopen",
-        ),
-        "references/orchestration-and-routing-rules.md": (
-            "CAPABILITY_MISMATCH",
-            "CAPSULE_DEFECT",
-            "SOURCE_DRIFT",
-            "INVALID_OBSERVATION",
-            "CONTRACT_DEFECT",
-            "IMPLEMENTATION_DEFECT",
-            "Default delegation depth: one",
-            "one or two",
-            "same capability tier",
-            "Capsule authority is monotonic",
-            "delegation: denied",
-            "NEW_CANDIDATE",
-            "ADMISSION_PRECONDITION_INVALIDATED",
-            "Apply control-plane checks progressively",
-            "checks state already produced",
-            "compact form",
-        ),
-        "references/evaluation-cases.md": (
-            "Short mechanical change",
-            "Host without subagents",
-            "same-slice retry",
-            "overlapping writes",
-            "scripts/evaluate_orchestration_trace.py",
-            "Advice-only delegation false positive",
-            "Leaf attempts recursive delegation",
-            "Brokered nested scope attenuation",
-            "New candidate reopens a stopped gate",
-            "Review finding legitimately discards a retained artifact",
-            "Compact cross-module implementation",
-            "Packet completion is not an evidence task",
-        ),
-        "references/codex-adapter.md": (
-            "agents.max_depth",
-            "Do not add an enabled Stage Manager profile",
-            "descendant scope / write-set ACL",
-        ),
-    },
-    "task-continuity": {
-        "SKILL.md": (
-            "READY",
-            "SNAPSHOT_REQUIRED",
-            "RESUME_AUDIT",
-            "Source Snapshot",
-            "Contract",
-            "Checkpoint",
-            "DecisionState",
-            "Resume",
-            "consecutive_matching_audits",
-            "first_allowed_action",
-            "COMPACT_CONTINUATION",
-            "COLD_HANDOFF",
-            "EXTERNAL_RETRY",
-            "previous_productive_action_id",
-            "pre_compaction_next_action_id",
-            "post_compaction_first_productive_action_id",
-            "SemanticFork",
-            "EvidenceBudget",
-            "SCOPE_INVALID",
-            "conversation_cursor_at_snapshot",
-            "directive_revision_at_snapshot",
-            "MainlineReturnAnchor",
-        ),
-        "references/task-state-and-recovery-rules.md": (
-            "Continuity Metadata",
-            "LoadedRules",
-            "audit_fingerprint",
-            "Checkpoint.Validated",
-            "Checkpoint.In-flight",
-            "RESUME_AUDIT -> READY",
-            "生产修改",
-            "区分检查",
-            "真实阻塞",
-            "resume_audit_tool_rounds <= 1",
-            "unmanaged_manifest_digest",
-            "conversation_cursor_at_snapshot",
-            "directive_revision_at_snapshot",
-            "MainlineReturnAnchor",
-            "do_not_reopen",
-            "semantic_fork:",
-            "evidence_budget:",
-            "latest_discriminating_evidence",
-        ),
-        "references/evaluation-cases.md": (
-            "验证失败后立即压缩",
-            "同阶段连续两次压缩",
-            "同一恢复切片连续五次压缩",
-            "空泛 Next",
-            "规则 revision 未变化",
-            "Continuation 对比协议",
-            "Full-context oracle",
-            "Ablation continuation",
-            "陈旧胶囊下修改",
-            "用户禁止提交",
-            "无关代码图注入",
-            "scripts/evaluate_continuity_trace.py",
-            "压缩续跑单批次",
-            "外部重试",
-            "压缩前后动作身份连续",
-            "正确动作前的恢复入口偏航",
-            "未解决语义分叉后压缩",
-            "已解决语义分叉后压缩",
-            "已停止取证预算后压缩",
-        ),
-    },
-    "systematic-solving": {
-        "SKILL.md": (
-            "stale consumer / oracle",
-            "invalid fixture / input",
-            "mechanical assembly defect",
-            "SemanticFork",
-            "EvidenceBudget",
-            "SCOPE_INVALID",
-        ),
-        "references/evaluation-cases.md": (
-            "停滞后再次实施",
-            "混合失败批次",
-            "语义分叉",
-            "EvidenceBudget=STOPPED",
-        ),
-    },
-    "code-navigation": {
-        "SKILL.md": (
-            "adaptive local structure view",
-            "eager repository-wide graph",
-        ),
-        "references/navigation-and-evidence-rules.md": (
-            "自适应局部图策略",
-            "任务相关性门禁",
-            "decision_question",
-            "target_languages",
-            "source fingerprint",
-            "增量刷新受影响节点",
-        ),
-    },
-    "jetlinks-router": {
-        "SKILL.md": (
-            "Before ordinary classification",
-            "first_allowed_action",
-            "Graph size is not evidence of relevance",
-            "current_decision",
-            "minimum_skills",
-            "SemanticFork",
-            "scripts/evaluate_route_trace.py",
-        ),
-        "references/ai-prompt.md": (
-            "continuation fast path",
-            "decision question",
-            "目标语言",
-            "user_confirmation_required",
-            "unique_next",
-        ),
-        "references/context-recovery-rules.md": (
-            "validate_continuity_state.py",
-            "suggested_gate",
-            "普通 router 分类",
-            "SemanticFork.status=OPEN",
-        ),
-        "references/evaluation-cases.md": (
-            "最小领域组合",
-            "匹配 compact continuation",
-            "SemanticFork.status=OPEN",
-            "scripts/evaluate_route_trace.py",
-        ),
-    },
+# Resource paths and public entry points are package interfaces. Natural-language
+# phrasing and individual test method names are deliberately not interfaces:
+# prose may be reworded or progressively disclosed without weakening behavior.
+REQUIRED_SKILL_RESOURCES = {
+    "agent-orchestration": (
+        "references/orchestration-and-routing-rules.md",
+        "references/evaluation-cases.md",
+        "references/codex-adapter.md",
+    ),
+    "task-continuity": (
+        "references/task-state-and-recovery-rules.md",
+        "references/evaluation-cases.md",
+    ),
+    "systematic-solving": (
+        "references/systematic-solving-rules.md",
+        "references/evaluation-cases.md",
+    ),
+    "code-navigation": ("references/navigation-and-evidence-rules.md",),
+    "jetlinks-router": (
+        "references/ai-prompt.md",
+        "references/context-recovery-rules.md",
+        "references/evaluation-cases.md",
+    ),
 }
 
-# Python helpers are executable contracts, not prose.  Check their AST shape and
-# require the negative tests that prove the important gates.  This deliberately
-# avoids importing or executing code from an arbitrary repository during a
-# structural validation pass; the coherent-stage test command executes these
-# suites once after edits are integrated.
+# Check Python syntax and public callables without executing arbitrary repository
+# code. Behavioral correctness is assessed by the coherent-stage test suites and
+# real task evaluations, not by searching documentation for contract vocabulary.
 REQUIRED_PYTHON_CONTRACTS = {
     "agent-orchestration": {
-        "scripts/evaluate_orchestration_trace.py": {
-            "functions": ("evaluate_trace",),
-        },
-        "scripts/test_orchestration_tools.py": {
-            "tests": (
-                "test_v4_route_requires_native_nonempty_decision_question",
-                "test_v4_rejects_duplicate_assignment_identity_without_overwriting_state",
-                "test_malformed_v4_lists_return_errors_instead_of_crashing",
-                "test_invalid_observation_reopen_is_limited_to_one_round",
-                "test_rejects_design_implementation_and_review_while_fork_open",
-            ),
-        },
+        "scripts/evaluate_orchestration_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/test_orchestration_tools.py": {"test_suite": True},
     },
     "systematic-solving": {
-        "scripts/evaluate_systematic_trace.py": {
-            "functions": ("evaluate_trace",),
-        },
-        "scripts/test_systematic_tools.py": {
-            "tests": (
-                "test_user_resolution_must_match_cited_decision_and_locator",
-                "test_invalid_reopen_must_cite_current_round_and_cannot_repeat",
-                "test_completed_inconclusive_round_requires_explicit_stop",
-                "test_malformed_enum_values_do_not_crash",
-            ),
-        },
+        "scripts/evaluate_systematic_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/test_systematic_tools.py": {"test_suite": True},
     },
     "task-continuity": {
-        "scripts/validate_continuity_state.py": {
-            "functions": ("validate_state",),
-        },
-        "scripts/evaluate_continuity_trace.py": {
-            "functions": ("evaluate_trace",),
-        },
-        "scripts/prepare_resume_context.py": {
-            "functions": ("project_context",),
-        },
-        "scripts/test_continuity_tools.py": {
-            "tests": (
-                "test_open_semantic_fork_blocks_solution_mutation",
-                "test_stopped_open_semantic_fork_rejects_more_evidence_without_reopen",
-                "test_semantic_options_are_not_silently_truncated",
-                "test_wrong_productive_action_does_not_close_recovery_deviation_window",
-            ),
-        },
+        "scripts/validate_continuity_state.py": {"functions": ("validate_state",)},
+        "scripts/evaluate_continuity_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/prepare_resume_context.py": {"functions": ("project_context",)},
+        "scripts/test_continuity_tools.py": {"test_suite": True},
+        "scripts/test_codex_execution_adapter.py": {"test_suite": True},
     },
     "jetlinks-router": {
-        "scripts/evaluate_route_trace.py": {
-            "functions": ("evaluate_trace",),
-        },
-        "scripts/test_router_tools.py": {
-            "tests": (
-                "test_accepts_exact_minimum_skill_route",
-                "test_rejects_unadmitted_skill_load",
-                "test_matching_compact_route_reuses_rules_and_hits_saved_next",
-                "test_matching_compact_route_rejects_reload_and_reclassification",
-                "test_open_semantic_fork_rejects_solution_route",
-            ),
-        },
-    },
-}
-FORBIDDEN_SKILL_CONTRACTS = {
-    "task-continuity": {
-        "references/task-state-and-recovery-rules.md": (
-            "Resume.audit_fingerprint",
-            "维护两个有界逻辑视图",
-        ),
+        "scripts/evaluate_route_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/test_router_tools.py": {"test_suite": True},
     },
 }
 AUTHOR_LOCAL_PATTERNS = {
@@ -362,21 +149,15 @@ def validate_generic_portability(skill_root: Path) -> list[str]:
     return errors
 
 
-def validate_required_contract_markers(skill_root: Path) -> list[str]:
-    """Smoke-check documented contract markers; executable tests prove behavior."""
-    required_files = REQUIRED_SKILL_CONTRACTS.get(skill_root.name)
-    if required_files is None:
-        return []
+def validate_required_resources(skill_root: Path) -> list[str]:
+    """Require documented public resources without prescribing their wording."""
     errors: list[str] = []
-    for relative, markers in required_files.items():
+    for relative in REQUIRED_SKILL_RESOURCES.get(skill_root.name, ()):
         path = skill_root / relative
         if not path.is_file():
-            errors.append(f"{path}: required contract-marker file missing")
-            continue
-        text = path.read_text(encoding="utf-8")
-        for marker in markers:
-            if marker not in text:
-                errors.append(f"{path}: missing required contract marker: {marker}")
+            errors.append(f"{path}: required skill resource missing")
+        elif not path.read_text(encoding="utf-8").strip():
+            errors.append(f"{path}: required skill resource is empty")
     return errors
 
 
@@ -418,52 +199,33 @@ def validate_python_contracts(skill_root: Path) -> list[str]:
 
         functions = {
             node.name: node
-            for node in ast.walk(tree)
+            for node in tree.body
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
         for name in contract.get("functions", ()):
             function = functions.get(name)
             if function is None:
                 errors.append(f"{path}: missing executable contract function {name}")
-                continue
-            has_input = bool(function.args.args or function.args.kwonlyargs)
-            has_gate = any(isinstance(node, (ast.If, ast.Try)) for node in ast.walk(function))
-            has_return = any(isinstance(node, ast.Return) for node in ast.walk(function))
-            if not (has_input and has_gate and has_return):
-                errors.append(
-                    f"{path}: executable contract function {name} is structurally incomplete; "
-                    "it must consume input, apply a conditional gate, and return a result"
-                )
+            elif not (
+                function.args.posonlyargs
+                or function.args.args
+                or function.args.kwonlyargs
+                or function.args.vararg
+                or function.args.kwarg
+            ):
+                errors.append(f"{path}: public contract function {name} must accept input")
 
-        methods = _test_methods(tree)
-        for name in contract.get("tests", ()):
-            method = methods.get(name)
-            if method is None:
-                errors.append(f"{path}: missing required behavioral test {name}")
-            elif not any(
+        if contract.get("test_suite"):
+            methods = _test_methods(tree)
+            has_assertion = any(
                 isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Attribute)
                 and node.func.attr.startswith("assert")
+                for method in methods.values()
                 for node in ast.walk(method)
-            ):
-                errors.append(f"{path}: behavioral test {name} has no executable assertion")
-    return errors
-
-
-def validate_forbidden_contracts(skill_root: Path) -> list[str]:
-    """Reject superseded contract shapes that would create parallel state schemas."""
-    forbidden_files = FORBIDDEN_SKILL_CONTRACTS.get(skill_root.name)
-    if forbidden_files is None:
-        return []
-    errors: list[str] = []
-    for relative, markers in forbidden_files.items():
-        path = skill_root / relative
-        if not path.is_file():
-            continue
-        text = path.read_text(encoding="utf-8")
-        for marker in markers:
-            if marker in text:
-                errors.append(f"{path}: contains superseded behavioral contract marker: {marker}")
+            )
+            if not methods or not has_assertion:
+                errors.append(f"{path}: test suite must contain an executable assertion")
     return errors
 
 
@@ -637,9 +399,8 @@ def validate_repository(
         for markdown in sorted(skill_root.rglob("*.md")):
             errors.extend(validate_links(markdown, repository_root))
         errors.extend(validate_generic_portability(skill_root))
-        errors.extend(validate_required_contract_markers(skill_root))
+        errors.extend(validate_required_resources(skill_root))
         errors.extend(validate_python_contracts(skill_root))
-        errors.extend(validate_forbidden_contracts(skill_root))
         if mirror_root is not None:
             errors.extend(validate_mirror(skill_root, mirror_root))
 

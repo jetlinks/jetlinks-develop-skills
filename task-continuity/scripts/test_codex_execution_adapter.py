@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import concurrent.futures
 import json
 import subprocess
 import sys
@@ -140,7 +141,7 @@ class AdapterTest(unittest.TestCase):
             "tool_name": "exec_command",
             "tool_use_id": "validation-1",
             "tool_input": {"cmd": "python3 -m unittest discover"},
-            "tool_response": "OK",
+            "tool_response": {"exit_code": 0},
             "tool_output": {"isError": False},
             "is_error": False,
             "cwd": str(self.workspace),
@@ -161,6 +162,83 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual({}, ADAPTER.handle_pretooluse(empty, event))
         self.assertEqual({}, ADAPTER.handle_posttooluse(empty, event))
         self.assertEqual({}, ADAPTER.handle_sessionstart(empty, {"source": "compact"}))
+
+    def test_pretooluse_blocks_leaf_recursive_delegation(self) -> None:
+        event = {
+            "tool_name": "spawn_agent",
+            "orchestration_context": {
+                "actor_role": "bounded_worker",
+                "delegated_program": True,
+                "delegation": "denied",
+                "depth": 1,
+                "max_depth": 1,
+            },
+        }
+        denied = ADAPTER.handle_pretooluse(self.config, event)
+        self.assertEqual("deny", denied["hookSpecificOutput"]["permissionDecision"])
+        self.assertIn("leaf Agent delegation", denied["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def test_pretooluse_blocks_primary_source_write_in_delegated_program(self) -> None:
+        event = {
+            "tool_name": "apply_patch",
+            "tool_input": {"patch": "change"},
+            "orchestration_context": {
+                "actor_role": "ORCHESTRATOR_INTEGRATOR",
+                "delegated_program": True,
+                "action_class": "coordination",
+            },
+        }
+        denied = ADAPTER.handle_pretooluse(self.config, event)
+        self.assertEqual("deny", denied["hookSpecificOutput"]["permissionDecision"])
+        self.assertIn("fresh bounded Worker", denied["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def test_pretooluse_blocks_overlapping_write_set(self) -> None:
+        event = {
+            "tool_name": "apply_patch",
+            "tool_input": {"patch": "change"},
+            "orchestration_context": {
+                "actor_role": "bounded_worker",
+                "write_set": ["backend/Service.java"],
+                "allowed_write_set": ["backend/Service.java"],
+                "active_write_sets": [["backend/Service.java"]],
+                "contract_state": "frozen",
+            },
+        }
+        denied = ADAPTER.handle_pretooluse(self.config, event)
+        self.assertEqual("deny", denied["hookSpecificOutput"]["permissionDecision"])
+        self.assertIn("overlaps", denied["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def test_recovery_efficiency_alone_does_not_block_tools(self) -> None:
+        event = {
+            "tool_name": "exec_command",
+            "tool_input": {"cmd": "sed -n 1,500p SKILL.md"},
+            "continuity_context": {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "identity_match": True,
+                "first_allowed_action_pending": True,
+                "first_allowed_action_id": "implement-adapter",
+                "operation_class": "full_skill_reload",
+            },
+        }
+        self.assertEqual({}, ADAPTER.handle_pretooluse(self.config, event))
+        event["continuity_context"]["operation_class"] = "previous_action_replay"
+        denied = ADAPTER.handle_pretooluse(self.config, event)
+        self.assertEqual("deny", denied["hookSpecificOutput"]["permissionDecision"])
+
+    def test_matching_compact_pretooluse_allows_exact_saved_action(self) -> None:
+        event = {
+            "tool_name": "exec_command",
+            "tool_input": {"cmd": "true"},
+            "continuity_context": {
+                "recovery_type": "COMPACT_CONTINUATION",
+                "identity_match": True,
+                "first_allowed_action_pending": True,
+                "first_allowed_action_id": "implement-adapter",
+                "operation_class": "productive",
+                "action_id": "implement-adapter",
+            },
+        }
+        self.assertEqual({}, ADAPTER.handle_pretooluse(self.config, event))
 
     def test_receipt_runtime_discovers_existing_sibling_state_only(self) -> None:
         args = types.SimpleNamespace(
@@ -225,6 +303,41 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual("deny", denial["hookSpecificOutput"]["permissionDecision"])
         self.assertNotEqual(before, ADAPTER.source_fingerprint(self.config))
         self.assertTrue(json.loads(self.graph.read_text())["dirty"])
+
+    def test_hook_receipt_reuses_stable_event_id(self) -> None:
+        event = {
+            "tool_name": "exec_command",
+            "tool_use_id": "validation-idempotent",
+            "tool_input": {"cmd": "python3 -m unittest discover"},
+            "tool_response": {"exit_code": 0},
+            "tool_output": {"isError": False},
+            "is_error": False,
+            "cwd": str(self.workspace),
+        }
+        ADAPTER.handle_posttooluse(self.config, event)
+        first, errors = ADAPTER._load_receipts(self.receipts)
+        self.assertFalse(errors)
+        ADAPTER.handle_posttooluse(self.config, event)
+        second, errors = ADAPTER._load_receipts(self.receipts)
+        self.assertFalse(errors)
+        self.assertEqual(len(first), len(second))
+        self.assertEqual(first[-1]["receipt_id"], second[-1]["receipt_id"])
+        self.assertEqual("validation-idempotent", second[-1]["event_id"])
+
+    def test_checkpoint_binding_rejects_a_different_task(self) -> None:
+        self.validation()
+        self.checkpoint()
+        document = valid_state()
+        document["recovery_capsule"]["contract"]["task_id"] = "other-task"
+        self.state.write_text(json.dumps(document), encoding="utf-8")
+        commit = {
+            "tool_name": "exec_command",
+            "tool_input": {"cmd": "git commit -m stage"},
+            "cwd": str(self.workspace),
+        }
+        denied = ADAPTER.handle_pretooluse(self.config, commit)
+        self.assertEqual("deny", denied["hookSpecificOutput"]["permissionDecision"])
+        self.assertIn("validated stage", denied["hookSpecificOutput"]["permissionDecisionReason"])
 
     def test_staging_and_commit_do_not_invalidate_content_fingerprint(self) -> None:
         (self.workspace / "app.py").write_text("VALUE = 3\n", encoding="utf-8")
@@ -293,6 +406,147 @@ class AdapterTest(unittest.TestCase):
         drift_context = json.loads(drifted["hookSpecificOutput"]["additionalContext"])
         self.assertFalse(drift_context["ready"])
         self.assertEqual("SNAPSHOT_REQUIRED", drift_context["gate"])
+
+    def post_validation(self, event_id: str, response: dict, *, tool: str = "exec_command", session: int = 17) -> None:
+        ADAPTER.handle_posttooluse(self.config, {
+            "tool_name": tool, "event_id": event_id, "is_error": False,
+            "tool_input": {"cmd": "python3 -m unittest discover"} if tool == "exec_command" else {"session_id": session},
+            "tool_response": response, "cwd": str(self.workspace),
+        })
+
+    def test_async_validation_requires_its_own_terminal_result(self) -> None:
+        self.post_validation("unknown", {"output": "tool invocation succeeded"})
+        self.post_validation("start", {"session_id": 17, "output": "running"})
+        records, _ = ADAPTER._load_receipts(self.receipts)
+        self.assertEqual(["unknown", "pending"], [item["status"] for item in records])
+        start = records[-1]
+        with self.assertRaises(ValueError):
+            self.checkpoint()
+        self.post_validation("unrelated", {"exit_code": 0}, tool="write_stdin", session=999)
+        self.post_validation("still-running", {"session_id": 17}, tool="write_stdin")
+        self.assertEqual(records, ADAPTER._load_receipts(self.receipts)[0])
+        self.post_validation("finish", {"exit_code": 0}, tool="write_stdin")
+        terminal = ADAPTER._load_receipts(self.receipts)[0][-1]
+        self.assertEqual("pass", terminal["status"])
+        self.assertEqual(start["receipt_id"], terminal["started_receipt_id"])
+        self.assertEqual(start["command"], terminal["command"])
+        self.assertEqual(start["source_fingerprint"], terminal["source_fingerprint"])
+        self.checkpoint()
+        self.post_validation("finish", {"exit_code": 0}, tool="write_stdin")
+        self.assertEqual(4, len(ADAPTER._load_receipts(self.receipts)[0]))
+
+    def test_async_failure_and_source_drift_cannot_become_passing_evidence(self) -> None:
+        self.post_validation("start-fail", {"session_id": 17})
+        self.post_validation("fail", {"exit_code": 1}, tool="write_stdin")
+        self.assertEqual("fail", ADAPTER._load_receipts(self.receipts)[0][-1]["status"])
+        self.post_validation("start-drift", {"session_id": 18})
+        before = ADAPTER.source_fingerprint(self.config)
+        (self.workspace / "app.py").write_text("VALUE = 8\n")
+        self.post_validation("finish-drift", {"exit_code": 0}, tool="write_stdin", session=18)
+        terminal = ADAPTER._load_receipts(self.receipts)[0][-1]
+        self.assertEqual("unknown", terminal["status"])
+        self.assertEqual(before, terminal["source_fingerprint"])
+        with self.assertRaises(ValueError):
+            self.checkpoint()
+
+    def test_async_completion_cannot_cross_task_binding(self) -> None:
+        self.post_validation("start", {"session_id": 17})
+        document = valid_state()
+        document["recovery_capsule"]["contract"]["task_id"] = "other-task"
+        self.state.write_text(json.dumps(document))
+        self.post_validation("foreign-finish", {"exit_code": 0}, tool="write_stdin")
+        self.assertEqual(1, len(ADAPTER._load_receipts(self.receipts)[0]))
+        with self.assertRaises(ValueError):
+            self.checkpoint()
+
+    def test_compact_drift_is_shared_across_independent_hook_processes(self) -> None:
+        document = valid_state()
+        fingerprint = ADAPTER.source_fingerprint(self.config)
+        document["source_snapshot"]["source_fingerprint"] = fingerprint
+        document["observed"]["source_fingerprint"] = fingerprint
+        self.state.write_text(json.dumps(document))
+        common = [sys.executable, str(SCRIPT_ROOT / "codex_execution_adapter.py"), "--state", str(self.state), "--workspace", str(self.workspace)]
+        def hook(action, event):
+            result = subprocess.run(common + [action], input=json.dumps(event), text=True, capture_output=True, check=True)
+            return json.loads(result.stdout)
+        hook("sessionstart", {"source": "compact"})
+        (self.workspace / "app.py").write_text("VALUE = 7\n")
+        # Known in-stage edits do not create an audit after every operation.
+        self.assertEqual({}, hook("pretooluse", {"tool_name": "apply_patch"}))
+        projected = hook("sessionstart", {"source": "compact"})
+        self.assertFalse(json.loads(projected["hookSpecificOutput"]["additionalContext"])["ready"])
+        denied = hook("pretooluse", {"tool_name": "apply_patch"})
+        self.assertEqual("deny", denied["hookSpecificOutput"]["permissionDecision"])
+        self.assertFalse(ADAPTER.doctor(self.config)["continuity_ready"])
+        self.assertEqual(document, json.loads(self.state.read_text()))
+        fingerprint = ADAPTER.source_fingerprint(self.config)
+        document["source_snapshot"]["source_fingerprint"] = fingerprint
+        document["observed"]["source_fingerprint"] = fingerprint
+        self.state.write_text(json.dumps(document))
+        self.assertEqual({}, hook("pretooluse", {"tool_name": "apply_patch"}))
+
+    def test_broken_configured_identity_never_degrades_delivery_binding(self) -> None:
+        self.validation()
+        self.checkpoint()
+        ADAPTER.complete_task(self.config, types.SimpleNamespace(acceptance=[]))
+        for contents in ("{", "{}", "null"):
+            with self.subTest(contents=contents):
+                self.state.write_text(contents)
+                for command in ("git commit -m done", "git push"):
+                    denied = ADAPTER.handle_pretooluse(self.config, {"tool_name": "exec_command", "tool_input": {"cmd": command}})
+                    self.assertEqual("deny", denied["hookSpecificOutput"]["permissionDecision"])
+                self.assertFalse(ADAPTER.doctor(self.config)["task_completion_valid"])
+        self.state.unlink()
+        self.assertFalse(ADAPTER.doctor(self.config)["task_completion_valid"])
+        unbound = ADAPTER.AdapterConfig(receipts=self.receipts, workspace=self.workspace)
+        self.assertFalse(ADAPTER.doctor(unbound)["task_completion_valid"])
+
+    def test_checkpoint_auto_selection_ignores_other_task_evidence(self) -> None:
+        self.validation()
+        document = valid_state()
+        document["recovery_capsule"]["contract"]["task_id"] = "task-two"
+        self.state.write_text(json.dumps(document))
+        current = self.validation()
+        checkpoint = self.checkpoint()
+        self.assertEqual([current["receipt_id"]], checkpoint["evidence_receipt_ids"])
+
+    def test_add_delete_symlink_and_mode_staging_keep_content_identity(self) -> None:
+        (self.workspace / "app.py").unlink()
+        (self.workspace / "new.py").write_text("VALUE = 3\n")
+        (self.workspace / "new.py").chmod(0o755)
+        (self.workspace / "link.py").symlink_to("new.py")
+        self.validation()
+        checkpoint = self.checkpoint()
+        before = ADAPTER.source_fingerprint(self.config)
+        subprocess.run(["git", "-C", str(self.workspace), "add", "-A"], check=True)
+        self.assertEqual(before, ADAPTER.source_fingerprint(self.config))
+        self.assertEqual({}, ADAPTER.handle_pretooluse(self.config, {"tool_name": "exec_command", "tool_input": {"cmd": "git commit -m stage"}}))
+        subprocess.run(["git", "-C", str(self.workspace), "commit", "-qm", "stage"], check=True)
+        self.assertEqual(before, ADAPTER.source_fingerprint(self.config))
+        self.assertEqual(checkpoint["source_fingerprint"], before)
+        (self.workspace / "new.py").chmod(0o644)
+        self.assertNotEqual(before, ADAPTER.source_fingerprint(self.config))
+
+    def test_old_fingerprint_algorithm_requires_a_new_snapshot(self) -> None:
+        document = valid_state()
+        document["source_snapshot"]["source_fingerprint"] = "git-worktree-sha256:" + "a" * 64
+        document["observed"]["source_fingerprint"] = document["source_snapshot"]["source_fingerprint"]
+        self.state.write_text(json.dumps(document))
+        projection = ADAPTER.handle_sessionstart(self.config, {"source": "compact"})
+        self.assertFalse(json.loads(projection["hookSpecificOutput"]["additionalContext"])["ready"])
+
+    def test_concurrent_duplicate_hooks_append_one_receipt(self) -> None:
+        command = [sys.executable, str(SCRIPT_ROOT / "codex_execution_adapter.py"),
+                   "--state", str(self.state), "--receipts", str(self.receipts), "--workspace", str(self.workspace), "posttooluse"]
+        event = json.dumps({"tool_name": "exec_command", "event_id": "shared-event", "tool_input": {"cmd": "python3 -m unittest"}, "tool_response": {"exit_code": 0}})
+        def send(_):
+            return subprocess.run(command, input=event, text=True, capture_output=True, check=True)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(send, range(16)))
+        receipts, errors = ADAPTER._load_receipts(self.receipts)
+        self.assertFalse(errors)
+        self.assertEqual(1, len(receipts))
+        self.assertEqual("shared-event", receipts[0]["event_id"])
 
     def test_graph_refresh_is_demand_driven(self) -> None:
         missing = ADAPTER.graph_status(self.config)

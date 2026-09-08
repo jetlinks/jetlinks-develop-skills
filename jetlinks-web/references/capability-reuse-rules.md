@@ -1,6 +1,6 @@
 # JetLinks Web Capability Reuse Rules
 
-本文件整合组件、hooks、utils 与包级能力地图。用于在实现前先判断可复用能力，减少重复开发。
+本文件用于新增能力、选择组件或改变抽象边界时判断复用。仅修改已知组件的文案、样式、字段或 props 时，沿相关契约和相邻代码处理，不触发全部搜索层级。
 
 ## 先确认的工作区事实
 
@@ -40,7 +40,7 @@
 
 ## 复用搜索优先级
 
-新增 component / hook / service / API wrapper / util 前，按以下顺序搜索：
+新增 component / hook / service / API wrapper / util 前，从当前锚点向相关层逐级搜索；找到适合且已验证的能力即停止，已有效的结果可以复用。以下是候选范围，不要求扫描所有范围或逐项提交证明：
 
 1. 当前功能目录：目标页面附近的 `components/**`、`hooks/**`、`utils/**`、`api/**`、`services/**`、`types/**`、schema/config。
 2. 当前模块：`modules/<module>-ui/**` 下相似页面、组件、hook、工具函数、store、API/service。
@@ -60,7 +60,7 @@
 
 以下名称是候选能力，使用前必须核验导出与契约。表中的 `ProTable`、`Search`、`CardSelect`、`AIcon`、`BadgeStatus`、`TimeFormat`、`ValueItem` 等共享基础组件，先从 `packages/components/src/components.md` 定位其独立文档并核验 `components.ts` 根导出；`ConditionFilter`、`QuickFilterSidebar`、`EntityCard`、`SectionCard`、`JlDrawerShell` 等项目级组件，则核验 `jetlinks-web-core/src/components/index.ts` 和相邻生产用法。
 
-先完成业务分型，再让用户确认交互方案，再选组件组合。只有页面已明确判断为标准管理页时，才进入“搜索层 + 列表层 + 编辑层”的管理页组合判断；如果核心任务是监控、分析、处置、流程推进、对象详情理解或资源选择，应先选更贴近业务的交互方案，再回头挑组件。对管理页中的通用条件搜索，如果 workspace 已提供 `ConditionFilter` 及其编码/回显工具，默认先用它承接搜索层。
+需要新增页面或改变主交互时先完成业务分型；已有明确授权与合理方案直接实施，只有实质未决选择才询问，再选相关组件组合。只有页面已明确判断为标准管理页时，才进入“搜索层 + 列表层 + 编辑层”的管理页组合判断；如果核心任务是监控、分析、处置、流程推进、对象详情理解或资源选择，应先选更贴近业务的交互方案，再回头挑组件。对管理页中的通用条件搜索，如果 workspace 已提供 `ConditionFilter` 及其编码/回显工具，默认先用它承接搜索层。
 
 | 场景 | 推荐组合 | 说明 |
 | --- | --- | --- |

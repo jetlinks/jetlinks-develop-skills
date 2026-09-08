@@ -1,79 +1,46 @@
 ---
 name: task-continuity
-description: 压缩长任务计划并在上下文压缩、暂停、恢复或交接后从复合源码指纹、动作身份链、引用 / 规则账本、区分观察和少量锚点继续工作，同时管理运行态分层、阶段验证、证据复用与条件式版本交付。适用于计划开始记流水账、恢复时反复重读任务或项目、压缩后回放上一动作、连续压缩后只分析不执行、最近观察与下一步脱节、脏工作区身份不可靠、实时进度混入权威文档、已有验证证据需要判定有效性，或需要约束“阶段验证后本地 checkpoint、整体完成后统一发布 / review”的场景；先发现宿主实际能力，不要求 Trellis、Git、GitHub、本地文件或生命周期 hooks。
+description: 在任务跨多轮、上下文压缩、暂停或交接时保存目标、已接受约束、当前状态和下一动作，并按身份与证据恢复。适用于已有工作需要继续、恢复后反复重读或容易偏离主线的场景；普通新任务和单次代码查询无需建立恢复状态。
 ---
 
 # Task Continuity
 
-On the first invocation, a cold handoff, a route change, or a changed rule revision, read [`references/task-state-and-recovery-rules.md`](references/task-state-and-recovery-rules.md) before acting. When reviewing or evolving this workflow, also read [`references/research-basis.md`](references/research-basis.md) and forward-test [`references/evaluation-cases.md`](references/evaluation-cases.md). Read [`references/host-adapters.md`](references/host-adapters.md) only when selecting, installing, or auditing a host persistence / hook adapter. For a matching `COMPACT_CONTINUATION`, reuse the `LoadedRules` ledger and extracted obligations; do not reread unchanged references before `first_allowed_action`. Do not load these maintenance references for ordinary task recovery.
+让下一轮从当前任务继续。用户原目标与已接受的新约束持续有效；只有用户明确取消、替换或改变契约时才改主线。技能不扩大授权，也不要求重新确认已经授权的工作。
 
-## Workflow
+## 保存最小主视图
 
-1. Establish task identity, current revision, observable outcome, scope, non-goals, constraints, and acceptance signals. Treat the user's latest instruction as higher priority than saved state, but classify its semantic effect before changing the task route: a new conversation message is not automatically a new task contract.
-2. Discover the active environment's task, checkpoint, workspace-state, source-identity, validation, event / memory index, VCS, lifecycle hook, and review capabilities. Reuse an existing workflow or compatible third-party backend before creating storage, retrieval, or hook infrastructure; do not assume a product, file layout, command, writable artifact, or remote platform.
-3. Separate authoritative sources, the task contract, live runtime state, validation evidence, and reusable knowledge by lifecycle. Never select a destination merely by filename or directory name.
-4. Maintain the plan as a bounded current-state projection: current phase, active hypothesis or decision, remaining stages and their acceptance signals, one next action, and blockers. Replace stale content; do not append completed steps or round summaries.
-5. Maintain a compact model-facing Recovery Capsule with four sections: `Contract`, `Checkpoint`, `DecisionState`, and `Resume`. Preserve a bounded non-empty set of still-active constraints / invariants and acceptance signals in `Contract`; give an in-flight slice a stable identity, retain only bounded complete `do_not_reopen {action_id, reason, reopen_when}` entries whose replay is likely, and give `Next` an explicit stable `action_id`. When a complex task has a material contract choice, also retain the current `decision_question`, complete bounded `SemanticFork` options, `EvidenceBudget` status and any later-round `evidence_reopen`, current stage / entry gate, and latest discriminating evidence locator; omit these optional fields for simple tasks. Keep source digests, reference / rule revisions, audit counters, `previous_productive_action_id`, `pre_compaction_next_action_id`, `conversation_cursor_at_snapshot`, `directive_revision_at_snapshot`, and full evidence locators in bounded Continuity Metadata beside it. Keep the task's semantic revision in `Contract.revision`; never collapse cursor, directive, and contract identity into one instruction counter. Maintain a separate Source Snapshot for source identity, expected changes, fingerprint strength, and missing layers. These three logical views may share one physical artifact, but machine metadata must not crowd the model-facing recovery index and no view may substitute for another.
-6. Gate continuation with `READY`, `SNAPSHOT_REQUIRED`, and `RESUME_AUDIT`. Any observation that changes the active hypothesis, semantic-fork status or resolution, evidence budget, failure signature, observation validity, acceptance state, source identity outside the declared in-flight slice, referenced facts, stage admission, or unique next action enters `SNAPSHOT_REQUIRED`; refresh bounded state before further solution-changing mutation. When systematic solving has an active observation or semantic fork, keep only its compact contract, revision / status, result, and evidence locator in `DecisionState`; do not impose these schemas on simple tasks. An `OPEN` semantic fork may resume only into a bounded discriminating check, observation setup / repair, focused user-decision blocker, or real blocker; it cannot authorize authoritative design, API deepening, production implementation, or review of a candidate artifact.
-7. Classify each advanced conversation cursor as `QUERY`, `REMINDER`, `NEW_CONSTRAINT`, `CONTRACT_CHANGE`, `TEMPORARY_INTERRUPT`, `OVERRIDE`, `OBSERVATION`, or `DECISION` before refreshing state. `QUERY` is answered and returns to the saved `Next` in the same turn. `REMINDER` is deduplicated by stable constraint identity. A scoped `NEW_CONSTRAINT` advances only the directive revision and affected assignments. `CONTRACT_CHANGE` and `OVERRIDE` invalidate dependent work. A material `TEMPORARY_INTERRUPT` saves `MainlineReturnAnchor {interruption_id, original_task_id, saved_stage, saved_next_action_id, frozen_contract_revision, active_assignment_ids, source_fingerprint, interrupt_objective, resume_condition}` and resumes only when task, contract, source, and action identity still match. An `OBSERVATION` refreshes state only when it changes the active model, acceptance, or `Next`; a `DECISION` resolves its recorded semantic fork.
-8. Classify recovery as `COMPACT_CONTINUATION`, `COLD_HANDOFF`, or `EXTERNAL_RETRY`. A compact continuation compares conversation cursor, directive revision, and contract revision separately. An advanced cursor with unchanged directive / contract does not invalidate the saved route. A changed directive invalidates only its declared scope; a changed contract enters `SNAPSHOT_REQUIRED`. Otherwise use the saved capsule and at most one bounded parallel identity / revision comparison batch, then on a match perform `RESUME_AUDIT -> READY -> first_allowed_action` in the same resumed turn. The action chain must remain `pre_compaction_next_action_id == first_allowed_action.action_id == post_compaction_first_productive_action_id`; `previous_productive_action_id` is a replay detector, not a fallback Next. A cold handoff may perform one bounded takeover audit to establish missing identity and anchors. An external retry whose task, source, contract, and references did not change keeps the existing `Next` and checks only the uncertain external outcome; it is not a new workspace recovery.
-   - The fast path is one host batch: compare conversation cursor plus classified effect, directive / contract revision, source fingerprint, referenced-source cursors, and loaded-rule revisions in parallel. On a match, inject only the bounded capsule, match summary, and exact `first_allowed_action`; do not reload skills, scan the workspace, reread the thread, or emit a recovery-only turn. On a mismatch, report only the changed identity and enter `SNAPSHOT_REQUIRED`.
-9. When an orchestration capability owns active delegated slices, keep only the `OrchestrationProgram` revision and current stage when present, frozen shared-contract revisions, the current `RouteDecision` revision, assignment IDs and states, source fingerprints, Result Packet locators, integration owner, and critical-path next action in bounded runtime state. On resume, reconcile the program, stage, contract, assignment, and result identities before spawning, waiting, or integrating; do not restart an Agent whose result is active or already recorded.
-10. When a host can export the three logical views as JSON, use [`scripts/validate_continuity_state.py`](scripts/validate_continuity_state.py) as the deterministic fast-path gate. The script validates but never mutates runtime or source state. A host adapter may collect observations and apply its suggested gate; the core skill must still work without the script.
-   - A host that needs model-visible hook text may use [`scripts/prepare_resume_context.py`](scripts/prepare_resume_context.py). It projects a bounded capsule and gate decision; it never emits full history, full rule bodies, raw logs, or a new Next.
-   - An explicitly configured Codex host may use [`scripts/codex_execution_adapter.py`](scripts/codex_execution_adapter.py) to turn hook events into source-change, validation, delegation, stage-checkpoint and delivery receipts. Its deterministic gates deny only high-confidence source mutation / delivery actions; an unconfigured adapter is a no-op and never creates repository state.
-11. Validate at coherent stage boundaries rather than after every operation. Map prior evidence to the current acceptance matrix and reuse it when source, inputs, semantics, environment, and freshness remain valid.
-12. When the environment provides versioned delivery, keep each validated coherent-stage checkpoint local. Publish once and create or update one task-level review only after the whole task passes; use one draft only when the user explicitly requests intermediate sharing.
+在已有任务状态、scratchpad 或安全临时载体中覆盖更新以下内容；没有安全持久载体时留在有界 active context，交接前提供可复制的胶囊。无需安装后端或创建数据库。
 
-## Required Constraints
+- **Contract**：任务身份、原目标、当前契约 revision、仍有效的约束和验收信号。
+- **Checkpoint**：当前阶段、在做什么、最近有效证据及其覆盖的源码或制品身份。
+- **DecisionState**：已接受决定、尚未解决的关键分歧、会改变下一步的观察；只记录容易重放的已关闭动作及重开条件。
+- **Resume**：一个有稳定 `action_id` 的 Next，精确落点、范围、预期观察；真实阻塞和临时插入任务的返回点。
 
-- Do not put live plans, attempts, discarded hypotheses, logs, Recovery Capsules, test reports, review text, or completion timelines into authoritative product, architecture, API, or repository documentation.
-- Do not let the current plan become an audit log. Remove completed checklists, stale alternatives, duplicated summaries, and historical step counts.
-- Do not treat every user message as a route revision. Answer a `QUERY` and continue the saved `Next` in the same turn; deduplicate a `REMINDER`; update only declared affected slices for a scoped constraint; reserve contract refresh and broad cancellation for an actual semantic contract change or override.
-- Do not resume from a temporary interruption using prose memory. Preserve a bounded `MainlineReturnAnchor`; if task, contract, source, or saved-action identity no longer matches, reconcile the mismatch instead of replaying the old Next.
-- Do not reconstruct an entire workspace merely because conversation context was compressed. Recover from task identity, source fingerprint, bounded state, and exact anchors first.
-- Do not satisfy the recovery protocol by reloading the skill that defines it. When the saved `LoadedRules` revision and extracted obligations still match, the rule ledger is sufficient; only the compact event and the exact action identity need to be checked.
-- Do not treat a third-party memory, transcript archive, event index, or generated resume narrative as authoritative task state. Use it as a reference / evidence backend, recover only missing facts, and keep `Contract / Checkpoint / DecisionState / Resume` plus source identity as the continuation gate.
-- Do not enter `READY` with a vague `Next` such as "continue implementation", "continue analysis", or "become familiar with the code". It must identify a bounded mutation, a hypothesis-discriminating check, or a real blocker; name the exact owner / locator or tool action, bound the changed items or read scope, and state the observable signal.
-- Do not mutate production state while continuity state is `SNAPSHOT_REQUIRED` or an unresolved `RESUME_AUDIT`. Bounded read-only reconciliation and runtime-state refresh are allowed.
-- When `DecisionState` contains an active observation, do not let `PLANNED`, `INVALID`, `INCONCLUSIVE`, or `SCOPE_INVALID` authorize a solution mutation. Permit only a bounded observation setup, the single declared observation-repair cycle, a discriminating check, a reframe, a focused user-decision blocker, or a concrete blocker; `DISCRIMINATING` may authorize the explicitly linked solution mutation.
-- When `DecisionState.SemanticFork.status` is `OPEN`, preserve the unresolved decision and evidence budget across compaction. Do not reconstruct a preferred contract from the recovery narrative or turn a technically relevant but scope-invalid observation into a solution mutation. Resume into the saved check or focused user-decision blocker; implementation and authoritative design require a recorded `RESOLVED` decision.
-- When an `OPEN` fork's evidence budget is `STOPPED`, do not resume another check directly: `ASK_USER` / `BLOCKER` resumes only its blocker, `FREEZE` first requires a resolution, and any later evidence round must carry a new revision plus structured reopen reason, locator, and prior round identity.
-- Do not treat a base revision plus a dirty-file count as a sufficient fingerprint when uncommitted content exists. Include the strongest available digests for tracked changes, untracked content, nested sources, and expected changed items, or mark the identity as partial.
-- A partial fingerprint permits bounded diagnosis. Before production mutation, reconcile task-relevant missing layers or explicitly record the residual identity risk and the exact mutation scope; never present partial identity as a match.
-- Do not reread a complete external task, thread, issue, research source, or long reference when its saved revision / cursor is unchanged and the facts needed for the next action are already in the reference ledger.
-- For cursor-capable threads or tasks, compare with a non-blocking wait / delta operation first. An unchanged cursor permits no `read_thread` / full-history equivalent; an advanced cursor permits only the new delta, expanding backward only when that delta cannot explain a recorded conflict.
-- A matching `COMPACT_CONTINUATION` may spend at most one parallel tool batch on source, contract, reference, and rule identity. It must execute `first_allowed_action` in that resumed turn; commentary that only restates recovery does not satisfy this requirement.
-- In a matching `COMPACT_CONTINUATION`, a full skill / rule reload, workspace-wide scan, unchanged full-history read, action listed in `do_not_reopen`, or replay of `previous_productive_action_id` before the saved Next is a route deviation even if the correct action happens later. Do not reconstruct a new Next from the recovery narrative when the saved action identity is still valid.
-- Preserve `consecutive_matching_audits` across compaction. Under the default policy, on the second matching audit without intervening new evidence or a productive action, do not reload the full skill set, task history, research, workspace overview, or rebuild the same system map; transition to `READY` and execute `first_allowed_action`. A third analysis-only recovery is an idle loop: perform the exact action, run one discriminating check, or report the concrete blocker.
-- Treat the second / third matching-audit thresholds and recommended anchor count as operational defaults to tune with trajectory evidence, not scientific constants. Never weaken the invariant: an unchanged recovery slice must not repeatedly consume turns without new evidence or a productive action.
-- Do not claim an in-flight or unverified stage is validated. A validated boundary must point to evidence and the source fingerprint it covers.
-- Do not rerun checks merely because work reached commit, delivery, or review. Run only missing, invalidated, failed, or explicitly time-sensitive checks.
-- When an execution-receipt adapter is active, do not replace its current-source validation, delegated-result acceptance, stage checkpoint, or whole-task completion receipts with a prose claim. Refresh the missing or invalidated receipt at the coherent boundary; do not manufacture one receipt per edit.
-- Do not commit after every edit, command, or individual test. A checkpoint represents one coherent, independently accepted stage.
-- Do not push or create / update reviews after every stage. Remote review is a completed-task delivery unit unless the user explicitly requests an intermediate share.
-- Do not assume Trellis, Git, GitHub, pull requests, local files, a particular agent product, or lifecycle hooks. Treat all as optional adapters.
-- Do not make the bundled validators responsible for editing runtime state, source files, VCS state, or remote reviews. They produce diagnostics and metrics; host adapters own collection and authorized mutations.
-- A matching compact recovery must have zero full skill/rule reloads after the first bounded identity batch. If the host cannot enforce this at the tool boundary, record it as a trace failure; do not compensate by expanding the capsule.
-- Do not silently install a state backend, modify shared ignore rules, start a service, or create a database merely to persist agent state.
-- When no safe persistent runtime exists, keep bounded state in the active task context and provide a portable Recovery Capsule before handoff.
+保留足以继续的信息，删除已完成步骤、过时假设和重复总结。源码摘要、引用 revisions、原始日志与收据放在机器元数据或已有证据载体，按需取回。运行态不进入产品、架构、API 或其他权威文档。
 
-## Response Shape
+## 多轮衔接与恢复
 
-1. Task and source identity
-2. Current phase, remaining acceptance stages, and one next action
-3. Runtime and authoritative artifact placement
-4. Validated boundary, in-flight state, and evidence reuse decisions
-5. Recovery anchors and fingerprint status
-6. Continuity gate: `READY`, `SNAPSHOT_REQUIRED`, or `RESUME_AUDIT`
-7. Local checkpoint versus remote delivery status
-8. Blockers or residual risk
+状态提问先简短回答，然后继续已有工作。重复提醒合并到现有约束；新增约束追加或修订其明确影响的范围，保留原目标和其他有效约束。临时插入若打断主线，保存原任务、契约、阶段、Next、源码身份和返回条件；完成后按这些身份返回。确有契约替换时使依赖旧契约的动作和委派结果失效。
 
-## Bundled deterministic tools
+恢复先核对 task / source / contract / action 身份、最新指令影响及下一步必需证据。已有 revision 和事实仍匹配时复用胶囊及精确锚点，执行保存的 Next；不要因为压缩而重新学习整个项目。外部调用超时只核对原 operation 的结果和幂等状态，不重新接管工作区。
 
-- [`scripts/validate_continuity_state.py`](scripts/validate_continuity_state.py): validate one JSON Recovery Capsule / Continuity Metadata / Source Snapshot boundary, compare conversation / directive / contract identities independently, validate scoped message effects and return anchors, enforce optional active-observation and semantic-fork action gates, reject vague or inconsistent actions, and recommend `READY`, `RESUME_AUDIT`, or `SNAPSHOT_REQUIRED`.
-- [`scripts/evaluate_continuity_trace.py`](scripts/evaluate_continuity_trace.py): evaluate normalized host traces, including pre/post-compaction action identity continuity, inline question return, reminder deduplication, temporary-interrupt return, stale-contract actions, full skill reloads before the saved Next, recovery-entry replay, time to first productive action, repeated reads or checks, observation integrity, evidence-gated solution changes, snapshot freshness, route deviation, idle recovery, runtime leakage, task-irrelevant graph injection, and full-context / capsule / ablation comparisons.
-- [`scripts/prepare_resume_context.py`](scripts/prepare_resume_context.py): project a bounded model-facing recovery context from validated state and lightweight observations; it is suitable for `SessionStart(source=compact)` adapters and never mutates state.
-- [`scripts/codex_execution_adapter.py`](scripts/codex_execution_adapter.py): optional Codex hook adapter and CLI for high-value execution receipts, current-source stage / delivery gates, bounded compact-session injection, and demand-driven code-index dirty markers. It is disabled unless runtime paths are explicitly configured.
+出现新漂移时，只对账变化的身份、路径、约束或证据，更新当前状态后继续。不能用旧动作、相邻 TODO 或一段恢复叙述替代明确的 Next。身份不足、权限缺失或证据已失效时，不能据此实施或声称验收通过；独立的有界读取和已授权工作可以继续。
 
-The portable validator, trace evaluator, and context projector accept stdin or a JSON file. The optional Codex adapter consumes native hook JSON and keeps its host-specific receipt ledger beside, not inside, the portable schema. All bundled programs use only the Python standard library. A Codex, Trellis, VCS, graph, or other host integration must not add host paths or product-specific fields to the core contract.
+`READY` 表示当前动作的身份与前提已核对；`RESUME_AUDIT` 表示还缺必要观测；`SNAPSHOT_REQUIRED` 表示状态已失配，需要刷新。简单任务无需建立观察装置、语义分叉或多 Agent schema；已有这些状态的复杂任务须保留其决定和结果，不能在压缩后悄悄换契约。
+
+## 验证与效率
+
+在连贯阶段结束后集中验证。复用仍覆盖当前源码、契约、输入、环境和验收范围的证据；进入提交或交付阶段本身不触发重跑。进行版本化交付时沿用项目和用户已授权的提交、共享与 review 方式，不因本技能自动发布。
+
+少量 anchors、一个身份比较批次、尽快执行 Next 是效率目标。超出目标先看是否有真实漂移、宿主串行限制或必要的新证据；次数、文风、额外读取和响应轮数不决定正确性。动作身份、用户约束、权限和验收证据有效性才是硬不变量。持续空转应回到确切 Next、能消除不确定性的检查或真实阻塞。
+
+## 按需资料
+
+普通保存和匹配恢复读到这里即可。已有 LoadedRules revision 与提取义务仍匹配时复用它们。
+
+- **实现状态格式、冷交接或处理复杂失配**：只读 [状态与恢复协议](references/task-state-and-recovery-rules.md) 中相关段落。其 JSON schema 是可选宿主交换格式，非普通任务清单。
+- **配置或审查 hooks / 收据**：读 [宿主适配](references/host-adapters.md)。`scripts/codex_execution_adapter.py` 只在显式配置运行态后启用；不安装 hooks。
+- **已有结构化状态需要验证或投影**：运行 [validate_continuity_state.py](scripts/validate_continuity_state.py) 或 [prepare_resume_context.py](scripts/prepare_resume_context.py)。它们只读状态，不生成新的任务目标或 Next。
+- **维护本技能或评估真实恢复表现**：读 [评测用例](references/evaluation-cases.md)，使用 [evaluate_continuity_trace.py](scripts/evaluate_continuity_trace.py) 分开观察结果、不变量和效率；[研究依据](references/research-basis.md) 只用于审查设计依据。
+
+向用户报告结果、必要证据和未解决事项即可；不要求每轮输出胶囊、门禁字段或固定报告模板。

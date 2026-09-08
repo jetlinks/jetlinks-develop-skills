@@ -13,13 +13,13 @@
 - Trellis task / PRD：当前任务的目标、范围、非目标、验收标准和待确认方案。
 - Trellis task 的 `prd.md` / `design.md` / `implement.md`：分别承载需求契约、技术设计和有界执行方案；文件是否存在以及命名以本地 workflow 为准。它们可以被审查和归档，但不是逐轮运行态。
 - Trellis `.runtime/sessions/` 或本地等价 runtime：官方当前版本用于按 session 隔离 active-task pointer；可以扩展保存 Recovery Capsule、Continuity Metadata 与 Source Snapshot locator，但不要假设 task pointer 本身已经包含复合源码指纹或最新证据。
-- Trellis task log / implement / check runtime：当前阶段、执行上下文、步骤、假设、失败与恢复状态；具体文件名以本地 workflow 为准。智能体滚动维护的当前计划、Recovery Capsule、Continuity Metadata 与 Source Snapshot 必须放不受 Git 管理的 runtime / checkpoint；若本地同名 artifact 受跟踪，则改用 Git-ignored sidecar。
+- Trellis task log / implement / check runtime：当前阶段、执行上下文、步骤、假设、失败与恢复状态；具体文件名以本地 workflow 为准。智能体滚动维护的当前计划、Recovery Capsule、Continuity Metadata 与 Source Snapshot 必须放不受 Git 管理的 runtime / checkpoint；若本地同名 artifact 受跟踪，则按 [制品归属](document-placement-rules.md) 选择已有安全载体；没有时保持有界 active context。
 - Trellis research：区分假设所需的来源、关键事实和调研结论。
 - Trellis workspace journal / finish / archive：官方提供跨会话工作日志与生命周期记录，由 Trellis 流程维护；journal 是审计 / 交接记录，不作为每次恢复的首读状态，也不能替代唯一 `Next`。
 - `.trellis/spec/`：稳定、跨任务的项目规范；是否受 Git 管理由本地策略决定。
 - 仓库 `docs/` / ADR / API 文档：已接受且当前有效的产品与架构事实，不承担 Trellis 运行态。
 
-focused skill 不主动创建、切换、完成或归档 Trellis task，不写 finish / journal，也不改变 Trellis 的共享 Git 策略，除非用户明确要求或本地 workflow 把该动作定义为当前步骤。若现有 Trellis runtime 全部受 Git 管理，为实时状态选择一个仓库本地 Git-ignored sidecar，不把胶囊更新混入阶段 commit。
+focused skill 不主动创建、切换、完成或归档 Trellis task，不写 finish / journal，也不改变 Trellis 的共享 Git 策略，除非用户明确要求或本地 workflow 把该动作定义为当前步骤。若现有 Trellis runtime 全部受 Git 管理，按 [制品归属](document-placement-rules.md) 选择已存在的安全载体或有界 active context，不自动建立 sidecar 或改 Git 配置。
 
 ## 计划与设计生命周期
 
@@ -27,7 +27,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 2. 实时步骤、checkbox、临时下一步、假设账本、失败轨迹和阶段总结进入 Trellis 的运行态 artifact，不进入 PRD 的稳定契约区，更不进入仓库 docs。
 3. 计划阶段切换时压缩当前状态：模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`；删除 completed checkbox，不把每轮完成项复制成新总结或计数。最近完成阶段由 `Checkpoint` 的 validated evidence pointer 承载，详细 digest / revisions / evidence ledger 留在 Continuity Metadata。
 4. 用户确认后，只有长期需求、契约、架构 / API / 模块设计或长期风险发生变化，才原位同步权威 docs。纯任务级实施步骤可以只留在 Trellis。
-5. 实现失败且契约未变时，只更新 Trellis 运行态；若证据表明已接受的设计必须改变，先更新 task contract 并重新确认，再同步权威 docs。
+5. 实现失败且契约未变时，只更新 Trellis 运行态；若证据表明已接受的设计必须改变，更新 task contract，并按 [授权规则](backend-design-test-driven-rules.md) 处理实质未决选择，再同步权威 docs。
 6. 完成时由 Trellis 负责 archive / journal；JetLinks delivery 将测试证据写入 PR / CI，只把稳定结论提升到 canonical docs / spec / skill。
 
 提升前执行四问门禁：结论是否已确认；离开当前任务后是否仍成立；后续维护者是否需要；已有 canonical 来源是否能原位承载。任一答案为否，就留在 task / runtime / research / PR / CI。`Phase` / `Slice`、fixture / case 编号、当前测试数量、待执行评测、阶段 commit、日期和完成进度永不因“已经验证”而变成权威架构内容。
@@ -36,7 +36,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 
 遵循 [`context-recovery-rules.md`](context-recovery-rules.md) 维护有界 Recovery Capsule：
 
-- 优先使用本地 workflow 已声明且不受 Git 管理的 runtime / checkpoint artifact；若其定义的 `info.md` 受 Git 管理，只在其中保留任务契约或稳定技术事实，胶囊改用 Git-ignored sidecar。
+- 优先使用本地 workflow 已声明且不受 Git 管理的 runtime / checkpoint artifact；若其定义的 `info.md` 受 Git 管理，只在其中保留任务契约或稳定技术事实，胶囊按制品归属选择已有安全载体；没有则保持有界 active context。
 - 在用户确认契约、路线变化、阶段验证并本地提交、暂停 / 交接 / 压缩前更新；阶段提交后写入实际 commit hash，提交前暂停则只标记 in-flight，不在每个命令后写 journal。模型主视图与 machine metadata 可以同文件保存，但恢复时必须能先读主视图、只比较 metadata identity。
 - 验证一旦改变 failure signature、acceptance status 或 `Next`，立即将状态置为 `SNAPSHOT_REQUIRED` 并覆盖更新模型主视图、Continuity Metadata 与 Git Source Snapshot；同一已声明切片内不逐命令更新。
 - 恢复时先读 active task、任务契约、胶囊主视图和复合 Git 指纹；外部任务 / 会话 / research 先比较 metadata 中的 revision / cursor，未变化时复用已提取事实，只加载少量 anchors；不要因对话被压缩就重新扫描全仓或重读完整历史。

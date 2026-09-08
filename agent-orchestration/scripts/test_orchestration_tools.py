@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
 import unittest
 from pathlib import Path
 
@@ -310,6 +311,174 @@ def review_disposition_trace(reason: str) -> dict[str, object]:
 
 
 class EvaluateOrchestrationTraceTest(unittest.TestCase):
+    def test_dependency_must_be_accepted_before_consumer_dispatch(self) -> None:
+        for dependency in ("backend-r1", "unknown-artifact"):
+            with self.subTest(dependency=dependency):
+                trace = compact_cross_module_trace()
+                trace["events"][2]["capsule"]["depends_on"] = [dependency]
+                result = EVALUATOR.evaluate_trace(trace)
+                self.assertFalse(result["passed"])
+                self.assertTrue(any("already accepted assignment" in error for error in result["errors"]))
+        trace = compact_cross_module_trace()
+        events = trace["events"]
+        events[2]["capsule"]["depends_on"] = ["backend-r1"]
+        trace["events"] = [events[index] for index in (0, 1, 3, 5, 2, 4, 6, 7)]
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+
+    def test_integration_cannot_precede_dispatch_or_terminal_collection(self) -> None:
+        for index in (1, 3):
+            with self.subTest(index=index):
+                trace = compact_cross_module_trace()
+                trace["events"].insert(index, trace["events"].pop())
+                result = EVALUATOR.evaluate_trace(trace)
+                self.assertFalse(result["passed"])
+                self.assertTrue(any("integration" in error for error in result["errors"]))
+
+    def test_each_accepted_result_requires_later_integration(self) -> None:
+        trace = compact_cross_module_trace()
+        trace["events"][-1]["assignment_ids"] = ["backend-r1"]
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("frontend-r1" in error and "subsequent integration" in error for error in result["errors"]))
+
+    def test_required_evidence_rejects_booleans_and_malformed_locators(self) -> None:
+        for value in (False, True, 1, [False], {"agreed": True}, [""]):
+            for event_type in ("result", "accept"):
+                with self.subTest(value=value, event_type=event_type):
+                    trace = compact_cross_module_trace()
+                    for event in trace["events"]:
+                        if event["type"] == event_type:
+                            if event_type == "result":
+                                event["evidence"] = value
+                            else:
+                                event["acceptance_matrix"] = {"slice behavior verified": value}
+                    result = EVALUATOR.evaluate_trace(trace)
+                    self.assertFalse(result["passed"])
+                    self.assertTrue(any("evidence" in error for error in result["errors"]))
+
+    def test_passive_user_messages_preserve_running_assignments(self) -> None:
+        trace = compact_cross_module_trace()
+        trace["events"][3:3] = [
+            {"type": "user_message", "message_class": "QUERY"},
+            {"type": "user_message", "message_class": "REMINDER"},
+        ]
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(2, result["metrics"]["delegations"])
+        self.assertEqual(2, result["metrics"]["accepted_assignments"])
+        trace["events"][3]["directive_changed"] = True
+        self.assertFalse(EVALUATOR.evaluate_trace(trace)["passed"])
+
+    def test_scoped_directive_change_preserves_unaffected_work_and_requires_fresh_assignment(self) -> None:
+        trace = compact_cross_module_trace()
+        events = trace["events"]
+        new_delegate = copy.deepcopy(events[1])
+        new_delegate.update(agent="backend-new", assignment_id="backend-r2", dispatch_receipt="host:backend-r2", supersedes="backend-r1")
+        new_delegate["capsule"]["directive_revision"] = "directive-r2"
+        new_result = copy.deepcopy(events[3])
+        new_result.update(agent="backend-new", assignment_id="backend-r2", directive_revision="directive-r2")
+        new_acceptance = copy.deepcopy(events[5])
+        new_acceptance["assignment_id"] = "backend-r2"
+        update = {
+            "type": "directive_update", "owner": "primary", "directive_revision": "directive-r2",
+            "affected_assignment_ids": ["backend-r1"], "stopped_assignment_ids": ["backend-r1"],
+            "evidence": ["user:scoped-constraint"],
+        }
+        trace["events"] = events[:3] + [update, events[4], events[6], new_delegate, new_result, new_acceptance, events[7]]
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(2, result["metrics"]["accepted_assignments"])
+        stale = copy.deepcopy(trace)
+        stale["events"].insert(4, events[3])
+        result = EVALUATOR.evaluate_trace(stale)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("superseded directive" in error for error in result["errors"]))
+        stale = copy.deepcopy(trace)
+        stale["events"][6]["capsule"]["directive_revision"] = "directive-r1"
+        self.assertFalse(EVALUATOR.evaluate_trace(stale)["passed"])
+
+    def test_contract_change_invalidates_previously_accepted_results(self) -> None:
+        trace = compact_cross_module_trace()
+        trace["events"].insert(-1, {
+            "type": "contract_update", "owner": "primary", "contract_revisions": {"feature-api": "r2"},
+            "stopped_assignment_ids": [], "evidence": ["user:new-shared-contract"],
+        })
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("no current accepted result" in error for error in result["errors"]))
+
+    def test_contract_change_accepts_fresh_results_after_invalidating_old_acceptance(self) -> None:
+        trace = compact_cross_module_trace()
+        initial = trace["events"]
+        fresh = copy.deepcopy(initial[1:7])
+        for event in fresh:
+            event["assignment_id"] = event["assignment_id"].replace("-r1", "-r2")
+            if "agent" in event:
+                event["agent"] += "-new"
+            if event["type"] == "delegate":
+                event["supersedes"] = event["assignment_id"].replace("-r2", "-r1")
+                event["dispatch_receipt"] += "-new"
+                event["capsule"]["contract_revisions"] = {"feature-api": "r2"}
+            elif event["type"] == "result":
+                event["contract_revisions"] = {"feature-api": "r2"}
+        trace["events"] = initial[:-1] + [{
+            "type": "contract_update", "owner": "primary", "contract_revisions": {"feature-api": "r2"},
+            "stopped_assignment_ids": [], "evidence": ["user:new-shared-contract"],
+        }] + fresh + [initial[-1]]
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertEqual(2, result["metrics"]["accepted_assignments"])
+
+        partial = copy.deepcopy(trace)
+        partial["events"] = [event for event in partial["events"]
+                             if event.get("assignment_id") != "frontend-r2"]
+        result = EVALUATOR.evaluate_trace(partial)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("uncovered invalidated assignments: frontend-r1" in error
+                            for error in result["errors"]))
+
+        # A useful intermediate integration is legal while the remaining obligation is later replaced.
+        intermediate = copy.deepcopy(trace)
+        first = intermediate["events"][:8]
+        by_id = {assignment: [event for event in intermediate["events"][8:-1]
+                             if event.get("assignment_id") == assignment]
+                 for assignment in ("backend-r2", "frontend-r2")}
+        integration = intermediate["events"][-1]
+        intermediate["events"] = (first + by_id["backend-r2"] + [copy.deepcopy(integration)]
+                                  + by_id["frontend-r2"] + [integration])
+        result = EVALUATOR.evaluate_trace(intermediate)
+        self.assertTrue(result["passed"], result["errors"])
+
+        cancelled = copy.deepcopy(partial)
+        update = next(event for event in cancelled["events"] if event["type"] == "contract_update")
+        update["cancelled_assignment_ids"] = ["frontend-r1"]
+        result = EVALUATOR.evaluate_trace(cancelled)
+        self.assertTrue(result["passed"], result["errors"])
+
+        unbound = copy.deepcopy(trace)
+        for event in unbound["events"]:
+            event.pop("supersedes", None)
+        result = EVALUATOR.evaluate_trace(unbound)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("uncovered invalidated assignments" in error for error in result["errors"]))
+
+    def test_declared_task_binding_cannot_be_reused_for_another_task(self) -> None:
+        trace = compact_cross_module_trace()
+        binding = {"task_id": "task-a", "run_id": "run-1", "workspace_id": "workspace-1"}
+        trace.update(binding)
+        for event in trace["events"]:
+            if event["type"] in {"delegate", "result", "accept", "integrate"}:
+                event.update(binding)
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+        for field in binding:
+            stale = copy.deepcopy(trace)
+            stale["events"][5][field] = "other"
+            result = EVALUATOR.evaluate_trace(stale)
+            self.assertFalse(result["passed"])
+            self.assertTrue(any(f".{field} does not match trace identity" in error for error in result["errors"]))
+
     def test_accepts_legacy_single_stage_trace_without_v2_receipts(self) -> None:
         legacy_capsule = capsule("backend")
         legacy_capsule.pop("acceptance_owner")
@@ -618,6 +787,42 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertTrue(any("economy write requires" in error for error in result["errors"]))
 
+    def test_capability_floor_rejects_underpowered_tier(self) -> None:
+        bounded = capsule("design")
+        bounded["capability_floor"] = {
+            "judgment": "architectural",
+            "impact": "shared",
+            "oracle": "judgment",
+            "minimum_tier": "strong",
+        }
+        result = EVALUATOR.evaluate_trace({
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER", "rationale": "shared design"},
+                {"type": "delegate", "agent": "worker", "assignment_id": "slice", "tier": "balanced",
+                 "dispatch_receipt": "host:worker", "write_set": [], "capsule": bounded},
+            ]
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("below capsule capability floor" in error for error in result["errors"]))
+
+    def test_capability_floor_rejects_internally_weak_declaration(self) -> None:
+        bounded = capsule("design")
+        bounded["capability_floor"] = {
+            "judgment": "architectural",
+            "impact": "local",
+            "oracle": "evidence_backed",
+            "minimum_tier": "balanced",
+        }
+        result = EVALUATOR.evaluate_trace({
+            "events": [
+                {"type": "route", "mode": "BOUNDED_WORKER", "rationale": "architecture judgment"},
+                {"type": "delegate", "agent": "worker", "assignment_id": "slice", "tier": "strong",
+                 "dispatch_receipt": "host:worker", "write_set": [], "capsule": bounded},
+            ]
+        })
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("below derived floor" in error for error in result["errors"]))
+
     def test_rejects_worker_success_without_primary_acceptance(self) -> None:
         result = EVALUATOR.evaluate_trace({
             "events": [
@@ -879,13 +1084,37 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
                  "action_class": "leaf_implementation", "write_set": []},
                 {"type": "primary_action", "stage_id": "implementation", "action_class": "coordination",
                  "write_set": ["service.py"]},
+                {"type": "primary_action", "stage_id": "implementation", "action_class": "validation",
+                 "write_set": []},
             ],
         }
         result = EVALUATOR.evaluate_trace(trace)
         self.assertFalse(result["passed"])
         self.assertEqual(1, result["metrics"]["primary_leaf_violations"])
+        self.assertEqual(3, result["metrics"]["primary_work_violations"])
         self.assertTrue(any("leaf_implementation is forbidden" in error for error in result["errors"]))
         self.assertTrue(any("overlaps active worker" in error for error in result["errors"]))
+
+    def test_rejects_primary_source_write_in_delegated_program(self) -> None:
+        trace = {
+            "schema_version": 5,
+            "semantic_fork": semantic_fork(),
+            "program": v4_program(),
+            "events": [
+                {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
+                 "decision_question": "Which boundary owns the behavior?",
+                 "rationale": "delegated implementation stage"},
+                {"type": "primary_action", "stage_id": "implementation",
+                 "action_class": "coordination", "write_set": ["service.py"]},
+            ],
+        }
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertFalse(result["passed"])
+        self.assertEqual(1, result["metrics"]["primary_work_violations"])
+        self.assertTrue(any(
+            "delegated-program primary_action must have an empty write_set" in error
+            for error in result["errors"]
+        ))
 
     def test_rejects_program_event_with_wrong_stage_id(self) -> None:
         result = EVALUATOR.evaluate_trace({
@@ -1019,7 +1248,7 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
             ],
         })
         self.assertFalse(result["passed"])
-        self.assertTrue(any("only one observation-apparatus" in error for error in result["errors"]))
+        self.assertTrue(any("default one observation-apparatus" in warning for warning in result["warnings"]))
 
     def test_rejects_legacy_semantic_fork_shapes_in_v4(self) -> None:
         legacy = semantic_fork()
@@ -1157,7 +1386,7 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
         self.assertEqual(1, result["metrics"]["scout_rounds_after_discriminating_evidence"])
         self.assertTrue(any("after discovery stopped" in error for error in result["errors"]))
 
-    def test_rejects_more_than_two_scouts_in_one_round(self) -> None:
+    def test_more_than_two_scouts_is_diagnostic_with_explicit_capacity(self) -> None:
         events: list[dict[str, object]] = [
             {"type": "route", "mode": "PARALLEL_SCOUTS",
              "decision_question": "Which boundary owns the behavior?", "rationale": "claimed scan"},
@@ -1190,8 +1419,9 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
             "budget": {"max_active": 3, "max_depth": 1},
             "events": events,
         })
-        self.assertFalse(result["passed"])
+        self.assertTrue(result["passed"], result["errors"])
         self.assertGreater(result["metrics"]["scout_budget_violations"], 0)
+        self.assertTrue(any("exceeds default limit 2" in item for item in result["warnings"]))
 
     def test_rejects_scout_without_decision_question_or_hypothesis(self) -> None:
         scout = scout_capsule("source", "source")
@@ -1331,32 +1561,22 @@ class EvaluateOrchestrationTraceTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertEqual(2, result["metrics"]["review_admission_violations"])
 
-    def test_rejects_duplicate_canonical_stage_kind(self) -> None:
-        duplicated = v4_program()
-        stages = duplicated["stages"]
-        assert isinstance(stages, list)
-        stages.insert(1, {
-            "stage_id": "decision-checklist-two",
+    def test_duplicate_stage_kind_is_diagnostic_when_dependencies_are_satisfied(self) -> None:
+        trace = compact_cross_module_trace()
+        trace["program"]["stages"].insert(1, {
+            "stage_id": "second-contract-check",
             "stage_kind": "semantic_decision_contract_freeze",
-            "objective": "Second checklist item",
+            "objective": "Confirm the second independent contract boundary",
             "depends_on": ["decision"],
             "required_contracts": [],
-            "entry_gate": "first checklist item",
+            "entry_gate": "first contract accepted",
             "route_mode": "SINGLE_OWNER",
-            "exit_gate": "second checklist item",
+            "exit_gate": "second contract accepted",
             "status": "completed",
         })
-        result = EVALUATOR.evaluate_trace({
-            "schema_version": 4,
-            "semantic_fork": semantic_fork(),
-            "program": duplicated,
-            "events": [
-                {"type": "route", "stage_id": "implementation", "mode": "BOUNDED_WORKER",
-                 "decision_question": "Which boundary owns the behavior?", "rationale": "claimed ready"},
-            ],
-        })
-        self.assertFalse(result["passed"])
-        self.assertTrue(any("stage_kind duplicates" in error for error in result["errors"]))
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertTrue(any("stage_kind duplicates" in warning for warning in result["warnings"]))
 
 
 if __name__ == "__main__":

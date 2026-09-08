@@ -47,7 +47,24 @@ COMPACT_CAPSULE_FIELDS = {
     "source_fingerprint",
 }
 READ_ONLY_WORK_CLASSES = {"evidence_scout", "review", "validation"}
+PRIMARY_CONTROL_ACTIONS = {
+    "design",
+    "shared_contract",
+    "coordination",
+    "acceptance",
+    "integration",
+    "delivery",
+}
+PRIMARY_DELEGATED_WORK_ACTIONS = {
+    "leaf_implementation",
+    "documentation",
+    "review",
+    "validation",
+}
 TIER_ORDER = {"economy": 0, "balanced": 1, "strong": 2}
+JUDGMENT_FLOOR = {"mechanical": "economy", "bounded_reasoning": "balanced", "architectural": "strong"}
+IMPACT_FLOOR = {"local": "economy", "shared": "strong", "irreversible": "strong"}
+ORACLE_FLOOR = {"deterministic": "economy", "evidence_backed": "balanced", "judgment": "strong"}
 STAGE_KINDS = (
     "discovery",
     "semantic_decision_contract_freeze",
@@ -105,8 +122,46 @@ def _nonempty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _evidence_locators(value: Any) -> bool:
+    """Evidence is a locator or locator list, never a boolean agreement signal."""
+    return _nonempty_string(value) or (
+        isinstance(value, list)
+        and bool(value)
+        and all(_nonempty_string(item) for item in value)
+    )
+
+
 def _enum(value: Any, allowed: set[str] | dict[str, Any] | tuple[str, ...]) -> bool:
     return isinstance(value, str) and value in allowed
+
+
+def _validate_capability_floor(value: Any, path: str, errors: list[str]) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        errors.append(f"{path} must be an object")
+        return None
+    dimensions = (
+        ("judgment", JUDGMENT_FLOOR),
+        ("impact", IMPACT_FLOOR),
+        ("oracle", ORACLE_FLOOR),
+    )
+    floors: list[str] = []
+    for field, mapping in dimensions:
+        current = value.get(field)
+        if not _enum(current, mapping):
+            errors.append(f"{path}.{field} is invalid")
+        else:
+            floors.append(mapping[str(current)])
+    declared = value.get("minimum_tier")
+    if not _enum(declared, TIER_ORDER):
+        errors.append(f"{path}.minimum_tier is invalid")
+        return None
+    if floors:
+        required = max(floors, key=lambda tier: TIER_ORDER[tier])
+        if TIER_ORDER[str(declared)] < TIER_ORDER[required]:
+            errors.append(f"{path}.minimum_tier {declared!r} is below derived floor {required!r}")
+    return str(declared)
 
 
 def _normalized_string_set(value: Any, path: str, errors: list[str]) -> set[str]:
@@ -288,7 +343,7 @@ def _validate_artifacts(value: Any, errors: list[str]) -> dict[str, str]:
 
 
 def _validate_program(
-    program: Any, errors: list[str], *, admission_schema: bool
+    program: Any, errors: list[str], warnings: list[str], *, admission_schema: bool
 ) -> dict[str, Any] | None:
     """Validate the optional program envelope and return its indexed state."""
     if program is None:
@@ -333,9 +388,9 @@ def _validate_program(
                 stage_kind = str(stage_kind)
                 stage_kind_index = STAGE_KINDS.index(stage_kind)
                 if stage_kind in stage_kinds_seen:
-                    errors.append(f"{prefix}.stage_kind duplicates {stage_kind!r}")
+                    warnings.append(f"{prefix}.stage_kind duplicates {stage_kind!r}; inspect whether this stage adds value")
                 if stage_kind_index <= previous_stage_kind_index:
-                    errors.append(f"{prefix}.stage_kind is out of canonical order")
+                    warnings.append(f"{prefix}.stage_kind is out of canonical order; dependency admission remains authoritative")
                 stage_kinds_seen.add(stage_kind)
                 previous_stage_kind_index = stage_kind_index
         if not isinstance(stage.get("depends_on"), list):
@@ -418,6 +473,7 @@ def _validate_program(
     return {
         "current_stage": current_stage,
         "current": current,
+        "stages": stage_by_id,
         "current_stage_kind": current.get("stage_kind") if current else None,
         "contracts": contract_by_id,
         "has_shared_contracts": bool(contracts),
@@ -446,7 +502,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
         and _enum(event.get("mode"), ROUTE_MODES)
     }
     program_state = _validate_program(
-        trace.get("program"), errors, admission_schema=admission_schema
+        trace.get("program"), errors, warnings, admission_schema=admission_schema
     )
     has_program = trace.get("program") is not None
     strict_schema = schema_version >= 2 or has_program or any(
@@ -507,6 +563,11 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
     route_count = 0
     route_mode: str | None = None
     integration_count = 0
+    invalidated_obligations: set[str] = set()
+    retired_assignments: set[str] = set()
+    assignment_supersedes: dict[str, set[str]] = {}
+    collected_assignments: set[str] = set()
+    integrated_assignments: set[str] = set()
     delegate_count = 0
     escalation_count = 0
     weak_retry_count = 0
@@ -528,6 +589,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
     max_observed_active = 0
     primary_action_count = 0
     primary_leaf_violations = 0
+    primary_work_violations = 0
     contract_gate_violations = 0
     semantic_fork_admission_violations = 0
     scout_budget_violations = 0
@@ -545,6 +607,18 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
     assignment_capsules: dict[str, dict[str, Any]] = {}
     assignment_work_class: dict[str, str] = {}
     assignment_directive_revision: dict[str, str] = {}
+    required_directive_revision: dict[str, str] = {}
+    current_directive_revision = trace.get("directive_revision")
+    if current_directive_revision is not None and not _nonempty_string(current_directive_revision):
+        errors.append("directive_revision must be a nonempty identity when present")
+    task_binding = {
+        field: trace[field]
+        for field in ("task_id", "run_id", "workspace_id")
+        if field in trace
+    }
+    for field, value in task_binding.items():
+        if not _nonempty_string(value):
+            errors.append(f"{field} must be a nonempty identity when present")
     assignment_source_fingerprint: dict[str, str] = {}
     compact_assignments: set[str] = set()
     assignment_scout_round: dict[str, int] = {}
@@ -580,6 +654,10 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             errors.append(f"event[{index}] must be an object")
             continue
         event_type = event.get("type")
+        if _enum(event_type, {"delegate", "result", "accept", "integrate"}):
+            for field, expected_identity in task_binding.items():
+                if event.get(field) != expected_identity:
+                    errors.append(f"event[{index}].{field} does not match trace identity")
 
         if event_type == "route":
             route_count += 1
@@ -675,6 +753,19 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(capsule, dict):
                 errors.append(f"event[{index}] delegate lacks Assignment Capsule")
             else:
+                minimum_tier = _validate_capability_floor(
+                    capsule.get("capability_floor"),
+                    f"event[{index}] capsule.capability_floor",
+                    errors,
+                )
+                if (
+                    minimum_tier is not None
+                    and _enum(tier, TIER_ORDER)
+                    and TIER_ORDER[str(tier)] < TIER_ORDER[minimum_tier]
+                ):
+                    errors.append(
+                        f"event[{index}] tier {tier!r} is below capsule capability floor {minimum_tier!r}"
+                    )
                 capsule_profile = capsule.get("profile")
                 if capsule_profile is not None and capsule_profile != "compact":
                     errors.append(f"event[{index}] capsule.profile must be compact when present")
@@ -710,10 +801,13 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                 if admission_schema and not _nonempty_string(capsule.get("directive_revision")):
                     errors.append(f"event[{index}] capsule.directive_revision must be nonempty")
                 elif _nonempty_string(capsule.get("directive_revision")):
+                    if current_directive_revision is not None and capsule["directive_revision"] != current_directive_revision:
+                        errors.append(f"event[{index}] capsule.directive_revision does not match current directive")
                     assignment_directive_revision[assignment] = str(
                         capsule["directive_revision"]
                     )
-                if assignment in compact_assignments:
+                    required_directive_revision[assignment] = str(capsule["directive_revision"])
+                if "source_fingerprint" in capsule:
                     assignment_source_fingerprint[assignment] = str(
                         capsule.get("source_fingerprint", "")
                     ).strip()
@@ -802,7 +896,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                                 scout_counts_by_round[scout_round] = count
                                 if count > 2:
                                     scout_budget_violations += 1
-                                    errors.append(
+                                    warnings.append(
                                         f"event[{index}] scout round {scout_round} exceeds default limit 2"
                                     )
                                 evidence_axis = str(capsule.get("evidence_axis", "")).strip()
@@ -953,6 +1047,30 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                 else:
                     if not isinstance(capsule.get("depends_on"), list):
                         errors.append(f"event[{index}] program capsule.depends_on must be a list")
+                    else:
+                        dependencies = _normalized_string_set(
+                            capsule["depends_on"], f"event[{index}] capsule.depends_on", errors
+                        )
+                        stages = (program_state or {}).get("stages", {})
+                        for dependency in dependencies:
+                            stage = stages.get(dependency)
+                            if stage is not None and stage.get("status") == "completed":
+                                continue
+                            if dependency in accepted_assignments:
+                                if (
+                                    assignment_directive_revision.get(dependency)
+                                    != required_directive_revision.get(dependency)
+                                    or any(
+                                        current_contract_revisions.get(contract_id) != revision
+                                        for contract_id, revision in assignment_contract_revisions.get(dependency, {}).items()
+                                    )
+                                ):
+                                    errors.append(f"event[{index}] dependency {dependency!r} has stale acceptance")
+                                continue
+                            errors.append(
+                                f"event[{index}] dependency {dependency!r} must reference a completed stage "
+                                "or an already accepted assignment"
+                            )
                     if not isinstance(capsule.get("contract_revisions"), dict):
                         errors.append(f"event[{index}] program capsule.contract_revisions must be an object")
                     else:
@@ -1098,6 +1216,15 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                                 f"event[{index}] concurrent write worker {participant!r} lacks frozen contracts: "
                                 + ", ".join(missing)
                             )
+            if "supersedes" in event:
+                raw_supersedes = event["supersedes"]
+                replacements = _normalized_string_set(
+                    [raw_supersedes] if _nonempty_string(raw_supersedes) else raw_supersedes,
+                    f"event[{index}].supersedes", errors,
+                )
+                if not replacements or replacements - invalidated_obligations:
+                    errors.append(f"event[{index}] supersedes must reference outstanding invalidated assignments")
+                assignment_supersedes[assignment] = replacements
             active[agent] = write_set
             assignment_for_agent[agent] = assignment
             active_contract_revisions[agent] = contract_revisions
@@ -1110,7 +1237,8 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             result_source_fingerprint.pop(assignment, None)
             max_observed_active = max(max_observed_active, len(active))
             if len(active) > max_active:
-                errors.append(f"event[{index}] active Agents {len(active)} exceed max_active {max_active}")
+                diagnostics = errors if "max_active" in budget else warnings
+                diagnostics.append(f"event[{index}] active Agents {len(active)} exceed max_active {max_active}")
 
         elif event_type == "contract_update":
             if not has_program:
@@ -1121,7 +1249,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(revisions, dict) or not revisions:
                 errors.append(f"event[{index}] contract_update.contract_revisions must be a nonempty object")
                 revisions = {}
-            if not _nonempty(event.get("evidence")):
+            if not _evidence_locators(event.get("evidence")):
                 errors.append(f"event[{index}] contract_update lacks evidence")
             changed_contracts: set[str] = set()
             for contract_id, revision in revisions.items():
@@ -1135,6 +1263,23 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                 if current_contract_revisions.get(normalized_id) != revision:
                     changed_contracts.add(normalized_id)
                 current_contract_revisions[normalized_id] = revision
+            integrated_assignments.difference_update(
+                assignment
+                for assignment, revisions_at_dispatch in assignment_contract_revisions.items()
+                if any(contract_id in revisions_at_dispatch for contract_id in changed_contracts)
+            )
+            for assignment, revisions_at_dispatch in assignment_contract_revisions.items():
+                if assignment not in retired_assignments and any(
+                    contract_id in revisions_at_dispatch for contract_id in changed_contracts
+                ):
+                    if compact_schema or any(
+                        isinstance(item, dict) and ("supersedes" in item or "cancelled_assignment_ids" in item)
+                        for item in events
+                    ):
+                        invalidated_obligations.add(assignment)
+                    successful_assignments.discard(assignment)
+                    accepted_assignments.discard(assignment)
+                    rejected_assignments.discard(assignment)
             affected_active = {
                 assignment_for_agent[agent]
                 for agent in active
@@ -1170,6 +1315,74 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                     assignment_for_agent.pop(agent, None)
                     active_contract_revisions.pop(agent, None)
 
+            cancelled = _normalized_string_set(
+                event.get("cancelled_assignment_ids", []), f"event[{index}].cancelled_assignment_ids", errors
+            )
+            if cancelled - invalidated_obligations:
+                errors.append(f"event[{index}] cancellation must reference outstanding invalidated assignments")
+            retired_assignments.update(cancelled & invalidated_obligations)
+            invalidated_obligations.difference_update(cancelled)
+
+        elif event_type == "directive_update":
+            if event.get("owner") != "primary":
+                errors.append(f"event[{index}] directive_update owner must be primary")
+            revision = event.get("directive_revision")
+            if not _nonempty_string(revision):
+                errors.append(f"event[{index}] directive_update requires directive_revision")
+                continue
+            current_directive_revision = revision
+            affected = _normalized_string_set(
+                event.get("affected_assignment_ids"), f"event[{index}].affected_assignment_ids", errors
+            )
+            stopped = _normalized_string_set(
+                event.get("stopped_assignment_ids", []), f"event[{index}].stopped_assignment_ids", errors
+            )
+            if not _evidence_locators(event.get("evidence")):
+                errors.append(f"event[{index}] directive_update requires evidence locators")
+            for assignment in affected:
+                if assignment not in seen_assignment_ids:
+                    errors.append(f"event[{index}] directive_update references unknown assignment {assignment!r}")
+                    continue
+                if assignment in retired_assignments:
+                    errors.append(f"event[{index}] directive_update cannot revive retired assignment {assignment!r}")
+                    continue
+                invalidated_obligations.add(assignment)
+                required_directive_revision[assignment] = revision
+                integrated_assignments.discard(assignment)
+                successful_assignments.discard(assignment)
+                accepted_assignments.discard(assignment)
+                rejected_assignments.discard(assignment)
+                agent = next((key for key, value in assignment_for_agent.items() if value == assignment), None)
+                if agent is not None:
+                    if assignment not in stopped:
+                        errors.append(f"event[{index}] directive_update did not stop affected assignment {assignment!r}")
+                    else:
+                        active.pop(agent, None)
+                        assignment_for_agent.pop(agent, None)
+                        active_contract_revisions.pop(agent, None)
+                        failed_assignments.add(assignment)
+
+            cancelled = _normalized_string_set(
+                event.get("cancelled_assignment_ids", []), f"event[{index}].cancelled_assignment_ids", errors
+            )
+            if cancelled - affected:
+                errors.append(f"event[{index}] cancellation must reference affected assignments")
+            retired_assignments.update(cancelled & invalidated_obligations)
+            invalidated_obligations.difference_update(cancelled)
+
+        elif event_type == "user_message":
+            # Passive messages may be observed, but need no routine bookkeeping.
+            # Actual changed obligations use directive_update / contract_update.
+            if not _enum(event.get("message_class"), {"QUERY", "REMINDER"}):
+                errors.append(f"event[{index}] changed obligations require directive_update or contract_update")
+            if (
+                event.get("affects_saved_next") is True
+                or event.get("affected_assignment_ids")
+                or event.get("directive_changed") is True
+                or event.get("contract_revisions")
+            ):
+                errors.append(f"event[{index}] passive user_message must not change the active route or obligations")
+
         elif event_type == "result":
             if has_program and event.get("stage_id") != (program_state or {}).get("current_stage"):
                 errors.append(f"event[{index}] result.stage_id must match program.current_stage")
@@ -1180,8 +1393,14 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             expected = assignment_for_agent.get(agent)
             if expected and assignment != expected:
                 errors.append(f"event[{index}] assignment {assignment!r} does not match active {expected!r}")
+            if expected == assignment and agent in active:
+                collected_assignments.add(assignment)
             status = event.get("status")
             if status == "success":
+                if assignment_directive_revision.get(assignment) != required_directive_revision.get(assignment):
+                    errors.append(f"event[{index}] successful result uses a superseded directive")
+                if "directive_revision" in event and event["directive_revision"] != assignment_directive_revision.get(assignment):
+                    errors.append(f"event[{index}] result directive_revision does not match capsule")
                 if assignment in compact_assignments:
                     directive_revision = event.get("directive_revision")
                     if directive_revision != assignment_directive_revision.get(assignment):
@@ -1224,14 +1443,14 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                         + ", ".join(stale_contracts)
                     )
                 successful_assignments.add(assignment)
-                if not _nonempty(event.get("evidence")):
+                if not _evidence_locators(event.get("evidence")):
                     errors.append(f"event[{index}] successful result lacks evidence")
-                if not _nonempty(event.get("source_fingerprint")):
+                if not _nonempty_string(event.get("source_fingerprint")):
                     errors.append(f"event[{index}] successful result lacks source_fingerprint")
                 else:
                     result_fingerprint = str(event["source_fingerprint"])
                     if (
-                        assignment in compact_assignments
+                        assignment in assignment_source_fingerprint
                         and result_fingerprint
                         != assignment_source_fingerprint.get(assignment)
                     ):
@@ -1256,6 +1475,10 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             status = event.get("status")
             if assignment not in successful_assignments:
                 errors.append(f"event[{index}] acceptance references assignment without collected success")
+            if assignment_directive_revision.get(assignment) != required_directive_revision.get(assignment):
+                errors.append(f"event[{index}] acceptance references a superseded directive")
+            if "directive_revision" in event and event["directive_revision"] != required_directive_revision.get(assignment):
+                errors.append(f"event[{index}] acceptance directive_revision does not match current assignment")
             stale_contracts = sorted(
                 contract_id
                 for contract_id, revision in assignment_contract_revisions.get(assignment, {}).items()
@@ -1275,7 +1498,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if assignment_write_set.get(assignment) and event.get("artifacts_checked") is not True:
                 errors.append(f"event[{index}] write acceptance must confirm artifacts_checked=true")
             fingerprint = str(event.get("source_fingerprint", "")).strip()
-            if not fingerprint:
+            if not _nonempty_string(event.get("source_fingerprint")):
                 errors.append(f"event[{index}] acceptance lacks source_fingerprint")
             elif result_source_fingerprint.get(assignment) != fingerprint:
                 errors.append(f"event[{index}] acceptance source_fingerprint does not match result")
@@ -1285,7 +1508,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                 matrix = {}
             expected_signals = assignment_acceptance.get(assignment, set())
             missing_signals = sorted(
-                signal for signal in expected_signals if signal not in matrix or not _nonempty(matrix[signal])
+                signal for signal in expected_signals if signal not in matrix or not _evidence_locators(matrix[signal])
             )
             if missing_signals:
                 errors.append(
@@ -1294,6 +1517,9 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if status == "accepted":
                 acceptance_count += 1
                 accepted_assignments.add(assignment)
+                replacements = assignment_supersedes.get(assignment, set())
+                retired_assignments.update(replacements)
+                invalidated_obligations.difference_update(replacements)
                 rejected_assignments.discard(assignment)
             elif status == "rejected":
                 rejection_count += 1
@@ -1422,8 +1648,8 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if reason == "INVALID_OBSERVATION":
                 invalid_observation_reopens += 1
                 if invalid_observation_reopens > 1:
-                    errors.append(
-                        f"event[{index}] INVALID_OBSERVATION permits only one observation-apparatus reopen"
+                    warnings.append(
+                        f"event[{index}] INVALID_OBSERVATION exceeds the default one observation-apparatus reopen; inspect progress evidence"
                     )
             if _enum(reason, DISCOVERY_REOPEN_REASONS):
                 evidence_reopens[round_number] = str(reason)
@@ -1463,6 +1689,17 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if has_program and event.get("stage_id") != (program_state or {}).get("current_stage"):
                 errors.append(f"event[{index}] integrate.stage_id must match program.current_stage")
             integration_count += 1
+            if active:
+                errors.append(f"event[{index}] integration precedes terminal results for active assignments")
+            if (any(isinstance(item, dict) and item.get("type") == "delegate" for item in events)
+                    and not collected_assignments and not retired_assignments):
+                errors.append(f"event[{index}] integration occurs before any delegated result was collected")
+            stale_directives = sorted(
+                assignment for assignment in accepted_assignments
+                if assignment_directive_revision.get(assignment) != required_directive_revision.get(assignment)
+            )
+            if stale_directives:
+                errors.append(f"event[{index}] integrates assignments against superseded directives: {', '.join(stale_directives)}")
             stale_accepted = sorted(
                 assignment
                 for assignment in accepted_assignments
@@ -1489,8 +1726,19 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                     )
             if strict_schema and not _nonempty(event.get("acceptance")):
                 errors.append(f"event[{index}] integration lacks acceptance mapping")
-            if strict_schema and successful_assignments and not _nonempty(event.get("evidence")):
+            if strict_schema and successful_assignments and not _evidence_locators(event.get("evidence")):
                 errors.append(f"event[{index}] integration lacks evidence")
+            eligible = accepted_assignments if strict_schema else successful_assignments
+            if strict_schema and result_source_fingerprint and not eligible and not retired_assignments:
+                errors.append(f"event[{index}] integration has no current accepted result")
+            integrating = eligible
+            if "assignment_ids" in event:
+                integrating = _normalized_string_set(
+                    event["assignment_ids"], f"event[{index}].assignment_ids", errors
+                )
+                if integrating - eligible:
+                    errors.append(f"event[{index}] integration references assignments without current acceptance")
+            integrated_assignments.update(integrating & eligible)
 
         elif event_type == "primary_action":
             primary_action_count += 1
@@ -1503,6 +1751,13 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             }
             if not _enum(action_class, allowed_actions):
                 errors.append(f"event[{index}] primary_action has invalid action_class")
+            delegated_program = has_program and route_mode != "SINGLE_OWNER"
+            if delegated_program and _enum(action_class, PRIMARY_DELEGATED_WORK_ACTIONS):
+                primary_work_violations += 1
+                errors.append(
+                    f"event[{index}] primary_action {action_class!r} is forbidden in a delegated program; "
+                    "primary is control-plane-only"
+                )
             if (
                 admission_schema
                 and semantic_fork_status == "OPEN"
@@ -1523,6 +1778,11 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                 f"event[{index}].write_set",
                 errors,
             )
+            if delegated_program and write_set:
+                primary_work_violations += 1
+                errors.append(
+                    f"event[{index}] delegated-program primary_action must have an empty write_set"
+                )
             if active and action_class == "leaf_implementation":
                 primary_leaf_violations += 1
                 errors.append(f"event[{index}] primary_action leaf_implementation is forbidden while workers are active")
@@ -1552,6 +1812,16 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
     unaccepted = sorted(successful_assignments - accepted_assignments)
     if strict_schema and unaccepted:
         errors.append(f"trace ends with collected results lacking acceptance: {', '.join(unaccepted)}")
+    if invalidated_obligations:
+        errors.append(
+            "trace ends with uncovered invalidated assignments: "
+            + ", ".join(sorted(invalidated_obligations))
+        )
+    if strict_schema and accepted_assignments - integrated_assignments:
+        errors.append(
+            "trace ends with accepted results lacking subsequent integration: "
+            + ", ".join(sorted(accepted_assignments - integrated_assignments))
+        )
     if admission_schema and route_mode == "PARALLEL_SCOUTS":
         rounds = sorted(scout_counts_by_round)
         if not rounds or rounds[0] != 1 or rounds != list(range(1, rounds[-1] + 1)):
@@ -1606,6 +1876,7 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             "program_stages": (program_state or {}).get("stage_count", 0),
             "primary_actions": primary_action_count,
             "primary_leaf_violations": primary_leaf_violations,
+            "primary_work_violations": primary_work_violations,
             "contract_gate_violations": contract_gate_violations,
             "stale_contract_results": stale_contract_results,
             "scout_budget_violations": scout_budget_violations,

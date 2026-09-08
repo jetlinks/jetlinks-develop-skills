@@ -16,7 +16,7 @@
 
 Optimize the completed task, not the number of Agents. Delegate only when the expected gain in quality, critical-path time, or context isolation exceeds spawn, duplicated reading, coordination, integration, review, and retry cost.
 
-Record one bounded `RouteDecision`:
+Choose the route in the task’s natural plan. The following normalized `RouteDecision` is for host integration, handoff or trajectory evaluation; do not require every task to print it:
 
 ```text
 mode: SINGLE_OWNER | PARALLEL_SCOUTS | BOUNDED_WORKER | INDEPENDENT_REVIEW | SEQUENTIAL_HANDOFF
@@ -44,13 +44,15 @@ Apply control-plane checks progressively. The presence of this skill is not itse
 
 | Runtime shape | Required control state |
 | --- | --- |
-| Low-risk `SINGLE_OWNER`, no shared contract or unresolved semantic fork | `RouteDecision` plus the task's natural stage validation; no Capsule, Result Packet, evidence ledger or reviewer |
+| Low-risk `SINGLE_OWNER`, no shared contract or unresolved semantic fork | A natural next action and relevant stage validation; no Capsule, Result Packet, evidence ledger or reviewer |
 | One or two bounded depth-one delegates | Compact Capsule and compact Result Packet; central role policy supplies boilerplate |
 | Shared-contract or concurrent writes | Add exact relevant `contract_revisions`, dependency and write-ownership gates |
 | Security, authorization, persistence, migration, destructive or irreversible effects | Add the relevant boundary evidence and conditional independent review |
 | Unknown root cause or unresolved material semantics | Add the bounded `SemanticFork` / `EvidenceBudget`; do not begin implementation |
 
 The evaluator checks state already produced by execution. It must not cause an Agent to run another search, test or review merely to make a trace more complete. If optional confidence remains missing, preserve it as an unverified item; only a claim required by the current acceptance gate needs supporting evidence.
+
+Separate hard execution gates from quality guidance: scope, authority, contract revision, source identity and required acceptance signals may block a route; response length, presentation style, confidence and optional packet fields must not. A host may observe the latter for offline tuning without dispatching repair work.
 
 ## 2. Orchestration programs
 
@@ -70,7 +72,7 @@ stages:
   - stage_id: stable stage identifier, for example discovery or bounded-implementation
     stage_kind: discovery | semantic_decision_contract_freeze | implementation | integration | review | validation
     objective: observable stage result
-    depends_on: prior stage_ids or explicit accepted artifacts
+    depends_on: prior stage_ids whose status is completed
     entry_gate: facts, identities, or contracts required to start
     required_contracts: relevant contract_ids required by this stage
     route_mode: one current RouteDecision.mode
@@ -83,7 +85,7 @@ shared_contracts:
     owner: primary integration owner
 ```
 
-The normal stage sequence is `discovery -> semantic_decision_contract_freeze -> implementation -> integration -> review -> validation`. Skip a stage only when its entry and exit gates are already evidenced; `review` is conditional on a retained integration candidate with named residual material risk. A stage may use one of the existing modes, and every active stage has one current `RouteDecision`; the program never replaces that decision. In schema version 4, each stage kind appears at most once: multiple checklist items belong inside the objective, dependency graph, assignments, or acceptance matrix of one stage rather than becoming Agent stages of their own.
+The normal stage sequence is `discovery -> semantic_decision_contract_freeze -> implementation -> integration -> review -> validation`. Skip a stage only when its entry and exit gates are already evidenced; `review` is conditional on a retained integration candidate with named residual material risk. A stage may use one of the existing modes, and every active stage has one current `RouteDecision`; the program never replaces that decision. Stage kinds describe purpose, not a mandatory checklist. Repetition or a different order is an efficiency observation; distinct stages with satisfied dependency and contract gates remain valid. Do not create stages or Agents solely to mirror a checklist.
 
 Carry, but do not redefine, the canonical decision states produced by problem solving:
 
@@ -107,15 +109,41 @@ Orchestration only consumes these states. When `SemanticFork.status = OPEN`, the
 
 An `OPEN` material fork always carries its `EvidenceBudget`, including a stopped `ASK_USER` or `BLOCKER` state. Orchestration must not drop that state merely because the current route is `SINGLE_OWNER`; doing so would let compaction or another adapter silently restart discovery.
 
-The `ORCHESTRATOR_INTEGRATOR` owns user-message classification and decisions, the problem model, public and cross-slice contracts, program transitions, dispatch / steer / interrupt decisions, result acceptance, integration, coherent-stage validation, checkpoints, and delivery. Workers do not reinterpret user messages. A `QUERY` or deduplicated `REMINDER` stays with the primary; a local directive change updates only affected Assignment Capsules; a shared-contract change first stops dependent workers and advances the frozen revision. While a worker is active, the primary does not enter a competing leaf-implementation action, concurrently write the worker's owned scope, or absorb raw process logs. It may still change its own shared-contract or integration-conflict scope when doing so invalidates or stops affected work first, and may implement bounded work before dispatch or after active workers have returned.
+The `ORCHESTRATOR_INTEGRATOR` owns user-message classification and decisions, the problem model, public and cross-slice contracts, program transitions, dispatch / steer / interrupt decisions, result acceptance, control-plane integration, coherent-stage validation coordination, checkpoints, and delivery. Workers do not reinterpret user messages. A `QUERY` or deduplicated `REMINDER` stays with the primary; a local directive change updates only affected Assignment Capsules; a shared-contract change first stops dependent workers and advances the frozen revision. In a delegated program, the primary is control-plane-only, not a fallback implementer: it must not author or repair production code, tests, documentation, or review findings. A host merge, test invocation, or acceptance decision is control-plane work only; if integration reveals a semantic or source conflict, the primary stops the affected slice and dispatches a fresh bounded assignment. A `SINGLE_OWNER` route remains the explicit exception where the primary is also the implementation owner.
 
-Before parallel implementation, the relevant shared contracts must be `frozen`, all `depends_on` artifacts accepted, active write sets mutually exclusive, and acceptance signals independently assignable. If any condition is false, use discovery, retain the work under `SINGLE_OWNER`, or serialize the slices with `SEQUENTIAL_HANDOFF`; do not let workers infer a changing contract from each other.
+### Primary control-plane boundary
+
+For every delegated `OrchestrationProgram`, classify primary actions as follows:
+
+```text
+allowed control-plane actions: design, shared_contract, coordination,
+  acceptance, integration, delivery
+forbidden delegated-work actions: leaf_implementation, documentation,
+  review, direct validation
+```
+
+All primary actions in a delegated program have an empty write set. `integration` means applying an already accepted patch or asking the host to merge it; `validation` means dispatching / supervising the stage check and interpreting its result, not editing tests or running an unassigned exploratory test. If a control action needs a non-empty source write set, it is no longer control-plane work: create a new Worker assignment with an exclusive scope and keep the primary as owner of the decision and acceptance.
+
+Before parallel implementation, the relevant shared contracts must be `frozen`, dependencies accepted, active write sets mutually exclusive, and acceptance signals independently assignable. Stage `depends_on` names completed stage IDs. Capsule `depends_on` names completed stage IDs or producer assignment IDs already accepted at dispatch time; an artifact dependency names its accepted producer. Unknown IDs, a running producer or a collected but unaccepted result do not satisfy admission. If any condition is false, use discovery, retain the work under `SINGLE_OWNER`, or serialize the slices with `SEQUENTIAL_HANDOFF`; do not let workers infer a changing contract from each other.
 
 Keep program depth at one and active delegated slices at one or two by default. The primary is the only dispatch owner and delegated roles are leaves. Do not form recursive teams merely because a stage contains multiple domains. After compaction or handoff, reconcile `program_id`, `current_stage`, accepted contract revisions, active assignment IDs and receipts before dispatching; never spawn a replacement for an assignment that is still active or already collected.
+
+Dispatch and result observations should be idempotent when the host supplies a stable event identity. A repeated hook or status delivery must reuse the existing assignment / receipt rather than inflate the program or trigger another validation round. Bind acceptance to the current task, run, workspace and contract revision; a source fingerprint alone is not sufficient to authorize an unrelated task.
 
 ## 3. Risk and capability routing
 
 Assess the capability floor before selecting a model or Agent profile.
+
+Use one compact, provider-neutral `CapabilityFloor` only when model choice is material:
+
+```text
+judgment: mechanical | bounded_reasoning | architectural
+impact: local | shared | irreversible
+oracle: deterministic | evidence_backed | judgment
+minimum_tier: economy | balanced | strong
+```
+
+Derive the minimum tier from the highest active requirement: `mechanical + local + deterministic` may use economy; ordinary implementation judgment or evidence-backed acceptance requires at least balanced; architectural judgment, shared or irreversible impact, or a judgment-only oracle requires strong. Security, authorization, migration, concurrency, lifecycle, external side effects and unknown root cause also set a strong floor. Do not materialize this record for a route where the host has no tier choice or the selection is already fixed by a stronger policy.
 
 | Work shape | Minimum route | Capability guidance |
 | --- | --- | --- |
@@ -137,9 +165,9 @@ Use for short, coupled, sensitive, or judgment-heavy work. The owner may still u
 
 ### `PARALLEL_SCOUTS`
 
-Use for independent evidence collection: separate modules, documents, logs, test families, or risk categories. Before dispatch, state one `decision_question` and open an `EvidenceBudget`. The default evidence round contains at most two scouts with complementary evidence axes. Each scout capsule names one hypothesis, the observation that discriminates it, and the stop condition; its `decision` matches the route question. The parent compares results rather than concatenating them.
+Use for independent evidence collection: separate modules, documents, logs, test families, or risk categories. Before dispatch, state one `decision_question` and open an `EvidenceBudget`. The default evidence round starts with one or two scouts with complementary evidence axes; a larger count is an efficiency diagnostic unless an explicit resource limit forbids it. Each scout capsule names one hypothesis, the observation that discriminates it, and the stop condition; its `decision` matches the route question. The parent compares results rather than concatenating them.
 
-At the end of each round, the primary records one evidence gate. `FREEZE`, `ASK_USER`, or `BLOCKER` closes discovery and forbids later scout dispatch unless a later evidenced fact creates a genuinely new candidate or invalidates the former boundary. An additional round is admissible only for a new evidenced candidate, an invalid preceding observation, source-identity drift, or a named high-risk gap; record that exact expansion reason before dispatch. “More confidence”, “complete understanding”, or another broad repository scan is not an expansion reason. Default `scout_count <= 2` applies per round, and the round number must advance monotonically.
+At the end of each round, the primary records one evidence gate. `FREEZE`, `ASK_USER`, or `BLOCKER` closes discovery and forbids later scout dispatch unless a later evidenced fact creates a genuinely new candidate or invalidates the former boundary. An additional round is admissible only for a new evidenced candidate, an invalid preceding observation, source-identity drift, or a named high-risk gap; record that exact expansion reason before dispatch. “More confidence”, “complete understanding”, or another broad repository scan is not an expansion reason. Inspect counts above the default two per round for duplicated work; the round number must advance monotonically and stopped evidence gates remain hard admission limits.
 
 Represent the transition to another round with an explicit `evidence_reopen` event rather than overloading `EvidenceBudget.stop_reason`. Its `reason` is one of `NEW_CANDIDATE | INVALID_OBSERVATION | SOURCE_DRIFT | HIGH_RISK_GAP`, it increments the round by exactly one, and it carries the locator that changed the former decision boundary. `INVALID_OBSERVATION` also requires the preceding stopped gate to carry that stop reason. A `NEW_CANDIDATE` may reopen a previously terminal gate only when the locator proves that the candidate was absent from the prior ledger and could change the decision; changing wording or asking for broader confidence is not a new candidate. Every later Scout capsule cites the same reopen reason as `expansion_reason`.
 
@@ -283,13 +311,25 @@ The child cannot add public-contract ownership, final acceptance, delivery, comm
 `artifacts_checked` is mandatory for a non-empty write set. `REJECTED` is an informative failure and must preserve the violated signal and evidence before capsule repair, reframing, or capability escalation.
 - Default delegation depth: one. The primary is the only dispatch owner; ordinary children have `delegation: denied` and their Agent tools are hard-disabled when the host supports it. A child requests adjacent help through its Result Packet; the primary decides whether to create a separate leaf assignment.
 - Depth greater than one is valid only when the host has an enforceable spawn broker or equivalent pre-dispatch policy. It must authenticate assignment ancestry, permit only declared child roles, intersect the requested capsule with the parent's remaining authority, enforce depth / child-count / token limits, and reject the spawn before side effects when any authority expands. If this capability is absent, prompt instructions and after-the-fact diff review do not make nested delegation safe; retain `max_depth = 1`.
-- Default active delegated slices: one or two. Increase only when independent critical-path work remains after integration cost is considered.
+- Default active delegated slices: one or two. Increase when independent critical-path work remains after integration cost is considered; the default is diagnostic, while an explicit host or user concurrency cap is a hard limit.
 - Assign a single owner to each file, public contract, schema, migration, runtime resource, and external side effect.
 - Parallelize read-only discovery only within the admitted evidence round. Scopes, evidence axes, hypotheses and discriminators must be complementary; the shared decision question remains identical. Serialize overlapping writes and dependent checks.
 - Keep the primary context to contracts, decisions, evidence indexes, conflicts and integrated outputs. Store or cite raw logs at their source.
+- Keep the primary out of delegated production work: no leaf implementation, test or documentation authoring, review fixing, or direct validation edits. A primary action with a non-empty write set is a control-boundary violation whenever the current route is a delegated program.
 - In an active program, only start a stage after its semantic, contract, `entry_gate`, and dependency admission conditions hold. Complete it only when its `exit_gate` has evidence; update `current_stage` rather than appending operational history. A checklist item does not justify another stage kind or another Agent by itself.
 - Interrupt or stop work whose inputs have become stale; do not let an obsolete Agent finish merely because it already consumed tokens.
 - When a continuity capability exists, persist only the `RouteDecision` revision, active assignment IDs and status, source fingerprints, Result Packet locators, integration owner and exact critical-path next action. After compaction or handoff, reconcile those identities before spawning; do not duplicate an Agent whose result is still running or already recorded.
+
+### Conditional normalized revision events
+
+These fields are for maintained audit traces and host adapters, not a ledger required for every user message. Schema 5 remains current; historical schema 1–4 traces remain readable.
+
+- If the trace declares `task_id`, `run_id` or `workspace_id`, every `delegate`, `result`, `accept` and `integrate` event must carry exactly that identity. Without these optional bindings a historical trace does not itself prove cross-task authority; the live host must bind its task and workspace. Capsule source identity, when present, must match the result, and acceptance must match the collected result identity.
+- An optional top-level `directive_revision` is the current revision for new dispatch. A `directive_update` event has `owner: primary`, a new `directive_revision`, `affected_assignment_ids`, `stopped_assignment_ids` and evidence locators. Stop affected active assignments before continuing, invalidate affected collected / accepted / integrated results, and dispatch a fresh assignment at the new revision. Unaffected assignments keep their valid original receipt and directive. Do not broadcast a local change.
+- `contract_update` advances the named frozen contract revisions, stops dependent active assignments and invalidates dependent collected / accepted / integrated results. Schema 5 requires fresh current-revision results to cover the changed obligations before final completion. Historical schema 1–4 can opt into explicit coverage with the same conditional replacement / cancellation fields; an older trace without those links does not establish complete replacement coverage. A reassignment conditionally declares `delegate.supersedes` as one invalidated assignment ID or a non-empty list of IDs; only its current acceptance resolves those obligations. Matching files or acceptance labels does not infer replacement. The update may explicitly declare `cancelled_assignment_ids` when the accepted change removes those obligations; its owner, evidence and affected-worker stops still apply. Do not revive already retired assignments on a later revision update.
+- An optional `user_message` observation with `message_class: QUERY | REMINDER` is passive: it does not change the saved Next, directives, contracts or assignments. A message that actually changes accepted obligations instead needs the scoped directive or contract transition. No passive event is required for each ordinary query.
+- Required evidence and acceptance-matrix values are a non-empty locator string or a non-empty list of non-empty locator strings. Boolean agreement, numbers, objects and empty strings do not prove an acceptance signal.
+- `integrate` occurs after terminal collection of all active receipts and current acceptance. Its optional `assignment_ids` selects current accepted results; when omitted it includes all currently accepted results. Every accepted result must be covered by a subsequent integration. Intermediate subset integration is valid while other invalidated obligations remain pending, but a completed trace must resolve each by accepted explicit replacement or authorized cancellation. An earlier integration cannot retroactively cover later dispatch, collection or acceptance.
 
 ## 7. Failure escalation
 
@@ -304,7 +344,7 @@ Classify a failed result before another spawn:
 
 After one informative failure, choose exactly one of: repair the capsule, repair one invalid observation, reframe the shared problem, or escalate to a stronger fresh owner. Do not send the same slice to the same capability tier with cosmetic prompt changes.
 
-The same decision / fork revision may use `INVALID_OBSERVATION` to reopen its evidence apparatus at most once. If the repaired round is still invalid or inconclusive, ask the focused question, report a blocker, or reframe under a new decision identity; do not open a third round under the same discriminator.
+The default is one concentrated observation-apparatus repair. Repeated `INVALID_OBSERVATION` reopening is an efficiency warning: inspect whether another observation has new discriminating value. If it does not, change the observation, ask a focused question or report a blocker; changing decision identity does not erase an unchanged failure.
 
 An escalation's `from_tier` must match the tier of the failed or rejected attempt; `to_tier` must be strictly stronger. Do not manufacture an apparent escalation by misreporting the failed tier.
 
@@ -314,7 +354,7 @@ The escalation packet contains verified facts, unchanged constraints, source fin
 
 ## 8. Result integration and verification
 
-Require this compact `Result Packet`; empty `unverified_items` and conflict lists are valid and require no additional investigation:
+Return only the delegated result and relevant acceptance evidence in ordinary interaction. When a host requires a normalized compact `Result Packet`, use this form; empty `unverified_items` and conflict lists are valid and require no additional investigation:
 
 ```text
 assignment_id, status and directive_revision
@@ -335,10 +375,10 @@ The primary Agent must:
 3. Map evidence to the parent acceptance matrix; do not count Agent agreement as independent evidence.
 4. Emit one explicit acceptance decision whose matrix covers every declared signal; for write slices also confirm artifacts or diff and scope were inspected.
 5. Reject rather than integrate stale, out-of-scope, contradictory, or incompletely evidenced work.
-   A Result Packet is stale when any cited contract revision differs from the current frozen revision, even if its source diff and tests otherwise look valid.
-6. Inspect shared-contract effects and integrate accepted changes under one owner.
+   A Result Packet is stale when any consumed contract revision or affected directive revision differs from the current required revision, even if its source diff and tests otherwise look valid. Preserve the original objective, accepted constraints and existing authorization across turns; a query or reminder does not replace them.
+6. Inspect shared-contract effects and perform only control-plane integration under one owner; reassign semantic conflicts instead of editing a Worker slice.
 7. Add an independent review only for named residual material risk on an artifact that will be retained.
-8. Validate the coherent integrated stage once, reusing still-valid prior evidence.
+8. Coordinate one coherent integrated-stage validation, reusing still-valid prior evidence; do not create a primary-side test implementation to fill a gap.
 
 ## 9. Cost and trajectory metrics
 
@@ -353,5 +393,6 @@ Measure outcomes per task class; do not optimize a single trace.
 - Cascading: economy-write admission rate, primary rejection rate, post-acceptance rework, cost per accepted slice and stronger-tier escalation rate.
 - Stability: source-drift stops, overlapping-write incidents, capsule defects, unresolved Result Packets.
 - Control overhead: compact versus expanded capsules, checks started only to populate control records, repeated still-fresh validation, and coordination-to-accepted-work ratio.
+- Role separation: primary work-boundary violations, primary source-write attempts during delegated programs, reassigned integration conflicts, and direct validation / review work incorrectly retained by the primary.
 
 Compare `SINGLE_OWNER` against the proposed route on representative tasks. A multi-Agent route is not an improvement when it only moves tokens to hidden threads or improves one benchmark while increasing rework and escaped defects.

@@ -46,11 +46,13 @@ def _validate_action(value: Any, path: str, errors: list[str]) -> dict[str, Any]
     action_type = value.get("type")
     if not isinstance(action_type, str) or action_type not in ACTION_TYPES:
         errors.append(f"{path}.type must be mutation, check, dispatch, collect, or blocker")
-    if action_type == "mutation" and value.get("purpose") not in MUTATION_PURPOSES:
+    purpose = value.get("purpose")
+    if action_type == "mutation" and (not isinstance(purpose, str) or purpose not in MUTATION_PURPOSES):
         errors.append(
             f"{path}.purpose must be solution, observation_setup, or observation_repair for mutation"
         )
-    if action_type == "dispatch" and value.get("work_class") not in DISPATCH_WORK_CLASSES:
+    work_class = value.get("work_class")
+    if action_type == "dispatch" and (not isinstance(work_class, str) or work_class not in DISPATCH_WORK_CLASSES):
         errors.append(f"{path}.work_class is invalid or missing for dispatch")
     if _text(value.get("owner")) is None:
         errors.append(f"{path}.owner must be nonempty")
@@ -62,8 +64,9 @@ def _validate_action(value: Any, path: str, errors: list[str]) -> dict[str, Any]
 
 def evaluate_trace(document: Any) -> dict[str, Any]:
     errors: list[str] = []
+    warnings: list[str] = []
     if not isinstance(document, dict):
-        return {"passed": False, "errors": ["trace must be an object"], "metrics": {}}
+        return {"passed": False, "errors": ["trace must be an object"], "warnings": [], "metrics": {}}
 
     envelope = document.get("route_envelope")
     if not isinstance(envelope, dict):
@@ -94,10 +97,9 @@ def evaluate_trace(document: Any) -> dict[str, Any]:
             action_type = unique_next.get("type")
             purpose = unique_next.get("purpose")
             work_class = unique_next.get("work_class")
-            if action_type == "mutation" and purpose not in {
-                "observation_setup",
-                "observation_repair",
-            }:
+            if action_type == "mutation" and (
+                not isinstance(purpose, str) or purpose not in {"observation_setup", "observation_repair"}
+            ):
                 errors.append("an OPEN semantic fork cannot route authoritative or solution work")
             if action_type == "dispatch" and work_class != "evidence_scout":
                 errors.append("an OPEN semantic fork may dispatch only a bounded evidence scout")
@@ -136,9 +138,9 @@ def evaluate_trace(document: Any) -> dict[str, Any]:
     minimum_set = set(minimum_skills)
     extra_loaded = sorted(set(loaded_skills) - minimum_set)
     if extra_loaded:
-        errors.append("loaded skills exceed minimum_skills: " + ", ".join(extra_loaded))
+        warnings.append("loaded skills exceed minimum_skills: " + ", ".join(extra_loaded))
     if len(loaded_skills) != len(set(loaded_skills)):
-        errors.append("the same skill must not be loaded repeatedly in one route")
+        warnings.append("the same skill was loaded repeatedly in one route")
 
     recovery = document.get("recovery")
     compact_match = (
@@ -154,17 +156,18 @@ def evaluate_trace(document: Any) -> dict[str, Any]:
         errors.append("the first productive action must execute route_envelope.unique_next")
     if compact_match:
         if loaded_skills:
-            errors.append("matching compact continuation must reuse LoadedRules without skill reloads")
+            warnings.append("matching compact continuation reloaded skills despite matching LoadedRules")
         if ordinary_classification_events:
-            errors.append("matching compact continuation must not rerun ordinary classification")
+            warnings.append("matching compact continuation reran ordinary classification")
         if saved_next is None or unique_next_action_id != saved_next or first_action_id != saved_next:
             errors.append("matching compact continuation must execute the saved first action")
     elif minimum_set and set(loaded_skills) != minimum_set:
-        errors.append("new or mismatched routes must load exactly the admitted minimum_skills")
+        warnings.append("skill load events differ from the planned minimum; inspect reuse or route changes")
 
     return {
         "passed": not errors,
         "errors": errors,
+        "warnings": warnings,
         "metrics": {
             "minimum_skill_count": len(minimum_set),
             "loaded_skill_count": len(loaded_skills),

@@ -1,44 +1,23 @@
-# 宿主连续性适配与现成后端
+# 宿主适配与执行收据
 
-本文件只在选择、安装或审计宿主持久化 / hooks 适配时读取。核心 `$task-continuity` 不依赖这里列出的任何产品。
+只在配置、实现或审查适配器时读取。核心连续性技能可使用 active context；没有已配置且可写的运行态时，不安装后端或建立基础设施来满足本文件。
 
-## 先做能力复用
+## 生命周期接口
 
-按能力而不是品牌选择：
+复用宿主原生能力：压缩前保存/校验，压缩后注入有界主视图，工具前检查确定性前提，工具后保存真实结果。task/thread/issue 的增量 API、已有 event store、FTS 或 memory 可以作为引用后端，但其历史叙述不能替代当前任务契约、源码身份和 Next。
 
-| 所需能力 | 可复用后端 | 仍由连续性协议负责 |
-| --- | --- | --- |
-| 生命周期触发、压缩前保存、压缩后注入 | 宿主原生 `PreCompact` / `SessionStart(source=compact)` 或等价事件 | 恢复类型、gate、独立 instruction revision 对账、`previous_productive_action_id -> pre_compaction_next_action_id -> post_compaction_first_productive_action_id`、注入预算、同轮 `first_allowed_action` |
-| 会话事件持久化、全文检索、按需取回 | 本地 event store / SQLite / FTS / host memory | Capsule 的当前路线、reference cursor、Source Snapshot、证据有效性 |
-| 跨会话语义记忆 | 本地或获准的向量 / knowledge store | 当前任务身份、源码一致性、验收和版本交付 |
-| task / issue / thread 增量状态 | cursor / revision / wait / delta API | `ReferencedSources` 的 extracted facts 与重读条件 |
+Codex 的映射可以使用 `PreCompact`、`SessionStart(source=compact)`、`PreToolUse`、`PostToolUse`。具体宿主接口见 [OpenAI Codex Hooks](https://learn.chatgpt.com/docs/hooks)。本仓库不安装或注册 hooks，也不保证目标宿主已经传入下列可选上下文；需要在获准的环境另行验证真实触发。
 
-不要因为某插件自称 memory、continuity 或 resume 就把它当成权威状态。用真实前向轨迹验证：压缩前后动作 identity 是否连续、压缩后首个动作是否命中 `Next`、是否重读完整历史 / skill / workspace、是否遗漏约束、源码漂移能否被发现。用户改变目标时另行验证 instruction revision 能使旧动作失效。
+- **PreCompact**：由状态所有者保存一致边界；适配器核对当前源观测，不从 transcript 猜目标或新 Next。
+- **SessionStart(compact)**：核对已有状态，只注入主视图、比较结果和允许动作。避免 PostCompact 再重复注入。
+- **PreToolUse**：拒绝已失配的源码 mutation、错误动作身份、越权或无有效交付证据的已识别操作。完整重读、额外验证和比较批次属于离线效率观察，不能仅因超预算阻塞工具。
+- **PostToolUse**：记录真实结果、事件身份和证据覆盖的源码；启动成功不能当作验证通过。
 
-## Codex 原生 Hooks
+工具 hooks 不是完整安全边界：未覆盖的工具、shell 变体和未提供的语义字段仍由宿主权限与正常执行规则负责。不要靠猜 shell 文本扩大门禁。
 
-OpenAI 官方 Hooks 已提供 `PreCompact`、`PostCompact`、`SessionStart`、`PreToolUse`、`PostToolUse` 和 `Stop`。根会话压缩后，`SessionStart(source=compact)` 会在紧接着的模型请求前运行，适合作为恢复索引注入点。
+## 可选 Codex 适配器
 
-- 只用 `PreCompact` 保存或校验有界状态；失败时标记 `SNAPSHOT_REQUIRED`，不要解析不稳定的 transcript 格式来猜完整任务状态。
-- 只在 `SessionStart(source=compact)` 注入一次 Capsule、identity / instruction match summary、动作 identity 链和 `first_allowed_action`；不要再由 `PostCompact` 重复注入。若动作链不匹配，或首个生产事件重放 previous action，适配器应留下可审计的 route-deviation 事件并保持 `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 结果，不得用后续正确动作覆盖它。
-- 设置严格 `additionalContextLimit`。多个 hooks / plugins 的上下文会累积，不能把完整技能、事件账本和系统图同时塞回模型。
-- tool hooks 不是完整安全边界；覆盖不到的工具仍服从语义 gate。
-
-官方文档：[OpenAI Codex Hooks](https://learn.chatgpt.com/docs/hooks)。
-
-### 通用三事件适配契约
-
-宿主可以把原生事件映射为下列最小协议；字段名可适配，语义不能省略：
-
-1. `PreCompact`：在当前边界覆盖写 `Recovery Capsule`、`Continuity Metadata` 和 `Source Snapshot`，记录 `pre_compaction_next_action_id`、`previous_productive_action_id`、`instruction_revision_at_snapshot` 及 `LoadedRules` / 引用 revisions；存在 material semantic fork 时同时保存其 decision question、`OPEN / RESOLVED`、resolution locator、evidence budget、stage admission 和 latest discriminating evidence。若任一视图无法形成一致边界，保存 `SNAPSHOT_REQUIRED`，不要生成猜测性的 Next。
-2. `SessionStart(source=compact)`：先独立比较用户指令 revision，再用一个并行批次比较 source / contract / references / rules。匹配时只输出有界 capsule、比较结果和 `first_allowed_action`；投影保留已存在的 fork / evidence budget，但不重新选择契约、重开 Scout 或重新分类阶段。失配时只输出失配 locator、残余身份风险和 `SNAPSHOT_REQUIRED`。不得在该事件中加载完整 skill、完整任务线程、仓库总览或原始日志。
-3. `PreToolUse`（若宿主支持）：在匹配恢复切片的首个生产动作前拒绝 full skill reload、unchanged full-history read、workspace-wide scan、`do_not_reopen` 动作和 `previous_productive_action_id` 回放；允许一次保存的 `first_allowed_action`，并把拒绝写入轨迹。对未覆盖的工具路径仍依赖语义 gate 与轨迹评测。
-
-适配器输出应保持有界，优先调用 `scripts/prepare_resume_context.py` 生成投影。把完整事件库留在 reference backend，不把 FTS 命中、原始 transcript 或 hook 调试输出拼进恢复上下文。
-
-### 可选执行收据适配器
-
-仓库提供 `scripts/codex_execution_adapter.py` 作为 Codex 的薄适配层。它不是新的 task store，也不改变核心协议；只有显式配置下列运行态路径时才启用相应能力：
+`scripts/codex_execution_adapter.py` 是独立 CLI。它只在显式配置 state、receipts 或 graph marker 时启用相应能力，workspace 单独存在不启用 hooks：
 
 ```text
 TASK_CONTINUITY_STATE=<portable-state.json>
@@ -47,56 +26,48 @@ TASK_CONTINUITY_WORKSPACE=<source-workspace>
 TASK_CONTINUITY_GRAPH_DIRTY=<optional-index-marker.json>
 ```
 
-运行态应使用宿主、Trellis 或组织已有的不受普通 Git 交付管理的位置。适配器不会修改 `.gitignore`，没有配置时所有 hook 都安全 no-op。若只配置 state，则只执行连续性 mutation gate 与 compact 投影；配置 receipts 时，若同目录已经存在 `continuity.json` 会自动复用但不会创建它，同时执行阶段 / 交付 gate；graph marker 也可单独使用。用 `doctor` 检查实际配置、source fingerprint、账本完整性和当前 gate，不能用“hook 已注册”代替生效验证。
+同名 `--state`、`--receipts`、`--workspace`、`--graph-dirty` 参数位于子命令之前。receipts 同目录已有 `continuity.json` 时可复用它，但不会创建 portable state。不要静默修改 `.gitignore`；选择已有非权威运行态位置。
 
-将原生 hook 分别映射到 `pretooluse`、`posttooluse`、`precompact` 和 `sessionstart` 子命令。`PostToolUse` 只对以下高价值事件计算 source fingerprint 并追加 JSONL 收据：
+当前实现要求 Python 3 和 **POSIX `fcntl.flock`**（macOS/Linux），依赖 Git 计算内容身份。账本读写通过同一个文件 inode 的共享/排他锁协调；重复事件查重与追加处于同一临界区。不支持该锁的宿主必须使用其等价事务适配，不能静默退回不幂等写入。活跃账本不能被外部进程替换 inode，所有写者都须遵守协议。
 
-- `apply_patch / Edit / Write` 源码变更，同时只把可选代码索引标记为 dirty；
-- 可识别且有确定退出码的 test / lint / typecheck / build 验证；
-- Agent dispatch 和 result observation；结果仍必须由主 Agent 显式 `accept-assignment`，spawn 成功不等于集成成功；
-- commit、push 和会修改 PR 状态 / 内容的实际工具结果。
+### 恢复观测跨 hook 共享
 
-阶段结束时用已有的、覆盖当前 source fingerprint 的 passed evidence 执行一次 `checkpoint-stage`。所有验收覆盖、委派结果均由主 Agent 接受后，再执行一次 `complete-task`。门禁语义如下：
+portable state 由状态所有者维护，适配器不覆盖它。已配置 state 时，适配器在同目录保存 `<state>.resume-observation.json`，原子记录当前 snapshot 边界的源码观测。`PreCompact` / `SessionStart` 强制刷新；`PreToolUse` 与 doctor 使用同一边界观测，保证 SessionStart 检出的漂移不能在下一独立 hook 调用中消失。
 
-| 动作 | 确定性前置条件 |
+初次入口或 snapshot 边界变化时建立新观测；同阶段预期编辑沿既有边界继续，不要求每次编辑重建胶囊。已失配状态须由所有者有界对账并保存新 snapshot，不能用后续正确动作抹掉失配。其他适配器的指纹由该宿主的 `observed` 负责，不能将不同算法冒充可比较。
+
+sidecar 仅属于该可选适配器的已配置运行态，不进入源码指纹或交付。已配置但不可写/身份不可读时返回具体诊断，不能假称门禁已生效；普通任务仍可使用核心技能的 active context，不能为消除诊断自动安装持久化设施。
+
+### 源码与任务身份
+
+指纹 v2 使用相对路径、文件类型/执行位和实际内容的统一摘要，覆盖 tracked、untracked、symlink 与嵌套 Git 工作区；已删除文件不参与摘要。单纯 `git add` / `commit` 不改变它。计算会读取参与工作树的实际文件，运行态路径被排除。
+
+算法前缀是 `git-worktree-v2-sha256:`。**旧算法的 snapshot/证据不能直接迁移为有效**：首次升级须重新核对当前源码、保存新 snapshot 并形成适用证据；之后纯暂存/提交复用该证据。指纹不同不意味着必须跑全套，只补覆盖当前验收边界所需的信号。
+
+receipts 按 `task_id`、contract revision、可选 `run_id` 和不暴露本地路径的 workspace identity 精确绑定。已配置 state 的读取或身份校验失败必须拒绝复用，不能降为 workspace-only。仅配置 receipts 的宿主没有任务级身份，应为独立任务配置独立账本；旧未绑定账本不能作为当前验收。
+
+### 事件与异步验证
+
+宿主提供稳定 `event_id`，缺失时使用 tool-use id。相同 kind、event ID 和完整 binding 的重复投递复用原收据；没有稳定事件 ID 时无法承诺跨投递去重。原始日志留在宿主，收据保留有界定位信息。
+
+PostToolUse 处理已识别的源码写入、验证、Agent dispatch/result、commit/push/PR 写操作。验证只有明确退出码 `0` 才记 pass；只有工具级 `is_error=false` 时仍为 unknown。
+
+异步 `exec_command` 返回 `session_id` 而没有退出码时记 pending。后续 `write_stdin` 的输入 session ID、事件 binding 必须命中同一待完成验证；终结收据引用原 start receipt、命令和启动源码。启动/结束源码不一致不能产生当前源码通过证据；无关 session、跨任务 poll 和仍无退出码的 poll 不会将 pending 升为 pass。宿主若不提供这些关联字段，使用明确 locator 的人工证据记录流程，不猜关联。
+
+### Gate 与 CLI
+
+| 动作 | 前提 |
 | --- | --- |
-| `apply_patch / Edit / Write` | continuity state 为 `READY`；未配置 state 时不硬拦截 |
-| `git commit` | 当前源码存在通过证据和 coherent-stage checkpoint |
-| `git push` / `gh pr` 写操作（create、edit、ready、reopen、comment、merge） | 当前源码的最新 checkpoint 有效、所有 dispatch 已接受、whole-task completion 引用有效 acceptance evidence |
+| 已识别 `apply_patch / Edit / Write` | 配置 state 时，当前边界的连续性状态支持 READY |
+| `git commit` | 当前任务、当前源码有有效 stage checkpoint 和 passed evidence |
+| `git push` / 已识别 `gh pr` 写操作 | 当前 checkpoint、委派结果接受状态和 whole-task acceptance evidence 均有效 |
 
-源码变化会通过内容指纹使旧证据失效；单纯 stage / commit 不改变内容指纹，因此不会为了交付重复验证。适配器不尝试解析并阻断所有可能写盘的 shell 语句，也不能替代 sandbox、权限控制或语义审查。需要非命令型证据时可用 `record-evidence` 保存有 locator 的 review / inspection / artifact / runtime 结果；这仍须覆盖当前源码且由 checkpoint / completion 显式引用。
+`record-evidence` 记录 review/inspection/artifact/runtime 的 locator、结果和当前身份；它不替代真实验收。阶段集中验证后用 `checkpoint-stage` 引用证据；`accept-assignment` 记录主控接受结果；所有验收完成后 `complete-task`。缺失或失效证据才补充，不按编辑次数生成 checkpoint。`doctor` 检查配置、ledger 错误与 gate，不用“hook 已注册”代替行为验证。
 
-代码图更新采用需求驱动协议：源码写入只置 dirty；当 `code-navigation` 已选择该图后端且当前 query envelope 确实需要它时，先运行增量更新，再调用 `graph-refreshed`。不能再把 `code-review-graph update` 或其他整图刷新绑定到每次 Bash、每次编辑、压缩或 session start。
+宿主可传入 `continuity_context {recovery_type, identity_match, first_allowed_action_pending, first_allowed_action_id, operation_class, action_id}`，在已匹配恢复中阻止 previous action、已关闭动作回放及错误的第一生产动作。`orchestration_context` 的显式角色、delegation、深度、写集、contract/fork 状态支持对应的前置检查；这些字段的采集和真实 dispatch 覆盖由宿主实现。
 
-## 可复用第三方后端
+代码图按需求更新：源码写入只置可选 graph marker 为 dirty。导航确需该索引时完成增量更新，再调用 `graph-refreshed`；不绑定每次命令或压缩刷新整图。
 
-### context-mode
+## 集成验收边界
 
-[mksglu/context-mode](https://github.com/mksglu/context-mode) 已提供 Codex plugin、`PreCompact` / `SessionStart` hooks、SQLite 会话事件、FTS5 检索和压缩恢复快照。适合复用为本地运行态事件与检索后端，避免自行实现数据库、全文索引、hook installer 和 MCP 检索工具。
-
-使用边界：
-
-- 它的事件快照是 reference backend，不是 `Contract / Checkpoint / DecisionState / Resume`。
-- 当前快照按 files / errors / decisions / rules / git / tasks 等事件组织，不提供复合源码指纹、外部 reference cursor、证据 freshness 或稳定 `first_allowed_action`。
-- 快照会建议按 FTS 搜索完整细节；当 Capsule 与 source identity 已匹配时，不要为“完整细节”搜索，只有缺失的决策事实才做一次定向检索。
-- 它会注入 routing block 并拦截 / 重路由部分工具，安装前必须审查 hook 定义；依赖 Node.js 和本地 SQLite/native dependency，采用 Elastic License 2.0。
-- 数据默认保存在本地适配器目录，可用 `CONTEXT_MODE_DIR` 指向明确的非仓库运行态目录。安装、hook trust 和全局工具路由属于显式环境变更，不能静默执行。
-
-### MemPalace
-
-[MemPalace/mempalace](https://github.com/MemPalace/mempalace) 提供 Codex `SessionStart` / `PreCompact` / `Stop` hooks、本地语义检索和跨会话记忆。适合用户明确需要长期语义记忆或跨任务知识检索的场景。
-
-它以 transcript / 内容挖掘和向量检索为主，需要 Python、向量后端和 embedding 模型；不提供确定性的当前 source identity、reference cursor、acceptance evidence 或执行 gate。不要仅为一次任务压缩恢复引入该依赖，也不要让相关性检索覆盖当前任务契约。
-
-### handoff / transcript archive 类插件
-
-Quiver、Rekindle、Codex Continuity 等工具可以生成 handoff、orientation packet 或 transcript 备份。它们适合人工交接和灾难恢复，但 transcript 解析通常不是稳定宿主接口，且“保存了更多历史”不等于“更快命中唯一 Next”。除非真实 continuation 评测证明有增益，否则只作为 fallback locator，不作为默认恢复主视图。
-
-## 安装决策
-
-1. 仅需同一 Codex 会话的压缩续跑：先用原生 compaction + task capsule；缺少自动事件恢复时再考虑 context-mode。
-2. 需要跨会话、跨项目语义记忆：评估 MemPalace 或现有组织 memory backend。
-3. 只需人工移交：使用现有 handoff artifact，不部署数据库。
-4. 已有 Trellis、workflow runtime、task store 或组织 MCP：优先映射其 revision / cursor / checkpoint，不另建平行状态。
-
-任何第三方方案都必须做四项前向验证：hook 真正触发、数据保存在预期位置、匹配恢复不完整重读、source / contract 漂移能阻止旧 `Next`。插件存在、MCP 可连接或快照文本出现都不能单独证明连续性有效。
+在实际获准宿主集中验证 hook 触发、运行态位置、匹配恢复、漂移后的下一 mutation、异步验证终结、事件重投与任务切换。脚本单元/CLI 测试不证明安装后的 host wiring。第三方 memory/event-store 只作为可替换后端，安装、hook trust 和网络行为沿用用户已有授权；本技能不要求某个插件。

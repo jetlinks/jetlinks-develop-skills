@@ -1,16 +1,16 @@
 ---
 name: jetlinks-protocol
-description: 在 JetLinks 协议包中处理协议支持注册、MQTT/HTTP/TCP/UDP/CoAP 编解码、Topic 或 path 路由、二进制报文读写、注册鉴权、设备物模型映射、协议文档与测试定位。适用于阅读、创建或维护 ProtocolSupportProvider、DeviceMessageCodec、MessageParser、二进制消息注册表等协议代码，排查上下行链路、认证失败、粘拆包、应答关联或基于协议文档实现新的设备接入方式。
+description: 在 JetLinks 协议包中阅读、实现或排查协议注册、传输编解码、二进制报文、Topic / path 路由、鉴权、物模型映射和应答关联。适用于协议文档落地、样例报文分析或设备接入调试。
 ---
 
 # JetLinks Protocol
 
-Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
+Use [`references/protocol-workflow.md`](references/protocol-workflow.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
 
 ## Workflow
 
 1. Classify the request as protocol reading, protocol implementation, binary packet analysis, or integration debugging.
-2. If this creates a new protocol package or changes protocol behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): record the task contract, protocol examples, and realistic test goals in the selected host runtime carrier, wait for explicit user confirmation, then update authoritative docs only for accepted durable wire contracts.
+2. If this creates a new protocol package or changes protocol behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract, relevant protocol examples and test goals; apply its authorization rule and synchronize accepted durable wire contracts when needed.
 3. Inspect protocol support registration first, then locate routes, config metadata, authenticators, and codec bindings.
 4. Trace the upstream path from transport input to `DeviceMessage`, then trace the downstream path back to encoded packets, topics, or replies.
 5. Read [`references/development-patterns.md`](references/development-patterns.md) when creating a new protocol package or turning a protocol document into implementation tasks.
@@ -20,7 +20,7 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 9. Read [`references/debugging-checklist.md`](references/debugging-checklist.md) when the symptom is auth failure, message loss, bad routing, decode failure, or device/platform mismatch.
 10. Before implementing or changing protocol code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): Provider / Codec / parser public contracts, wire compatibility, endian / framing assumptions, ACK or sequence correlation, ByteBuf lifecycle, auth boundary, retry / timeout, and transport-specific deviations.
 11. Reuse the existing protocol abstraction and update adjacent tests or protocol docs when the wire behavior changes.
-12. Pair with `$systematic-solving` when a protocol issue crosses transport / framing / auth / mapping / reply correlation, has competing root causes, or a first implementation merely moves failure to another packet or direction. Do not add packet-specific fallback parsing before rebuilding the protocol model.
+12. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
 
 ## Required Constraints
 
@@ -30,13 +30,15 @@ Read [`references/protocol-workflow.md`](references/protocol-workflow.md) first.
 - Do not implement only one direction of a protocol change. Verify both upstream decode and downstream encode when the transport supports both.
 - Do not start from business-field mapping before the transport boundary and frame boundary are stable.
 - Do not make simple protocols carry complex caches, state machines, or split packages just because another protocol does; add those only when the protocol explicitly needs them.
-- Do not implement a new protocol or large wire-behavior change before the task contract, packet examples, upstream/downstream mapping, compatibility risks, and realistic test goals have been documented and confirmed.
+- Do not implement a new protocol or large wire-behavior change until the relevant contract and validation goals are clear under the authorization rule in [backend design](../jetlinks-router/references/backend-design-test-driven-rules.md).
 - Do not make protocol tests pass with invented packets that ignore the real document or adjacent examples; validate representative registration, auth, framing, decode, encode, ACK, error, and compatibility cases.
 - Do not leave protocol providers, codecs, parsers, packet registries, or compatibility branches comment-free when they encode wire contracts, framing / endian assumptions, ACK or sequence correlation, ByteBuf lifecycle, auth boundary, or transport-specific deviations. Add concise code comments and complete public contract comments where implementers depend on them.
 - If protocol changes cannot be verified in-session, state the exact pending test or debug commands and residual interoperability risks.
 - Combine this skill with `$jetlinks-reactive` or `$jetlinks-delivery` when the task also changes reactive flows or requires commit or PR preparation.
 
 ## Response Shape
+
+Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
 
 1. Task type and target transport or packet family
 2. Confirmed protocol entry points

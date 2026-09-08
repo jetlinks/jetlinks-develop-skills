@@ -1,111 +1,52 @@
 ---
 name: jetlinks-web
-description: 在 JetLinks 前端工作区中实现或改造 Vue3 页面，优先复用 `@jetlinks-web/components` 的共享基础组件、`@jetlinks-web-core/components` 的项目级组件，以及现有 hooks、utils。适用于列表页/详情页/弹窗开发、后端 EnumDict/I18nEnumDict 返回 `{value,text}` 的枚举渲染、目录落点判断、状态管理、类型与质量约束、Tab 回传、平台上下文、运行时注册扩展、路由菜单装配与查询参数编码等场景。除局部调整外，任何新增页面、页面壳层重构、信息架构或主筛选 / 主列表 / 主详情承载变化，都必须先按本 skill 的页面分型规则形成交互方案档案，再进入实现。
+description: 在 JetLinks Vue3 前端实现或改造页面、交互、组件、状态与类型。适用于列表 / 详情 / 弹窗、条件筛选、EnumDict 渲染、路由菜单、Tab 回传、平台上下文和运行时扩展；根据当前工作区导出复用共享基础组件与项目级能力。
 ---
 
 # JetLinks Web
 
-Read [`references/web-development-rules.md`](references/web-development-rules.md) first.
+从本次实际变化选择路径。已定位的一处字段、prop、文案或样式调整，可以直接沿相邻实现修改；不必重新设计页面、扫描全部复用层或为未改逻辑补说明。
 
 ## Workflow
 
-1. Read [`references/web-development-rules.md`](references/web-development-rules.md) and classify the task as page implementation, interaction solution selection, capability reuse, code organization, state/quality concerns, in-framework interaction polishing, or business-driven experience design.
-2. Inspect adjacent production code and verify workspace facts (actual exports, package versions, adjacent examples, and module structure), then read [`references/component-source-rules.md`](references/component-source-rules.md) when choosing components. If the task may reuse `jetlinks-web-core` capabilities, also use [`references/core-capability-docs.md`](references/core-capability-docs.md) to locate the relevant core index before opening candidate docs. Treat `@jetlinks-web/components` as the shared base-component layer and `@jetlinks-web-core/components` as the project-level component layer; verify each layer from its own export entry instead of treating one as a substitute for the other.
-3. Analyze the real business goal before sketching UI: target users, high-frequency tasks, key decisions, status transitions, exception paths, and whether the page is actually CRUD-heavy or should be workbench / detail / dashboard / process-oriented.
-4. Before coding, check five decision facts: target user, first task after entering the page, success criterion, whether the user operates one object or many, and the source of any key metric/chart. If any one is critical and unknown, ask the user first; if two or more are unknown, or page type is still undecided across multiple patterns, you must stop and clarify before implementation.
-5. Select only the minimal additional references from [`references/index.md`](references/index.md) based on task scope, and treat references as supporting material only after the business model is clear.
-6. Unless the task is a local tweak (single form field / single filter chip / single dialog content / styling-copy-props-only), form a solution profile before coding with [`references/page-pattern-decision-rules.md`](references/page-pattern-decision-rules.md). Record solution name, filter surface, content surface, detail carrier, edit mode, core components to verify, action placement, density target, and rejected alternatives. If known facts clearly support one recommendation and the user asked for implementation, proceed with that recommendation and report it as the assumed choice; if critical facts are missing or 2+ patterns remain equally plausible, ask the user to choose before coding.
-7. Once task scope is classified (and the solution profile is locked when the task requires one), load [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md). When the task may reuse core capabilities, also load [`references/core-capability-docs.md`](references/core-capability-docs.md), read `jetlinks-web-core/src/README.md` when present, and then read only the relevant category index (`components/README.md`, `hooks/README.md`, `utils/README.md`, `store/README.md`, or `views/README.md`). For shared base controls, locate the workspace `packages/components/src/components.md` (or the installed package's equivalent documentation), use it as a thin map, and open only the matching component documents; for project-level business components, verify `jetlinks-web-core/src/components/index.ts` and implementation. Map every scenario to an existing capability in one of these layers before creating local UI.
-8. When page type is still unclear, load [`references/page-pattern-decision-rules.md`](references/page-pattern-decision-rules.md) first; when deciding whether a block should exist, load [`references/block-admission-rules.md`](references/block-admission-rules.md); when borrowing from examples, load [`references/business-ui-example-rules.md`](references/business-ui-example-rules.md).
-9. When the page includes reusable search or filtering, first decide whether the current workspace `ConditionFilter` plus its route encode/decode toolchain should own the search layer; for generic condition search, tokenized editing, dynamic route query encoding, remote option panels, or quick filter sidebars, load [`references/condition-filter-rules.md`](references/condition-filter-rules.md) and treat `ConditionFilter` as the first candidate. Before creating any field-specific search UI, first classify the field into generic editor categories such as text, number, date/time, range, boolean, option/reference, nested path, or valueless condition, and decide whether the value editor can be expressed through field-driven generic editors plus field-level transform hooks.
-10. Prefer adjacent pages, same-domain modules, or similar business scenarios as references; extract interaction patterns, information architecture, component combinations, and feedback rhythm, but do not copy flows, metrics, page shells, local components, or API contracts from unrelated business domains.
-11. When the task includes UI or interaction optimization, first lock the local style anchors and Ant Design / Ant Design Vue baseline, then refine hierarchy, feedback, and micro-interactions inside the current framework style instead of inventing a new visual language.
-12. If the page skeleton or interaction path is still uncertain, or the user would benefit from validating direction first, provide a low-fidelity wireframe or effect sketch before implementation, then code after alignment.
-13. Before coding frontend files, run the reuse and decomposition gate with [`references/code-organization-rules.md`](references/code-organization-rules.md):
-    - list the Vue/JSX/TSX files expected to be created or edited;
-    - define each file's responsibility boundary;
-    - search existing shared exports and adjacent implementations for reusable components, hooks, utils, services, and API wrappers;
-    - decide whether UI, state orchestration, request logic, or data transforms should live in a component, hook, service/api, or util.
-14. Check existing capabilities before creating new abstractions, in this order:
-    - same feature directory near the target page;
-    - same `modules/<module>-ui/**` module;
-    - sibling modules in the same business domain or with the same interaction/data pattern;
-    - shared packages and source exports: for `@jetlinks-web/components`, start from `packages/components/src/components.md`, then verify `packages/components/src/components.ts` and only the matching component document/source; for `@jetlinks-web-core/components`, verify `jetlinks-web-core/src/components/index.ts`; then inspect other `@jetlinks-web-core/*` / `@jetlinks-web/*` exports as needed;
-    - public module exports, registries, runtime extension points, or documented cross-module APIs.
-      Reuse, configure, or adapt existing capabilities when stable. Do not deep-import private code from another business module unless it is already an accepted local pattern.
-15. If a created or edited Vue/JSX/TSX file mixes multiple responsibilities (layout, orchestration, requests, transforms), if a semantically identical UI/logic structure is reused, or if request/business orchestration would enter a display component, load [`references/code-organization-rules.md`](references/code-organization-rules.md) and split only at a meaningful responsibility boundary before implementation. Do not postpone needed decomposition as cleanup, and do not split merely to shrink line count.
-16. Implement the smallest complete change with Vue 3 SFC + `script setup lang="ts"` after confirming reusable abstractions, extraction boundaries, current workspace exports, and a short comment plan. The comment plan must identify function summaries, public composable/service/API contracts, and key business or compatibility logic that need comments according to [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md).
-17. After coding, review created or modified Vue/JSX/TSX files for responsibility cohesion and readability: extract by responsibility when a file mixes concerns, and verify extraction did not create long wrapper call chains.
-18. Before final output, verify how the current workspace handles frontend i18n for user-visible copy such as 页面标题、区块标题、字段展示名、表格列头、按钮、Tab、空态、Tooltip、校验提示和枚举文案; follow adjacent code instead of scattering hardcoded strings.
-19. When backend fields come from `EnumDict` / `I18nEnumDict` or are shaped as `{ value, text }`, load [`references/enum-rendering-rules.md`](references/enum-rendering-rules.md): render `text` to users, use `value` for submit/filter/status logic, and never display `[object Object]` or duplicate backend enum copy maps.
-20. Run quality, comment, and type checks with [`references/quality-and-type-rules.md`](references/quality-and-type-rules.md) before final output. If no comment is added in a touched frontend code file, explicitly justify why the file contains no named function, non-trivial branch, data transform, async flow, public contract, compatibility rule, or business decision worth explaining.
-21. Pair with `$jetlinks-conventions` whenever naming/import/i18n consistency or user-visible copy changes are involved, and with `$jetlinks-delivery` when commit or PR output is requested.
-22. Pair with `$systematic-solving` when a frontend problem spans API / route / state / component / async boundaries, has competing root causes, or one attempted implementation still fails / moves the symptom / needs another page-specific conditional, compatibility conversion, watcher, retry, or local wrapper. Rebuild the full state and data-flow model before further edits.
+1. 保留用户已明确的目标、限制和交互选择，确认当前模块及相关代码锚点。只补当前修改需要的组件导出、接口、i18n 或状态事实。
+2. 新页面、页面壳层、信息架构或主筛选 / 主列表 / 主详情承载发生变化时，读 [页面分型](references/page-pattern-decision-rules.md)，根据真实用户任务形成方案档案。已知事实支持一个方案且用户要求实施时采用并继续；只有影响契约或主要操作路径的关键未决选择才询问。
+3. 新增组件 / hook / util 或改变职责边界时，读 [能力复用](references/capability-reuse-rules.md) 与 [代码组织](references/code-organization-rules.md)。从相关锚点和相邻实现查起，找到可信能力即停止扩搜；复用不合适时说明实际缺口，按职责拆分，不按行数拆分。
+4. 只加载下表中当前动作需要的 references。实现最小完整变化，保留 Vue 3 SFC + `script setup lang="ts"` 及相邻代码约定。
+5. 在连贯阶段结束后，按改变的可观察行为、类型与交互风险集中验证。复用有效证据，报告真实未覆盖风险；不以固定检查清单制造无关构建、注释或抽象。
 
-## Required Constraints
+## Conditional References
 
-- Do not invent component props, emits, hook signatures, or utils APIs that are not present in current workspace exports.
-- When generating or substantially changing frontend code, add concise comments by default for exported functions, named business functions, public composables/hooks, service/API wrappers, non-trivial data transforms, compatibility conversion, hidden state linkage, race guards, and business rules. Do not wait for the user to ask again.
-- Do not use the comment rule as permission to add noisy line-by-line comments; plain assignments, event forwarding, obvious computed values, and template rendering should stay uncommented.
-- Do not duplicate existing `@jetlinks-web/components`, `@jetlinks-web-core/components`, or other `@jetlinks-web` abstractions with ad hoc local wrappers.
-- Treat both current-workspace component layers as first-class facts with different responsibilities: `@jetlinks-web/components` provides cross-project shared base components, while `@jetlinks-web-core/components` provides project-level business components and wrappers. For the shared package, navigate from `packages/components/src/components.md`, verify root exports in `packages/components/src/components.ts`, and open only matching component docs/source; for the project layer, verify `jetlinks-web-core/src/components/index.ts` and implementation. `jetlinks-project-ui-cli` remains only an explicit external reference, never a default dependency or import source.
-- Do not repeat hand-written base controls or business UI patterns inside modules when either `@jetlinks-web/components` provides the shared component or `@jetlinks-web-core/components` provides a matching project-level component/pattern. When both exist, prefer the project-level wrapper if it carries stable business, permission, i18n, route, or composition conventions.
-- When existing components are not reused, state which `@jetlinks-web/components` mapping/root export and which `@jetlinks-web-core/components` export/implementation were checked, along with the adjacent page and exact capability gap.
-- Do not hardcode route auth buttons, menu metadata, API base behavior, or token handling when existing abstractions already cover them.
-- Do not load every reference by default; choose only the files needed by the current scenario.
-- Treat components/hooks/utils listed in references as candidates, not guaranteed facts; verify against current workspace exports before implementation. A component directory or document does not prove root-package availability: for `@jetlinks-web/components`, only `components.ts` proves root exports, and deep imports require an existing production usage plus target-version verification.
-- For pages with generic condition search, prefer `ConditionFilter` as the reusable search shell whenever the workspace already provides `ConditionFilter` plus route encode/decode utilities.
-- For generic condition search fields such as date/time, range, boolean, option/reference, tree, nested path, or valueless conditions, prefer the field-driven generic value editor path provided by `ConditionFilter` field definitions and field-level hooks such as `options`, `loadOptions`, `loadSelectedOptions`, `rename`, `routeAlias`, and `handleParamsItem`; do not jump straight to a custom per-field component unless the generic path is proven insufficient in the current workspace.
-- Only after the page is explicitly classified as a standard management page, and only when this is a narrow old-page patch, the user explicitly wants the old table style, or the search is a few fixed fields with no route echo / remote options / saved search needs, may you use `ProSearch`; the solution profile or implementation summary must record the exception reason. Adjacent pages using `ProSearch` is evidence to inspect, not a default for new pages.
-- For backend enum fields shaped as `{ value, text }` from `EnumDict` / `I18nEnumDict`, show `text` in tables, cards, details, tags, badges, and filter tokens; use `value` for request params, form models, comparisons, status color, and permissions. Do not render the object directly, do not submit `{ value, text }` unless the API requires it, and do not duplicate backend enum text maps in frontend constants.
-- Business goals come first and references come second; do not let a borrowed layout overrule the actual business task, user role, or decision path.
-- Do not force every frontend requirement into a search-form + table + modal CRUD shell; first decide whether the business is better expressed as workspace, drill-down detail, timeline, dashboard, wizard, kanban, topology, or mixed interaction.
-- Do not default to table plus full edit form; for object details, support summary, sectioned details, local editing, and related records when they fit the business.
-- For lightweight fields such as name, tags, description, remark, or notes, prefer single-field editing via `InputEditable`, `Editable`, or `FormItemEditable` before opening a full edit dialog.
-- For single-object detail pages (object detail workspace / master-detail / runtime-edit toggle and derivatives), follow adjacent detail pages and the scenario matrix in [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md): name / description inline editable, tags added/removed in place, status switched via quick actions; never an "编辑" button that opens a basic-info form, and never bespoke editable text / chip / inline form / validation bubble when `jetlinks-web-core` already exposes one.
-- Across modules, the editing control, trigger, and save feedback for the same field type must be identical: same field type → same component, unified hover-trigger → click-inline entry, Enter to save / Esc to cancel / blur to save by default.
-- Functional introductions must help end users understand capability, enablement conditions, configuration impact, or next actions; do not render design notes, interaction principles, developer hints, or prototype labels.
-- Before writing any user-visible copy, identify the concrete end-user role, their goal action, the terminology they understand, and their next step; if any is unclear, ask first. Rewrite from the end-user's perspective — never paste raw requirement text, prompt, or developer vocabulary (field keys, API paths, component names, "TODO", "占位文案", "待接接口", "设计意图" etc.) into the UI.
-- Empty/error/loading copy names the object and the next step; validation copy gives concrete limits and examples; success feedback carries the object name; the same intro never repeats across banner, empty state, tooltip, and help entry. Full copy rules: [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md).
-- Use Ant Design / Ant Design Vue and current workspace wrappers as the default visual and interaction language unless the user explicitly requires otherwise.
-- When page shell or interaction solution still has multiple viable options, route the task through user-facing template selection first instead of silently defaulting to a traditional CRUD shell.
-- When one recommendation is clearly supported and the user asked for implementation, do not block solely for template confirmation; record the assumed solution profile and continue.
-- A solution profile is mandatory by default for new pages, shell rewrites, and information-architecture or main-surface changes — use [`references/page-pattern-decision-rules.md`](references/page-pattern-decision-rules.md); only local tweaks (single form field / single filter chip / single dialog content / styling-copy-props-only) may bypass it.
-- Treat [`references/page-pattern-decision-rules.md`](references/page-pattern-decision-rules.md) and [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md) as the source of truth for templates, skeletons, edit trigger gradient, and density targets; never invent page-shell variants outside the established patterns.
-- When presenting candidate templates, include each one's ASCII skeleton summary, shared `@jetlinks-web/components` and project-level `@jetlinks-web-core/components` families to verify, edit trigger gradient, state/label anchor, and "不借鉴清单"; do not list only template names.
-- Enforce the baseline in [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md) at implementation time: edit trigger gradient `inline > sectional > drawer > modal > page`; no default "4 KPI + top search + big table" stack; one main visual anchor per screen; state before fields on lists and cards; user-facing copy only; the edit dialog is not the only edit path.
-- For object detail pages, follow adjacent detail pages and [`references/component-reuse-patterns.md`](references/component-reuse-patterns.md).
-- Reverse references on asset detail pages (设备 / 产品 / 模型 / Skill / 大屏模板 / 规则 etc., "used by which agent / project / rule") must render as a main-area section with a count badge, populated by live reverse lookup, hidden entirely when empty; do not use a right-side sticky panel for reverse references.
-- Sidebar collapsible parent-child groups reuse a shared component (do not reimplement per place); collapsed icon-only sidebars switch grouped vs flat rendering with `v-if/v-else`; active-state styling follows the project's existing sidebar convention consistently across modules.
-- Top-level tab root routes do not render PageHead (the title is already expressed by topbar nav); non-root routes keep the declarative PageHead.
-- Floating elements use tokenized z-index (no raw `z-index: 9999` / `z-index: 1000`); one FAB per page at the default right-bottom anchor, extras stack via the same-anchor 56px offset protocol.
-- References should come from adjacent pages, same-domain modules, or similar business scenarios; borrow only what still matches the current business semantics, and do not transplant interaction flows from completely different domains.
-- Unless the user explicitly asks for a redesign, do not introduce a new brand palette, font system, page shell, or decorative style that conflicts with the current frontend framework.
-- Prefer polishing existing interaction patterns such as search areas, operation bars, form grouping, cards, tabs, drawers, and loading/empty/error states instead of rebuilding the page into a self-styled showcase.
-- Do not add decorative KPI cards, fake statistics, placeholder trend charts, or any data block that has no clear business meaning, action value, or source path just to make the page look full.
-- If the source path, refresh trigger, or business use of a metric/chart is unclear, do not render it.
-- Do not hardcode user-visible field display names, column titles, form labels, button text, tab names, placeholders, status copy, or validation messages directly in page code; use the current workspace i18n mechanism consistently, and use Chinese as the default or fallback text only when the local abstraction supports it.
-- Wireframes, effect sketches, and design reasoning are alignment artifacts for developers and stakeholders; the final implemented UI must face end users and must not expose prototype labels, interaction explanations, design principles, or development notes on the page.
-- If critical interaction decisions are under-specified, ask the user instead of guessing; if alignment is easier visually, show a wireframe or effect sketch first.
-- If frontend changes cannot be fully verified in-session, state the exact pending quality or type-check commands and remaining UI risks.
-- Before creating a new frontend component, hook, service, or util, search existing workspace capabilities first (shared package exports and adjacent module `components/**`, `hooks/**`, `utils/**`, `api/**`, `services/**`, per [`references/capability-reuse-rules.md`](references/capability-reuse-rules.md)); when an existing capability covers most of the need through props, slots, config, or field schema, extend by configuration instead of creating a parallel implementation.
-- Decompose Vue/JSX/TSX files according to [`references/code-organization-rules.md`](references/code-organization-rules.md), not by line count: page/container, display component, composable/hook, service/api, and util/mapper each need a clear responsibility; do not treat needed decomposition as optional follow-up cleanup.
-- Never extract for extraction's sake: no responsibility-free wrappers and no a > b > c > d > e style deep call chains just to shrink a file — readability of the flat call path outranks file length. Props count and component depth are warning signals only, not hard gates; evaluate whether the boundary has independent UI semantics, state/lifecycle, reuse, or permission/platform value.
-- Extract by responsibility: repeated markup becomes a child component only when its business semantics match; state orchestration, watchers, and computed business state become composables/hooks; API calls and request parameter assembly go to `api/*.ts` or service; reusable data transforms go to pure utils/mappers.
-- Display components must stay free of external side effects: no direct API calls, global state writes, route changes, environment coupling, or hidden business orchestration. Page/container code may trigger side effects through composables or services.
-- For frontend final output, report which reuse scopes were checked: same feature, same module, sibling/domain module, shared package, and public exports. If a new abstraction was created, state why none of those scopes provided a suitable capability.
+| 当前任务 | 读取 |
+| --- | --- |
+| 新页面、主交互或业务体验设计 | [页面分型](references/page-pattern-decision-rules.md)、[页面设计规则](references/web-development-rules.md)；选择组件时再查 [场景矩阵](references/component-reuse-patterns.md) |
+| 选择 / 新增组件，核对包导出 | [组件事实源](references/component-source-rules.md)；涉及 core 时按 [能力文档](references/core-capability-docs.md) 定位相关分类 |
+| 新增抽象、复用不明确或职责变化 | [能力复用](references/capability-reuse-rules.md)、[代码组织](references/code-organization-rules.md) |
+| 通用搜索、token 条件、远程选项、路由编解码 | [ConditionFilter](references/condition-filter-rules.md) |
+| EnumDict / I18nEnumDict 或 `{ value, text }` 字段 | [枚举渲染](references/enum-rendering-rules.md) |
+| 类型、复杂注释、样式 token 或质量风险 | [质量与类型](references/quality-and-type-rules.md) |
+| 状态 / 生命周期 / 路由归属变化 | [状态管理](references/state-management-rules.md) |
+| 详情轻量编辑、反向引用、侧栏、PageHead 或浮动操作 | [场景组件与整页约定](references/component-reuse-patterns.md) |
+| 新目录或模块落点 | [目录结构](references/directory-structure-rules.md) |
+| 仪表盘运行组件 / 配置 / 注册接线 | [Dashboard](references/dashboard-component-rules.md) |
+| 添加指标、图表或其他信息区块 | [区块准入](references/block-admission-rules.md) |
+| 借鉴其他页面或寻找真实例子 | [业务参考](references/business-ui-example-rules.md)、[示例定位](references/example-locations.md) |
 
-## Response Shape
+更多细分入口见 [索引](references/index.md)，按需查阅，不将它作为必读链。
 
-1. Frontend task type and target module
-2. Business goal, target users, and why this is or is not a standard CRUD page
-3. Selected interaction template, confirmation mode, and which alternatives were rejected
-4. Search-shell decision: `ConditionFilter` by default, or the explicit `ProSearch` exception reason
-5. Enum rendering decision for backend `EnumDict` / `I18nEnumDict` fields when relevant
-6. Which references were used, why they are business-relevant, and what was deliberately not borrowed
-7. Current framework style anchors plus reused `jetlinks-web-core` components/hooks/utils/capabilities and key contracts
-8. Any existing component not reused, with checked export/example and reason
-9. If `$frontend-design` was used, which interaction or visual refinements stayed aligned with local style and Ant Design language
-10. Whether a wireframe / effect sketch was provided or why it was unnecessary
-11. Main code changes and compatibility risks
-12. Verification evidence or pending commands, including UI interaction, state flow, route or permission behavior, type checks, created/modified Vue/JSX/TSX file line-count status, reuse scopes checked (same feature, same module, sibling/domain module, shared package, public exports), reused capabilities, and reasons for any new components/hooks/utils/services/API wrappers.
+## Domain Constraints
+
+- 组件 API 以当前工作区实际导出为准。`@jetlinks-web/components` 是跨项目基础层，`@jetlinks-web-core/components` 是项目层；验证使用到的层，不能用其中一层的文档证明另一层可用。共享层从 `packages/components/src/components.md` 定位，并用 `components.ts` 核验根导出；项目层核验 `jetlinks-web-core/src/components/index.ts`。已验证且未失效的导出可复用。
+- 现有组件的 props、slots、config、schema 能覆盖需求时优先配置；已有稳定业务、权限、i18n 或路由约定的项目封装优先。不要复制基础控件、深导入其他业务模块私有代码或为缩短文件建立空包装。
+- 页面 / container、展示组件、composable、service / API、util 按职责分工。展示组件不直接请求 API、写全局状态或暗含业务编排；本次不改变的相邻逻辑不因文件被触碰而强制重构。
+- 通用搜索优先当前工作区的 ConditionFilter 及其路由编解码链。字段先用通用编辑类型与 transform hooks 表达；ProSearch 的适用边界见其 [规则](references/condition-filter-rules.md)，相邻页面用了它不等于新页面默认。
+- 后端枚举对象显示 `text`，提交、筛选、比较和状态色使用 `value`；不直接渲染对象或复制后端文案映射。
+- 使用 Ant Design / Ant Design Vue、现有组件和样式 token；需求未改变视觉体系时沿用它。布局由真实业务任务决定；指标 / 图表必须有业务用途和数据来源，原型标注、TODO 和开发过程说明不进入成品 UI。
+- 文案与 i18n 沿用当前工作区机制。面向实际用户写内容：开发集成者需要的 API 路径、Topic 或命令 ID 可以准确展示；无关内部标识和设计说明不展示。对已有明确语义的局部文案修改，不重问整页角色。
+- 新增或实质修改的公共函数、业务规则、状态联动、兼容、并发和生命周期逻辑按 [质量规则](references/quality-and-type-rules.md) 补简洁注释；明显代码不逐行复述，未改逻辑不触发逐文件“无需注释”说明。
+
+复杂问题是否需要系统求解，统一使用 [systematic-solving Admission](../systematic-solving/SKILL.md#admission)，不以跨 API / route / state 层或出现 retry / mock 词汇自行升级。命名、i18n、追踪等需要跨端规范时再加入 [conventions](../jetlinks-conventions/SKILL.md)；提交或 PR 请求加入 [delivery](../jetlinks-delivery/SKILL.md)。
+
+## Response
+
+说明实际变化、关键决策和验证结果；只报告当前任务涉及的方案、复用缺口、条件搜索、枚举或剩余风险。局部修改可以用一两句话交付，无需复述未触发的路径。

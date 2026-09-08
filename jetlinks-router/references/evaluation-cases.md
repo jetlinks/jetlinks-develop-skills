@@ -1,6 +1,6 @@
 # JetLinks Router 前向评测
 
-本文件只在维护或评测 Router 时读取。给被测智能体真实请求和当前工作区事实，不提供预期路由、建议技能组合或判分结论；评测实际加载、提问、dispatch 与首个生产动作，不以回答中是否出现某个标题判定成功。
+本文件只在维护或评测 Router 时读取。给被测智能体真实请求和当前工作区事实，不提供预期路由、建议技能组合或判分结论；评测产出、主线保持与首个有效动作，并单独记录实际加载、提问和 dispatch 成本；不以标题、固定工具序列或文案完全一致判定成功。
 
 ## 核心用例
 
@@ -23,13 +23,12 @@
 | 技术关键词测试路由 | 仅“使用数据库 / 消息 / 事件 / 协议”但交互契约和真实装配语义未变时，不触发集成测试 | 按技术名词机械补集成测试或“不适用”证明 |
 | 已有有效证据 | 行为、代码指纹和相关输入匹配时直接复用，只补实际缺口 | 因进入交付阶段重跑全部测试、收集覆盖率或重新准备逐项证据 |
 
-## 通过标准
+## 判定与记录
 
-- 路由主视图只保留 `current_decision / minimum_skills / user_confirmation_required / unique_next`；条件细节只在影响当前动作时出现。
-- `SemanticFork.status=OPEN` 时，权威设计写入、API 深化、生产实现 dispatch 和候选制品 review 均为 0。
-- 可决定路线的证据出现后，额外 Scout 轮次和无新 decision 的 Skill / reference 加载均为 0。
-- 匹配 compact continuation 的普通分类、阶段重分类、完整 Router / skill reload 和上一动作回放均为 0；首个生产动作命中保存的 action identity。
-- 简单任务不会被升级为 semantic-fork、program 或全量 plan-first 仪式；高安全任务不会因最小路由而丢失必要证据。
-- 使用 [`../scripts/evaluate_route_trace.py`](../scripts/evaluate_route_trace.py) 的标准化轨迹时，新 / 失配 route 的实际 skill loads 与 `minimum_skills` 精确一致；匹配 compact continuation 的 skill reload、ordinary classification 和错误首动作均为 0。
-- 没有 owning boundary、已确认契约或真实可达风险而新增的 guard 为 0；同一输入、权限或状态不变量在多层重复校验为 0。
-- 技术关键词触发的额外测试、未选择测试类型的逐项“不适用”证明、无阈值覆盖率造数，以及为测试清单创造生产行为均为 0。
+实质失败包括：未解决的 `SemanticFork.status=OPEN` 被固化成实施契约、权限或授权被越过、保存的下一动作被旧有副作用动作替代，以及用户最新约束丢失。必要的安全证据和真实验收不能为缩短上下文而省略。
+
+`current_decision / minimum_skills / user_confirmation_required / unique_next` 是离线轨迹接口；真实任务允许自然语言表达同一判断。普通回答不必先填写字段。
+
+使用 [evaluate_route_trace.py](../scripts/evaluate_route_trace.py) 时，`passed` 反映可判定的契约与动作错误；`warnings` 和 metrics 记录额外 skill 读取、重复分类及计划加载差异。合法复用、必要重新分类或不同工具批次不单独判失败。评测者仍需阅读实际产出，确认何种额外成本无益。
+
+维护时比较明确机械跨层、已提供协议样例、局部 UI、技术受众帮助、未决权限、依赖委派、匹配与失配恢复等少量任务。检查原目标和最新约束是否同时保留、是否及时执行有效动作、结果是否正确，以及全体智能体耗时和 token；遇到差异或不稳定再扩大样本，不把此表变成日常任务仪式。

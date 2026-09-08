@@ -1,4 +1,4 @@
 interface:
   display_name: "Task Continuity"
   short_description: "用状态门禁、复合指纹、区分观察和少量锚点恢复长任务"
-  default_prompt: "使用 $task-continuity 将恢复主视图压缩为 Contract、Checkpoint、DecisionState、Resume，把源码指纹和规则账本留在机器元数据；区分 COMPACT_CONTINUATION、COLD_HANDOFF、EXTERNAL_RETRY，独立比较最新用户指令 revision，并保持 previous_productive_action_id → pre_compaction_next_action_id == first_allowed_action.action_id → post_compaction_first_productive_action_id 的动作连续性；匹配时只用一个核验批次并在同轮执行，失配时只对账失配项，并复用仍有效的验证证据。"
+  default_prompt: "使用 $task-continuity 保留当前任务的原目标、已接受约束、有效证据和下一动作，在身份匹配后继续工作，失配时只对账必要变化。"

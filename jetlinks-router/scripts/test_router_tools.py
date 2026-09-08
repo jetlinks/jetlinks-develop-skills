@@ -51,11 +51,12 @@ class RouterTraceTest(unittest.TestCase):
         result = EVALUATOR.evaluate_trace(new_route())
         self.assertTrue(result["passed"], result["errors"])
 
-    def test_rejects_unadmitted_skill_load(self) -> None:
+    def test_reports_unplanned_load_without_rejecting_correct_action(self) -> None:
         trace = new_route()
         trace["events"].insert(2, {"type": "skill_load", "skill": "jetlinks-delivery"})
         result = EVALUATOR.evaluate_trace(trace)
-        self.assertFalse(result["passed"])
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertTrue(result["warnings"])
         self.assertEqual(1, result["metrics"]["extra_loaded_skill_count"])
 
     def test_matching_compact_route_reuses_rules_and_hits_saved_next(self) -> None:
@@ -74,7 +75,7 @@ class RouterTraceTest(unittest.TestCase):
         self.assertTrue(result["passed"], result["errors"])
         self.assertTrue(result["metrics"]["saved_next_action_hit"])
 
-    def test_matching_compact_route_rejects_reload_and_reclassification(self) -> None:
+    def test_matching_compact_route_reports_reload_and_reclassification(self) -> None:
         trace = new_route()
         trace["recovery"] = {
             "type": "COMPACT_CONTINUATION",
@@ -89,9 +90,9 @@ class RouterTraceTest(unittest.TestCase):
             {"type": "action", "action_id": "inspect-owner", "productive": True},
         ]
         result = EVALUATOR.evaluate_trace(trace)
-        self.assertFalse(result["passed"])
-        self.assertTrue(any("without skill reloads" in error for error in result["errors"]))
-        self.assertTrue(any("ordinary classification" in error for error in result["errors"]))
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertTrue(any("reloaded skills" in warning for warning in result["warnings"]))
+        self.assertTrue(any("ordinary classification" in warning for warning in result["warnings"]))
 
     def test_open_semantic_fork_rejects_solution_route(self) -> None:
         trace = new_route()
@@ -158,6 +159,36 @@ class RouterTraceTest(unittest.TestCase):
         result = EVALUATOR.evaluate_trace(trace)
         self.assertFalse(result["passed"])
         self.assertTrue(any("first productive action" in error for error in result["errors"]))
+
+    def test_replayed_previous_action_still_fails_despite_later_saved_action(self) -> None:
+        trace = new_route()
+        trace["recovery"] = {
+            "type": "COMPACT_CONTINUATION",
+            "identity_match": True,
+            "instruction_changed": False,
+            "loaded_rules_match": True,
+            "saved_next_action_id": "inspect-owner",
+        }
+        trace["events"] = [
+            {"type": "action", "action_id": "previous-write", "productive": True},
+            {"type": "action", "action_id": "inspect-owner", "productive": True},
+        ]
+        result = EVALUATOR.evaluate_trace(trace)
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["metrics"]["saved_next_action_hit"])
+
+    def test_malformed_action_fields_return_errors(self) -> None:
+        for fields in (
+            {"type": "mutation", "purpose": []},
+            {"type": "dispatch", "work_class": {}},
+        ):
+            with self.subTest(fields=fields):
+                trace = new_route()
+                trace["route_envelope"]["unique_next"].update(fields)
+                trace["semantic_fork"] = {"status": "OPEN"}
+                trace["evidence_budget"] = {"status": "OPEN"}
+                result = EVALUATOR.evaluate_trace(trace)
+                self.assertFalse(result["passed"])
 
 
 if __name__ == "__main__":

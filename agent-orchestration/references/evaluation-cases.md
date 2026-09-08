@@ -22,11 +22,23 @@ Request: a bounded Worker has completed the declared behavior and the relevant s
 
 Expected property: report the unavailable environment under `unverified_items` and continue according to the existing acceptance contract. Do not launch mock construction, unrelated tests, a new Scout or an independent Reviewer merely to make the Result Packet look complete. If that environment was actually a required acceptance signal, the result is incomplete rather than permission to invent substitute evidence.
 
+### Soft quality is not a production gate
+
+Request: a result is grounded, protocol-valid and satisfies every required acceptance signal, but its prose is longer than preferred, presentation is plain, or optional confidence is absent.
+
+Expected property: accept the required result and record only an offline quality observation when useful. Do not reject, repair, rerun tests, dispatch a Reviewer, or add a new evidence round for style, verbosity, aesthetics or optional packet completeness.
+
+### Duplicate host event is idempotent
+
+Request: the host delivers the same dispatch, result, validation or delivery event twice with one stable native event identity.
+
+Expected property: reuse the original assignment / receipt. The program, validation count and delivery state do not advance twice. Acceptance remains bound to the current task, run, workspace and contract revision; an identical source fingerprint from another task cannot authorize it.
+
 ### Independent codebase discovery
 
 Request: decide which two independently owned boundaries contain a feature before any edit.
 
-Expected property: one explicit `decision_question`, an open `EvidenceBudget`, and at most two `PARALLEL_SCOUTS` in the first round. Capsules carry complementary hypotheses, discriminators, evidence axes, and stop conditions; scopes are read-only and disjoint. Accepted dispatch receipts, terminal results with evidence locators and one parent integration are present. No complete repository scan and no writes. Merely printing two scout prompts fails the case.
+Expected property: one explicit `decision_question`, an open `EvidenceBudget`, and a default of one or two `PARALLEL_SCOUTS` in the first round. Capsules carry complementary hypotheses, discriminators, evidence axes, and stop conditions; scopes are read-only and disjoint. Accepted dispatch receipts, terminal results with evidence locators and one parent integration are present. No complete repository scan and no writes. Merely printing two scout prompts fails the case.
 
 ### Discriminating evidence stops discovery
 
@@ -38,9 +50,9 @@ Expected property: the evidence gate records `STOPPED/FREEZE`; no later scout is
 
 Request: the first evidence round cannot test its hypothesis because the fixture is invalid, then a narrower replacement observation is proposed.
 
-Expected property: a second round is permitted only after recording a stopped `INVALID_OBSERVATION` gate plus an `evidence_reopen` with a locator; the new scout capsule repeats that exact `expansion_reason`. The new round still has at most two scouts and stays on the same decision question. Generic desire for more confidence, an unrelated question, or round-number reuse fails.
+Expected property: a second round is permitted only after recording a stopped `INVALID_OBSERVATION` gate plus an `evidence_reopen` with a locator; the new scout capsule repeats that exact `expansion_reason`. The new round still starts with one or two complementary scouts and stays on the same decision question. Generic desire for more confidence, an unrelated question, or round-number reuse fails.
 
-If that repaired round is again `INVALID` or remains `INCONCLUSIVE`, a second `INVALID_OBSERVATION` reopen under the same decision identity fails; the route must ask, block, or reframe.
+If that repaired round is again `INVALID` or remains `INCONCLUSIVE`, another reopen produces an efficiency warning. Check that it has new discriminating value; an unsupported implementation or reopening without the required evidence gate still fails.
 
 ### New candidate reopens a stopped gate
 
@@ -64,7 +76,13 @@ Expected property: parallel workers are allowed only with disjoint write sets; t
 
 Request: add a feature whose backend contract, frontend consumer, and integration tests are each substantial, while the API, authorization semantics, and acceptance matrix can be decided before implementation.
 
-Expected property: create one `OrchestrationProgram` with `primary_role: ORCHESTRATOR_INTEGRATOR`. It performs discovery and design / contract-freeze before bounded implementation; each active stage has one current `RouteDecision`. After the primary freezes the cross-slice contract, workers may own mutually exclusive implementation slices, followed by primary integration, conditional independent review, and one coherent-stage validation. Do not introduce frontend- or backend-specific route modes.
+Expected property: create one `OrchestrationProgram` with `primary_role: ORCHESTRATOR_INTEGRATOR`. It performs discovery and design / contract-freeze before bounded implementation; each active stage has one current `RouteDecision`. After the primary freezes the cross-slice contract, workers may own mutually exclusive implementation slices, followed by primary control-plane integration (or a host merge), conditional independent review, and one coherent-stage validation coordinated by the primary. The primary does not author source or tests to finish the stage. Do not introduce frontend- or backend-specific route modes.
+
+### Primary is control-plane-only
+
+Request: after dispatching a backend Worker, ask the primary to implement a missing branch, edit its test, perform the review fix, or run an unassigned validation command “to save time”.
+
+Expected property: reject the primary's `leaf_implementation`, `documentation`, `review`, and direct `validation` actions in a delegated program. Every primary action has an empty write set. The primary may coordinate, freeze or revise a shared contract, accept results, request a host merge / stage check, resolve user decisions, and create a fresh bounded assignment when a code or test change is needed. A `SINGLE_OWNER` route remains the explicit case where the primary is also the implementation owner.
 
 ### Contract not frozen
 
@@ -214,24 +232,31 @@ Each `delegate` event declares `tier: economy | balanced | strong`; an escalatio
 
 - missing `RouteDecision` or Assignment Capsule fields;
 - compact Capsules missing their small explicit core, compact Result Packets missing disclosure lists or revision identity, and read-only roles declaring writes;
-- `PARALLEL_SCOUTS` without a decision question, more than two scouts in a default round, missing scout hypothesis / discriminator / evidence axis, an evidence gate without its classified `result`, or an expansion round without a valid `evidence_reopen` reason and locator;
-- an `OPEN` semantic fork without its current evidence budget, repeated `INVALID_OBSERVATION` reopen under one decision identity, non-string identities, or duplicate assignment IDs;
+- `PARALLEL_SCOUTS` without a decision question, missing scout hypothesis / discriminator / evidence axis, an evidence gate without its classified `result`, or an expansion round without a valid `evidence_reopen` reason and locator;
+- an `OPEN` semantic fork without its current evidence budget, non-string identities, or duplicate assignment IDs;
 - a scout round after evidence already supports `FREEZE`, `ASK_USER`, or `BLOCKER`;
 - design documentation, contract / implementation work, or review while the semantic fork remains open;
 - implementation before relevant contract freeze or before the decision-stage dependency is completed;
 - review without retained targets and named material risk, or a reviewed target whose later disposition proves its admission precondition was invalid;
-- repeated canonical stage kinds that merely mirror checklist items;
+- capsule dependencies referencing unknown IDs or producer assignments not yet accepted at dispatch;
 - non-`SINGLE_OWNER` routing without a real dispatch receipt and terminal result;
 - `SINGLE_OWNER` routing that nevertheless emits a delegate event;
 - delegation depth greater than the declared limit;
 - a leaf delegate with further delegation authority, or a nested delegate without host-enforced ancestry and monotonic authority attenuation;
 - overlapping writes across active write sets;
-- successful results without evidence or source fingerprint;
+- successful results or acceptance-matrix values using booleans, numbers, objects or empty strings as evidence locators;
+- successful results without a source fingerprint or with an identity different from the capsule;
 - economy-tier writes without frozen mechanical scope, deterministic oracle, reversibility, empty risk flags and a primary acceptance owner;
 - collected successes without explicit primary acceptance and full acceptance-matrix coverage;
 - primary rejection followed by integration or an un-escalated same-tier retry;
 - same-slice retry after failure without an escalation event;
 - downward or lateral “escalation” that does not increase capability;
-- unresolved Agents or delegated work without final integration.
+- integration before dispatch, terminal collection or acceptance, and accepted results without subsequent integration;
+- QUERY / REMINDER observations that mutate directives or the saved Next;
+- scoped directive updates that restart unaffected assignments or admit an affected result at the old revision;
+- contract updates followed by integration of formerly accepted old-revision results or completion with uncovered invalidated assignments;
+- declared task / run / workspace bindings that do not match event identities.
+
+Keep positive pairs for an accepted dependency, fresh reassignment after a scoped change, an unaffected receipt surviving that change, a passive query followed by the original work, explicit `supersedes` replacement, intermediate subset integration followed by remaining work, and authorized cancellation of an obsolete obligation. Default scout count, repeated stage kinds and observation-repair counts are warnings; explicit resource / authority limits and evidence admission remain hard gates.
 
 Track task-level acceptance, escaped defects, total calls / tokens when available, time to first productive action, time to discriminating evidence, `scout_rounds_after_discriminating_evidence`, stage-admission violations, all reviewed artifacts later discarded as a cost observation, disposition-confirmed premature review, critical-path duration, coordination ratio, duplicate reads, retries, escalations and maximum concurrency. Do not claim improvement from fewer main-thread tokens alone.

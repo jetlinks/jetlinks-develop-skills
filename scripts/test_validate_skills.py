@@ -68,157 +68,96 @@ class ValidateSkillsTest(unittest.TestCase):
             result = VALIDATOR.validate_repository(root)
             self.assertTrue(any("macOS user absolute path" in error for error in result["errors"]))
 
-    def test_rejects_missing_continuity_state_contract(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            self.create_skill(root, "task-continuity")
-            result = VALIDATOR.validate_repository(root)
-            joined = "\n".join(result["errors"])
-            self.assertIn("missing required contract marker: READY", joined)
-            self.assertIn("required contract-marker file missing", joined)
+    def create_contract_resources(self, skill: Path) -> None:
+        """Create the declared package interfaces; prose has no fixed wording."""
+        for relative in VALIDATOR.REQUIRED_SKILL_RESOURCES.get(skill.name, ()):
+            path = skill / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# Current rules\n\nUse relevant task evidence.\n", encoding="utf-8")
+        for relative, contract in VALIDATOR.REQUIRED_PYTHON_CONTRACTS.get(skill.name, {}).items():
+            path = skill / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if contract.get("test_suite"):
+                content = (
+                    "import unittest\n\nclass ContractTest(unittest.TestCase):\n"
+                    "    def test_reworded_case(self):\n"
+                    "        self.assertEqual(1, 1)\n"
+                )
+            else:
+                content = "\n".join(
+                    f"def {name}(document):\n    return {{'input': document}}\n"
+                    for name in contract["functions"]
+                )
+            path.write_text(content, encoding="utf-8")
 
-    def test_rejects_marker_only_behavioral_contracts(self) -> None:
+    def test_rejects_missing_public_resource(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot "
-                "Contract Checkpoint DecisionState Resume "
-                "consecutive_matching_audits first_allowed_action "
-                "COMPACT_CONTINUATION COLD_HANDOFF EXTERNAL_RETRY "
-                "previous_productive_action_id pre_compaction_next_action_id "
-                "post_compaction_first_productive_action_id SemanticFork EvidenceBudget "
-                "SCOPE_INVALID\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞 "
-                "resume_audit_tool_rounds <= 1 unmanaged_manifest_digest "
-                "conversation_cursor_at_snapshot directive_revision_at_snapshot MainlineReturnAnchor "
-                "do_not_reopen semantic_fork: evidence_budget: "
-                "latest_discriminating_evidence\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
-                "空泛 Next 规则 revision 未变化 Continuation 对比协议 "
-                "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交 "
-                "无关代码图注入 scripts/evaluate_continuity_trace.py 压缩续跑单批次 外部重试 "
-                "压缩前后动作身份连续 正确动作前的恢复入口偏航\n"
-                "未解决语义分叉后压缩 已解决语义分叉后压缩 已停止取证预算后压缩\n",
-                encoding="utf-8",
-            )
-            (continuity / "scripts").mkdir()
-            (continuity / "scripts" / "validate_continuity_state.py").write_text(
-                "def _validate_evidence_budget():\n    return None\n"
-                "def validate_state():\n    pre_compaction_next_action_id = None\n"
-                "    marker = 'semantic_fork.open_blocks_solution'\n"
-                "    return {'suggested_gate': 'SNAPSHOT_REQUIRED'}\n",
-                encoding="utf-8",
-            )
-            (continuity / "scripts" / "evaluate_continuity_trace.py").write_text(
-                "def evaluate_trace():\n    return {'repeated_read_count': 0, "
-                "'irrelevant_graph_injection_count': 0, 'full_thread_reads': 0, "
-                "'unchanged_reference_reads': 0, 'compact_continuation_fast_path_passed': True, "
-                "'post_compaction_first_productive_action_id': None, "
-                "'recovery_route_deviation_count': 0, "
-                "'post_compaction_full_skill_reload_count': 0, "
-                "'scope_invalid_observation_count': 0}\n",
-                encoding="utf-8",
-            )
-            (continuity / "scripts" / "prepare_resume_context.py").write_text(
-                "def project_context():\n    return {'gate': 'SNAPSHOT_REQUIRED', "
-                "'first_allowed_action': None}\n"
-                "MARKERS = 'SNAPSHOT_REQUIRED first_allowed_action do not reload unchanged "
-                "references semantic_fork evidence_budget'\n",
-                encoding="utf-8",
-            )
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "references" / "task-state-and-recovery-rules.md").unlink()
             result = VALIDATOR.validate_repository(root)
-            joined = "\n".join(result["errors"])
-            self.assertIn("structurally incomplete", joined)
-            self.assertIn("required executable contract file missing", joined)
+            self.assertTrue(any("required skill resource missing" in item for item in result["errors"]))
 
-    def test_rejects_missing_anti_idle_resume_contract(self) -> None:
+    def test_accepts_reworded_rules_and_renamed_test_cases(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "LoadedRules\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 陈旧胶囊下修改 用户禁止提交\n",
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "SKILL.md").write_text(
+                "---\nname: task-continuity\ndescription: Resume a task.\n---\n\n"
+                "Continue from the current objective and saved next step.\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
-            joined = "\n".join(result["errors"])
-            self.assertIn("missing required contract marker: consecutive_matching_audits", joined)
-            self.assertIn("missing required contract marker: audit_fingerprint", joined)
-            self.assertIn("missing required contract marker: 同一恢复切片连续五次压缩", joined)
+            self.assertEqual([], result["errors"])
 
-    def test_rejects_missing_continuation_evaluation_contract(self) -> None:
+    def test_words_do_not_replace_executable_resources(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot Contract Checkpoint "
-                "DecisionState Resume consecutive_matching_audits first_allowed_action\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "生产修改 区分检查 真实阻塞\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
-                "空泛 Next 规则 revision 未变化 陈旧胶囊下修改 用户禁止提交\n",
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            script = skill / "scripts" / "validate_continuity_state.py"
+            script.write_text(
+                "CONTRACT = 'READY SNAPSHOT_REQUIRED validate_state'\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
-            joined = "\n".join(result["errors"])
-            self.assertIn("missing required contract marker: Continuation 对比协议", joined)
-            self.assertIn("missing required contract marker: Ablation continuation", joined)
+            self.assertTrue(
+                any("missing executable contract function validate_state" in item for item in result["errors"])
+            )
 
-    def test_rejects_superseded_continuity_schema(self) -> None:
+    def test_rejects_invalid_python_and_inputless_public_entry(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot Contract Checkpoint "
-                "DecisionState Resume consecutive_matching_audits first_allowed_action\n",
-                encoding="utf-8",
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "scripts" / "validate_continuity_state.py").write_text(
+                "def validate_state():\n    return {}\n", encoding="utf-8"
             )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞\n"
-                "Resume.audit_fingerprint 维护两个有界逻辑视图\n",
-                encoding="utf-8",
+            (skill / "scripts" / "prepare_resume_context.py").write_text(
+                "def project_context(document\n", encoding="utf-8"
             )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
-                "空泛 Next 规则 revision 未变化 Continuation 对比协议 Full-context oracle "
-                "Ablation continuation 陈旧胶囊下修改 用户禁止提交\n",
+            result = VALIDATOR.validate_repository(root)
+            joined = "\n".join(result["errors"])
+            self.assertIn("must accept input", joined)
+            self.assertIn("invalid Python executable contract", joined)
+
+    def test_rejects_empty_required_resource_and_assertion_free_suite(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "references" / "evaluation-cases.md").write_text("", encoding="utf-8")
+            (skill / "scripts" / "test_continuity_tools.py").write_text(
+                "import unittest\nclass EmptyTest(unittest.TestCase):\n"
+                "    def test_placeholder(self):\n        pass\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
             joined = "\n".join(result["errors"])
-            self.assertIn("superseded behavioral contract marker: Resume.audit_fingerprint", joined)
-            self.assertIn("superseded behavioral contract marker: 维护两个有界逻辑视图", joined)
+            self.assertIn("required skill resource is empty", joined)
+            self.assertIn("test suite must contain an executable assertion", joined)
 
     def test_validates_codex_agent_adapter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

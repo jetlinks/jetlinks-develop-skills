@@ -4,8 +4,8 @@
 
 ## 1. 任务状态映射
 
-- 先由 `$task-continuity` 建立环境无关状态协议；检测到 `.trellis/` 时，再按 [`trellis-integration-rules.md`](trellis-integration-rules.md) 发现本地 workflow、task、research、runtime 和跟踪策略，不能把某个项目的 Trellis 布局当成全局约定。
-- 没有 Trellis 时，按 [`document-placement-rules.md`](document-placement-rules.md) 复用已有 task / agent runtime；确实没有时才使用经 Git 忽略验证的单一 sidecar。
+- 需要维护长任务或恢复状态时由 `$task-continuity` 管理；检测到 `.trellis/` 且需要其载体时，再按 [`trellis-integration-rules.md`](trellis-integration-rules.md) 发现本地 workflow、task、research、runtime 和跟踪策略，不能把某个项目的 Trellis 布局当成全局约定。
+- 没有 Trellis 时，按 [`document-placement-rules.md`](document-placement-rules.md) 复用已有 task / agent runtime；其次使用已存在且经 Git 忽略验证的位置；无安全载体时保留有界 active context，不自动改本地配置。
 - JetLinks Recovery Capsule、Continuity Metadata 与 Source Snapshot 使用 [`context-recovery-rules.md`](context-recovery-rules.md) 将模型语义状态、机器 revisions / evidence ledger 和源码身份分别映射为 `Contract / Checkpoint / DecisionState / Resume`、账本 / 审计指纹，以及 branch / HEAD / tracked / untracked / nested digest / expected paths；Git 是本仓库交付适配，不是通用技能依赖。
 - 实时计划、假设、失败和胶囊不进入权威 docs；任务契约和稳定设计是否受跟踪按本地 workflow 与文档归属决定。
 - 当两个合理契约会改变 JetLinks 模块所有权、AssetsHolder / permission 语义、存储 / 缓存时点、Command / Event / Topic / API 形态、兼容或迁移方式时，使用通用 `SemanticFork`；领域名只说明后果，不替用户选择契约。`OPEN` 状态只写任务运行态并绑定一轮有界区分证据，禁止提升到权威 docs、深化领域 API、派发实现或启动候选设计 review。`RESOLVED` 后把 resolution locator 与冻结契约 revision 交给对应 focused skill。
@@ -30,6 +30,6 @@
 - 按实际变化选择验证：bug 验证原始触发，共享能力变化验证一个同类代表，权限 / 状态 / 危险操作或变化轴改变时验证反例 / 边界，并只覆盖受影响回归；局部缺陷不为凑矩阵而扩成公共框架。
 - 运行时校验只在唯一 owner：外部 DTO / schema、权威 AssetsHolder / 安全边界、状态或持久化事务、危险删除 / 无界 / 批量操作、已确认错误转换。框架或上游已经保证后内部默认信任，不跨 Controller / Service / Repository / Command 重复，也不为异常测试或“更健壮”准备额外 guard 与证明台账。
 - 同一验证批次中的失败先分为生产契约缺陷、陈旧 consumer / oracle、无效 fixture、机械装配或 unresolved；只有违反同一 JetLinks 不变量的生产失败进入同一实现切片。
-- 在连贯阶段完成并集中验证后，交给 `$jetlinks-delivery` 创建一个本地 commit，并把实际 commit 与 Git 指纹写入非版本化 Recovery Capsule。
-- 所有阶段与总体验收完成前不 push、不创建或更新 PR；用户明确要求共享中间状态时只更新同一个 draft，不创建步骤 PR。
+- 在连贯阶段完成后集中验证；提交已获授权时才交给 `$jetlinks-delivery` 创建阶段 commit，并更新实际 checkpoint；未授权提交时保留 in-flight 验证证据。
+- 阶段与整体的版本交付按 `$task-continuity` 的当前授权和 `$jetlinks-delivery` 的分支规则执行；不把领域任务自动变成发布任务。
 - 交付前先映射已有测试证据；tree / diff、相关测试、配置、依赖、base、环境和检查语义未失效的证据直接复用，只补跑缺失、失效或有时效性的范围。

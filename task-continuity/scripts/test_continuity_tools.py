@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import os
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -192,7 +194,8 @@ class ContinuityStateTest(unittest.TestCase):
             "the saved task revision already contains the required facts",
             projected["decision_state"]["do_not_reopen"][0]["reason"],
         )
-        self.assertLessEqual(len(projected["checkpoint"]["in_flight"]["owner"]), 80)
+        self.assertEqual(document["recovery_capsule"]["checkpoint"]["in_flight"]["owner"], projected["checkpoint"]["in_flight"]["owner"])
+        self.assertTrue(projected["projection_warnings"])
         self.assertNotIn("referenced_sources", projected)
         self.assertNotIn("loaded_rules", projected)
         self.assertIn("do not reload unchanged references", projected["instructions"])
@@ -205,6 +208,67 @@ class ContinuityStateTest(unittest.TestCase):
         self.assertEqual("SNAPSHOT_REQUIRED", projected["gate"])
         self.assertIn("source", projected["identity"]["comparisons"])
         self.assertIn("do not mutate production state", projected["instructions"])
+
+    def test_projection_preserves_original_objective_and_current_constraints_across_turns(self) -> None:
+        document = valid_state()
+        contract = document["recovery_capsule"]["contract"]
+        objective = ("Deliver the original task. " + "Keep the existing behavior. " * 20).strip()
+        original = "A long scoped obligation: " + "preserve state; " * 30 + "do not publish."
+        contract["objective"] = objective
+        contract["constraints"] = [original, "old worker constraint"]
+        contract["accepted_constraints"] = [{"id": "worker", "text": "old worker constraint"}]
+        document["observed"].update({
+            "conversation_cursor": "cursor-4", "directive_revision": "directive-r4", "message_class": "NEW_CONSTRAINT",
+            "message_effect": {"affects_saved_next": False, "affected_assignment_ids": ["worker"],
+                               "accepted_constraints": [{"id": "worker", "text": "current worker constraint", "scope": ["worker"]},
+                                                        {"id": "format", "text": "keep the selected output format"}]},
+        })
+        projected = PROJECTOR.project_context(document, text_limit=80)
+        self.assertTrue(projected["ready"])
+        self.assertEqual(objective, projected["contract"]["objective"])
+        self.assertEqual([original, "current worker constraint", "keep the selected output format"], projected["contract"]["constraints"])
+        self.assertEqual("directive-r4", projected["identity"]["current_directive_revision"])
+        action = projected["resume"]["first_allowed_action"]
+        # Save a new boundary, then receive a status question: the task is unchanged.
+        contract["constraints"] = projected["contract"]["constraints"]
+        contract["accepted_constraints"] = projected["contract"]["accepted_constraints"]
+        document["continuity_metadata"]["directive_revision_at_snapshot"] = "directive-r4"
+        document["continuity_metadata"]["conversation_cursor_at_snapshot"] = "cursor-4"
+        document["observed"].update({"conversation_cursor": "cursor-5", "message_class": "QUERY",
+                                    "message_effect": {"affects_saved_next": False, "affected_assignment_ids": []}})
+        queried = PROJECTOR.project_context(document, text_limit=80)
+        self.assertTrue(queried["ready"])
+        self.assertEqual(projected["contract"], queried["contract"])
+        self.assertEqual(action, queried["resume"]["first_allowed_action"])
+        # An explicit withdrawal removes that constraint, retaining all other work.
+        document["observed"].update({"conversation_cursor": "cursor-6", "directive_revision": "directive-r5", "message_class": "NEW_CONSTRAINT",
+            "message_effect": {"affects_saved_next": False, "affected_assignment_ids": ["worker"],
+                               "accepted_constraints": [{"id": "worker", "status": "revoked"}]}})
+        withdrawn = PROJECTOR.project_context(document)
+        self.assertTrue(withdrawn["ready"])
+        self.assertEqual([original, "keep the selected output format"], withdrawn["contract"]["constraints"])
+        self.assertEqual(["format"], [item["id"] for item in withdrawn["contract"]["accepted_constraints"]])
+        self.assertEqual(objective, withdrawn["contract"]["objective"])
+
+    def test_size_targets_do_not_truncate_or_reject_valid_resume(self) -> None:
+        document = valid_state()
+        document["recovery_capsule"]["resume"]["anchors"] = [f"module-{index}/entry.py" for index in range(9)]
+        document["recovery_capsule"]["contract"]["constraints"] = [f"Retain requirement {index}" for index in range(9)]
+        projected = PROJECTOR.project_context(document, max_anchors=3)
+        self.assertTrue(projected["ready"])
+        self.assertEqual(9, len(projected["resume"]["anchors"]))
+        self.assertEqual(9, len(projected["contract"]["constraints"]))
+        self.assertTrue(projected["projection_warnings"])
+        self.assertEqual({}, projected["projection_omissions"])
+
+    def test_new_constraint_revision_without_accepted_text_is_not_ready(self) -> None:
+        document = valid_state()
+        document["observed"].update({"conversation_cursor": "cursor-4", "directive_revision": "directive-r4", "message_class": "NEW_CONSTRAINT",
+                                    "message_effect": {"affects_saved_next": False, "affected_assignment_ids": ["worker"]}})
+        projected = PROJECTOR.project_context(document)
+        self.assertFalse(projected["ready"])
+        self.assertIsNone(projected["resume"]["first_allowed_action"])
+        self.assertIn("constraints.missing_delta", {item["code"] for item in projected["identity"]["errors"]})
 
     def test_matching_observations_transition_to_ready(self) -> None:
         result = STATE.validate_state(valid_state())
@@ -250,7 +314,8 @@ class ContinuityStateTest(unittest.TestCase):
             for index in range(2)
         ]
         result = STATE.validate_state(expanded)
-        self.assertIn("checkpoint.validated_too_large", {item["code"] for item in result["errors"]})
+        self.assertTrue(result["ready"])
+        self.assertIn("checkpoint.validated_too_large", {item["code"] for item in result["warnings"]})
 
     def test_unknown_source_strength_cannot_authorize_ready(self) -> None:
         document = valid_state()
@@ -325,6 +390,7 @@ class ContinuityStateTest(unittest.TestCase):
             "directive_revision": "directive-r4",
             "message_class": "NEW_CONSTRAINT",
             "message_effect": {
+                "accepted_constraints": [{"id": "frontend-format", "text": "Use the accepted frontend format", "scope": ["frontend-slice"]}],
                 "affects_saved_next": False,
                 "affected_assignment_ids": ["frontend-slice"],
             },
@@ -340,6 +406,7 @@ class ContinuityStateTest(unittest.TestCase):
             "directive_revision": "directive-r4",
             "message_class": "NEW_CONSTRAINT",
             "message_effect": {
+                "accepted_constraints": [{"id": "frontend-format", "text": "Use the accepted frontend format", "scope": ["frontend-slice"]}],
                 "affects_saved_next": True,
                 "affected_assignment_ids": ["validator-gate"],
             },
@@ -453,6 +520,122 @@ class ContinuityStateTest(unittest.TestCase):
         document["source_snapshot"]["missing_layers"] = ["untracked"]
         result = STATE.validate_state(document)
         self.assertIn("snapshot.partial_risk_missing", {item["code"] for item in result["errors"]})
+
+    def test_partial_identity_retains_risk_and_blocks_unobserved_action_content(self) -> None:
+        document = valid_state()
+        snapshot = document["source_snapshot"]
+        snapshot.update(strength="partial", missing_layers=["current content"],
+                        residual_identity_risk="Current action source content has not been observed.")
+        for scopes in (None, {"current content": ["task-continuity/scripts"]}):
+            with self.subTest(scopes=scopes):
+                if scopes is not None:
+                    snapshot["missing_layer_scopes"] = scopes
+                result = PROJECTOR.project_context(document)
+                self.assertEqual("RESUME_AUDIT", result["gate"])
+                self.assertFalse(result["ready"])
+                self.assertIsNone(result["resume"]["first_allowed_action"])
+                self.assertEqual(snapshot["missing_layers"], result["identity"]["missing_layers"])
+                self.assertEqual(snapshot["residual_identity_risk"], result["identity"]["residual_identity_risk"])
+                self.assertNotIn("Identity matched", result["instructions"])
+
+    def _partial_local_state(self, root: Path) -> dict:
+        (root / "src").mkdir()
+        (root / "docs").mkdir()
+        (root / "src/exporter.py").write_text("def export_rows(): pass\n")
+        (root / "docs/help.md").write_text("Device integration guide\n")
+        document = valid_state()
+        document["source_snapshot"].update(
+            locator=str(root), strength="partial", missing_layers=["documentation content"],
+            missing_layer_scopes={"documentation content": ["docs/help.md"]},
+            residual_identity_risk="Documentation content is unavailable.",
+        )
+        for field in ("next", "first_allowed_action"):
+            document["recovery_capsule"]["resume"][field].update(
+                owner="src/exporter.py", scope=["src/exporter.py"],
+            )
+        return document
+
+    def test_partial_identity_allows_proven_unrelated_scope_without_erasing_risk(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            document = self._partial_local_state(Path(directory))
+            result = PROJECTOR.project_context(document)
+            self.assertTrue(result["ready"], result["identity"]["errors"])
+            self.assertEqual("mutation", result["resume"]["first_allowed_action"]["type"])
+            self.assertEqual("partial", result["identity"]["strength"])
+            self.assertIn("Identity remains partial", result["instructions"])
+
+    def test_partial_identity_also_covers_the_action_actually_projected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            document = self._partial_local_state(Path(directory))
+            document["recovery_capsule"]["resume"]["first_allowed_action"]["scope"] = ["docs/help.md"]
+            result = PROJECTOR.project_context(document)
+            self.assertFalse(result["ready"])
+            self.assertIsNone(result["resume"]["first_allowed_action"])
+
+    def test_partial_identity_rejects_aliases_of_the_same_physical_source(self) -> None:
+        for alias_kind in ("directory_alias", "file_object_alias"):
+            with self.subTest(alias_kind=alias_kind), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                document = self._partial_local_state(root)
+                if alias_kind == "directory_alias":
+                    (root / "src").rename(root / "generated")
+                    (root / "src").symlink_to("generated", target_is_directory=True)
+                    missing_path = "generated"
+                    self.assertTrue((root / "src/exporter.py").samefile(root / "generated/exporter.py"))
+                else:
+                    os.link(root / "src/exporter.py", root / "exporter-alias.py")
+                    missing_path = "exporter-alias.py"
+                    self.assertTrue((root / "src/exporter.py").samefile(root / missing_path))
+                document["source_snapshot"]["missing_layer_scopes"] = {"documentation content": [missing_path]}
+                result = PROJECTOR.project_context(document)
+                self.assertFalse(result["ready"])
+                self.assertEqual("RESUME_AUDIT", result["gate"])
+                self.assertIsNone(result["resume"]["first_allowed_action"])
+
+    def test_partial_identity_cannot_infer_disjointness_from_unverified_or_open_boundaries(self) -> None:
+        for boundary in ("remote", "missing", "directory", "outside_alias"):
+            with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                document = self._partial_local_state(root)
+                if boundary == "remote":
+                    document["source_snapshot"]["locator"] = "workspace://remote"
+                elif boundary == "missing":
+                    (root / "docs/help.md").unlink()
+                elif boundary == "directory":
+                    document["source_snapshot"]["missing_layer_scopes"] = {"documentation content": ["docs"]}
+                else:
+                    (root / "docs/help.md").unlink()
+                    (root / "docs/help.md").symlink_to(Path(__file__).resolve())
+                self.assertFalse(PROJECTOR.project_context(document)["ready"])
+                for field in ("next", "first_allowed_action"):
+                    document["recovery_capsule"]["resume"][field].update(type="check", purpose="observation_setup")
+                self.assertTrue(PROJECTOR.project_context(document)["ready"])
+
+    def test_partial_identity_scope_must_cover_every_missing_layer_and_stay_inside_boundary(self) -> None:
+        for scopes in ({"content": ["docs"]}, {"content": ["docs"], "nested": ["../outside"]},
+                       {"content": ["docs"], "nested": ["/outside/workspace"]},
+                       {"content": ["docs"], "nested": ["src/*"]}):
+            with self.subTest(scopes=scopes):
+                document = valid_state()
+                document["source_snapshot"].update(
+                    strength="partial", missing_layers=["content", "nested"],
+                    missing_layer_scopes=scopes, residual_identity_risk="Source layers are incomplete.",
+                )
+                self.assertFalse(PROJECTOR.project_context(document)["ready"])
+
+    def test_partial_identity_allows_recovery_read_but_not_acceptance_check(self) -> None:
+        for purpose, ready in (("observation_setup", True), ("observation_repair", True), ("solution", False)):
+            with self.subTest(purpose=purpose):
+                document = valid_state()
+                document["source_snapshot"].update(
+                    strength="partial", missing_layers=["current content"],
+                    residual_identity_risk="Current file content is not observed.",
+                )
+                for field in ("next", "first_allowed_action"):
+                    document["recovery_capsule"]["resume"][field].update(type="check", purpose=purpose)
+                result = PROJECTOR.project_context(document)
+                self.assertEqual(ready, result["ready"])
+                self.assertIn("partial", result["identity"]["strength"])
 
     def test_discriminating_observation_authorizes_linked_solution_mutation(self) -> None:
         document = with_active_observation(valid_state(), "DISCRIMINATING", "solution")
@@ -638,6 +821,25 @@ class ContinuityStateTest(unittest.TestCase):
 
 
 class ContinuityTraceTest(unittest.TestCase):
+    def test_efficiency_targets_do_not_decide_correctness(self) -> None:
+        trace = {
+            "recovery_type": "COMPACT_CONTINUATION", "identity_match": True,
+            "resume_turn": 1, "expected_action_id": "implement", "pre_compaction_next_action_id": "implement",
+            "instruction_revision_at_snapshot": "r1", "post_compaction_instruction_revision": "r1",
+            "acceptance_success": True,
+            "events": [{"type": "identity_compare", "tool_round": 1, "turn": 1, "continuity_phase": "RESUME_AUDIT"},
+                       {"type": "reference_compare", "tool_round": 2, "turn": 1, "continuity_phase": "RESUME_AUDIT"},
+                       {"type": "mutation", "action_id": "implement", "turn": 2, "productive": True}],
+        }
+        metrics = TRACE.evaluate_trace(trace)
+        self.assertFalse(metrics["compact_continuation_fast_path_passed"])
+        self.assertTrue(metrics["observed_invariants_passed"])
+        self.assertTrue(metrics["acceptance_success"])
+        trace["events"][-1]["action_id"] = "unrelated-action"
+        metrics = TRACE.evaluate_trace(trace)
+        self.assertFalse(metrics["observed_invariants_passed"])
+        self.assertIn("action_identity", metrics["invariant_violations"])
+
     def test_matching_compact_continuation_passes_same_turn_fast_path(self) -> None:
         metrics = TRACE.evaluate_trace(
             {

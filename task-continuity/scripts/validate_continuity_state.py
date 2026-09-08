@@ -95,7 +95,7 @@ def _validate_string_list(
             _diagnostic(
                 "list.too_large",
                 path,
-                f"field must contain at most {max_items} items; compact state must group rather than truncate",
+                f"recommended target is {max_items} items; retain necessary semantics when exceeding it",
             )
         )
         valid = False
@@ -115,6 +115,92 @@ def _nonempty_scope(value: Any) -> bool:
     if _nonempty_string(value):
         return True
     return isinstance(value, list) and bool(value) and all(_nonempty_string(item) for item in value)
+
+
+def _identity_path(value: Any, locator: Any) -> Path | None:
+    """Resolve only the declared boundary against a verifiable local source root."""
+    if not _nonempty_string(value) or any(char in value for char in "*?[]\\") or ":" in value:
+        return None
+    if not _nonempty_string(locator) or not Path(locator).is_absolute():
+        return None
+    path = Path(value.strip())
+    if ".." in path.parts:
+        return None
+    try:
+        root = Path(locator).resolve(strict=True)
+        if not root.is_dir():
+            return None
+        resolved = (path if path.is_absolute() else root / path).resolve(strict=True)
+        resolved.relative_to(root)
+        return resolved
+    except (OSError, ValueError, RuntimeError):
+        return None
+
+
+def _identity_paths_disjoint(action_paths: list[Path | None], missing_paths: list[Path]) -> bool:
+    """Only distinct observed file objects prove disjointness without tree expansion."""
+    if not action_paths or not missing_paths or any(path is None for path in action_paths):
+        return False
+    try:
+        for first in action_paths:
+            if first is None:
+                return False
+            for second in missing_paths:
+                if first.samefile(second) or first in second.parents or second in first.parents:
+                    return False
+                # A directory boundary does not disclose identities of its children.
+                # Do not claim its unknown descendants have no aliases elsewhere.
+                if not first.is_file() or not second.is_file():
+                    return False
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _partial_source_coverage(snapshot: dict[str, Any], action: Any, warnings: list[dict[str, str]]) -> str:
+    """Partial identity is sufficient only for diagnostics or proven-disjoint work."""
+    if not isinstance(action, dict):
+        return "unknown"
+    layers = snapshot.get("missing_layers")
+    scopes = snapshot.get("missing_layer_scopes")
+    complete_scopes = (
+        isinstance(layers, list) and bool(layers) and all(_nonempty_string(item) for item in layers)
+        and isinstance(scopes, dict) and set(scopes) == set(layers)
+    )
+    missing_paths: list[Path] = []
+    if complete_scopes:
+        for layer in layers:
+            items = scopes[layer]
+            if not isinstance(items, list) or not items:
+                complete_scopes = False
+                break
+            paths = [_identity_path(item, snapshot.get("locator")) for item in items]
+            if any(path is None for path in paths):
+                complete_scopes = False
+                break
+            missing_paths.extend(path for path in paths if path is not None)
+    action_scope = action.get("scope")
+    scope_items = [action_scope] if isinstance(action_scope, str) else action_scope
+    action_paths = (
+        [_identity_path(item, snapshot.get("locator")) for item in scope_items]
+        if isinstance(scope_items, list) and scope_items else [None]
+    )
+    disjoint = complete_scopes and _identity_paths_disjoint(action_paths, missing_paths)
+    diagnostic = action.get("type") == "blocker" or (
+        action.get("type") == "check"
+        and _enum(action.get("purpose"), {"observation_setup", "observation_repair"})
+    )
+    if diagnostic:
+        message = "identity remains partial; allow only the bounded recovery observation or blocker, not acceptance based on missing layers"
+    elif disjoint:
+        message = "identity remains partial; observed file-object identities prove disjointness for the current explicit scope only"
+    else:
+        message = "missing identity layers may affect the current action, or their physical boundaries are unverified; observe only those boundaries before mutation or acceptance"
+    warnings.append(_diagnostic(
+        "source.partial_identity" if diagnostic or disjoint else "source.partial_coverage_required",
+        "source_snapshot.missing_layers", message,
+    ))
+    return "match" if diagnostic or disjoint else "unknown"
 
 
 def _stable_action_identity(action: dict[str, Any]) -> str:
@@ -230,7 +316,7 @@ def _validate_do_not_reopen(value: Any, path: str, errors: list[dict[str, str]])
             _diagnostic(
                 "decision.do_not_reopen_too_large",
                 path,
-                f"do_not_reopen must retain at most {MAX_BOUNDED_ITEMS} replay-prone actions",
+                f"recommended target is {MAX_BOUNDED_ITEMS} replay-prone actions",
             )
         )
     action_ids: set[str] = set()
@@ -338,7 +424,7 @@ def _validate_semantic_fork(value: Any, path: str, errors: list[dict[str, str]])
             _diagnostic(
                 "semantic_fork.options_too_large",
                 f"{path}.options",
-                f"semantic fork must contain at most {MAX_BOUNDED_ITEMS} complete options; group equivalent contracts instead of truncating",
+                f"recommended target is {MAX_BOUNDED_ITEMS} options; never truncate unresolved contracts",
             )
         )
         valid_options = False
@@ -370,7 +456,7 @@ def _validate_semantic_fork(value: Any, path: str, errors: list[dict[str, str]])
             _diagnostic(
                 "semantic_fork.consequences_too_large",
                 f"{path}.architectural_consequences",
-                f"architectural consequences must contain at most {MAX_BOUNDED_ITEMS} boundaries",
+                f"recommended target is {MAX_BOUNDED_ITEMS} consequence boundaries",
             )
         )
     if _enum(status, {"OPEN", "RESOLVED"}):
@@ -674,6 +760,26 @@ def _compare_ledger(
     return "mismatch"
 
 
+def _validate_accepted_constraints(value: Any, path: str, errors: list[dict[str, str]], *, required: bool = False) -> None:
+    if value is None and not required:
+        return
+    if not isinstance(value, list) or (required and not value):
+        errors.append(_diagnostic("constraints.missing_delta", path, "accepted constraints require a list of stable id/text records"))
+        return
+    seen: set[str] = set()
+    for index, item in enumerate(value):
+        if not isinstance(item, dict) or not _nonempty_string(item.get("id")):
+            errors.append(_diagnostic("constraints.invalid_entry", f"{path}[{index}]", "each accepted constraint requires a stable id"))
+            continue
+        if not _enum(item.get("status", "active"), {"active", "revoked"}) or (item.get("status") != "revoked" and not _nonempty_string(item.get("text"))):
+            errors.append(_diagnostic("constraints.invalid_entry", f"{path}[{index}]", "active constraints require text; status must be active or revoked"))
+        if item["id"] in seen:
+            errors.append(_diagnostic("constraints.duplicate_id", f"{path}[{index}].id", "constraint ids must be unique within one accepted revision"))
+        seen.add(item["id"])
+        if "scope" in item:
+            _validate_string_list(item["scope"], f"{path}[{index}].scope", errors)
+
+
 def _validate_message_effect(
     value: Any,
     message_class: Any,
@@ -689,6 +795,7 @@ def _validate_message_effect(
             )
         )
         return None
+    _validate_accepted_constraints(value.get("accepted_constraints"), f"{path}.accepted_constraints", errors, required=message_class == "NEW_CONSTRAINT")
     affects_saved_next = value.get("affects_saved_next")
     if not isinstance(affects_saved_next, bool):
         errors.append(
@@ -778,6 +885,7 @@ def validate_state(document: Any) -> dict[str, Any]:
     mismatches: list[dict[str, str]] = []
     comparisons = {
         "source": "unknown",
+        "source_coverage": "match",
         "contract": "unknown",
         "directive": "unknown",
         "instruction": "unknown",
@@ -829,6 +937,7 @@ def validate_state(document: Any) -> dict[str, Any]:
     decision = sections["decision_state"]
     resume = sections["resume"]
 
+    _validate_accepted_constraints(contract.get("accepted_constraints"), "recovery_capsule.contract.accepted_constraints", errors)
     for field in ("task_id", "revision", "locator", "objective"):
         if not _nonempty_string(contract.get(field)):
             errors.append(
@@ -862,7 +971,7 @@ def validate_state(document: Any) -> dict[str, Any]:
             _diagnostic(
                 "checkpoint.validated_too_large",
                 "recovery_capsule.checkpoint.validated",
-                "compact state must retain only the latest validated boundary",
+                "normally retain the latest validated boundary; extra valid evidence is an efficiency concern",
             )
         )
     for index, item in enumerate(validated):
@@ -1127,6 +1236,13 @@ def validate_state(document: Any) -> dict[str, Any]:
                 _diagnostic("snapshot.partial_risk_missing", "source_snapshot.residual_identity_risk", "partial fingerprint must state residual identity risk")
             )
 
+    if strength == "partial":
+        comparisons["source_coverage"] = _partial_source_coverage(snapshot, next_action, warnings)
+        if first_action != next_action:
+            first_coverage = _partial_source_coverage(snapshot, first_action, warnings)
+            if first_coverage != "match":
+                comparisons["source_coverage"] = first_coverage
+
     if isinstance(observed, dict):
         message_class = observed.get("message_class")
         observed_cursor = observed.get("conversation_cursor")
@@ -1259,7 +1375,14 @@ def validate_state(document: Any) -> dict[str, Any]:
                     )
                 )
 
-    readiness_keys = {"source", "contract", "directive", "references", "rules", "message_effect", "return_anchor"}
+    efficiency_codes = {
+        "list.too_large", "decision.do_not_reopen_too_large",
+        "semantic_fork.options_too_large", "semantic_fork.consequences_too_large",
+        "checkpoint.validated_too_large", "metadata.invalid_audit_count",
+    }
+    warnings.extend({**item, "category": "efficiency"} for item in errors if item["code"] in efficiency_codes)
+    errors = [item for item in errors if item["code"] not in efficiency_codes]
+    readiness_keys = {"source", "source_coverage", "contract", "directive", "references", "rules", "message_effect", "return_anchor"}
     if active_observation is not None:
         readiness_keys.add("observation")
     all_matched = all(comparisons.get(key) in {"match", "scoped_change"} for key in readiness_keys)

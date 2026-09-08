@@ -246,12 +246,12 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             and override.get("reason") == "HIGH_RISK_GAP"
             and _nonempty_string(override.get("locator"))
         ):
-            errors.append(
-                "a budget above two investigations requires a structured HIGH_RISK_GAP override with locator"
+            warnings.append(
+                "a budget above two investigations lacks a structured HIGH_RISK_GAP rationale with locator"
             )
         if max_investigations > 3:
-            errors.append(
-                "a HIGH_RISK_GAP override may add at most one complementary investigation to a round"
+            warnings.append(
+                "investigation budget exceeds the default one complementary HIGH_RISK_GAP check"
             )
 
     evidence: dict[str, dict[str, Any]] = {}
@@ -321,7 +321,8 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                 investigations_by_round[event_round] = investigations_by_round.get(event_round, 0) + 1
                 budget["scout_count"] = investigations_by_round[event_round]
                 if investigations_by_round[event_round] > max_investigations:
-                    errors.append(
+                    diagnostics = errors if policy.get("enforce_limit") is True else warnings
+                    diagnostics.append(
                         f"event[{index}] round {event_round} exceeds investigation budget {max_investigations}"
                     )
 
@@ -422,8 +423,8 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
             if reason == "INVALID_OBSERVATION":
                 invalid_observation_reopens += 1
                 if invalid_observation_reopens > 1:
-                    errors.append(
-                        f"event[{index}] INVALID_OBSERVATION permits only one observation-apparatus reopen"
+                    warnings.append(
+                        f"event[{index}] INVALID_OBSERVATION exceeds the default one observation-apparatus reopen; inspect progress evidence"
                     )
             next_round = event.get("round")
             if next_round != budget["round"] + 1:
@@ -546,15 +547,24 @@ def evaluate_trace(trace: dict[str, Any]) -> dict[str, Any]:
                 )
             cited_ids = _strings(event.get("evidence_ids"))
             if action_class in DESIGN_OR_IMPLEMENTATION_ACTIONS:
-                scope_invalid_ids = [
+                if "evidence_ids" in event and (
+                    not isinstance(event["evidence_ids"], list)
+                    or (event["evidence_ids"] and not cited_ids)
+                ):
+                    errors.append(f"event[{index}] action.evidence_ids must be a string list")
+                unsupported_ids = [
                     evidence_id
                     for evidence_id in cited_ids
-                    if evidence.get(evidence_id, {}).get("result") == "SCOPE_INVALID"
+                    if evidence.get(evidence_id, {}).get("result") != "DISCRIMINATING"
                 ]
-                if scope_invalid_ids:
+                if unsupported_ids:
                     errors.append(
-                        f"event[{index}] design or implementation cites SCOPE_INVALID evidence: "
-                        + ", ".join(scope_invalid_ids)
+                        f"event[{index}] design or implementation requires DISCRIMINATING evidence; "
+                        "unsupported citations: "
+                        + ", ".join(
+                            f"{evidence_id} ({evidence.get(evidence_id, {}).get('result', 'unknown')})"
+                            for evidence_id in unsupported_ids
+                        )
                     )
 
         else:

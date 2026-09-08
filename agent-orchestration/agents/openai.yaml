@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Orchestration"
   short_description: "Orchestrate and verify bounded multi-agent work"
-  default_prompt: "Use $agent-orchestration to select and execute the current route. Keep the primary as the only dispatch, integration, acceptance, and delivery owner; delegate bounded leaf slices with hard-disabled recursive tools where supported, collect Result Packets, and validate the coherent integrated stage."
+  default_prompt: "Use $agent-orchestration to choose a useful route, preserve the accepted goal and constraints, and coordinate bounded assignments through current acceptance and integration."

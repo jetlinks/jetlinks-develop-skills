@@ -198,7 +198,7 @@ class SystematicTraceTest(unittest.TestCase):
         result = EVALUATOR.evaluate_trace(trace)
         self.assertFalse(result["passed"])
         self.assertEqual(1, result["metrics"]["scout_rounds_after_sufficient_evidence"])
-        self.assertTrue(any("exceeds investigation budget" in item for item in result["errors"]))
+        self.assertTrue(any("exceeds investigation budget" in item for item in result["warnings"]))
         self.assertTrue(any("without stopping EvidenceBudget" in item for item in result["errors"]))
 
     def test_invalid_observation_can_open_one_bounded_next_round(self) -> None:
@@ -246,7 +246,7 @@ class SystematicTraceTest(unittest.TestCase):
         result = EVALUATOR.evaluate_trace(trace)
         self.assertFalse(result["passed"])
         self.assertTrue(any("current round" in item for item in result["errors"]))
-        self.assertTrue(any("only one" in item for item in result["errors"]))
+        self.assertTrue(any("default one" in item for item in result["warnings"]))
 
     def test_completed_inconclusive_round_requires_explicit_stop(self) -> None:
         trace = open_trace()
@@ -270,7 +270,7 @@ class SystematicTraceTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertTrue(any("only one focused" in item for item in result["errors"]))
 
-    def test_more_confidence_does_not_override_investigation_budget(self) -> None:
+    def test_larger_investigation_budget_is_diagnostic(self) -> None:
         trace = open_trace()
         trace["budget_policy"] = {
             "max_investigations_per_round": 3,
@@ -279,10 +279,10 @@ class SystematicTraceTest(unittest.TestCase):
         trace["trace_status"] = "IN_PROGRESS"
         trace["events"] = [investigation(f"e-{index}", result="INCONCLUSIVE") for index in range(3)]
         result = EVALUATOR.evaluate_trace(trace)
-        self.assertFalse(result["passed"])
-        self.assertTrue(any("structured HIGH_RISK_GAP" in item for item in result["errors"]))
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertTrue(any("structured HIGH_RISK_GAP" in item for item in result["warnings"]))
 
-    def test_high_risk_override_remains_bounded(self) -> None:
+    def test_large_high_risk_budget_retains_efficiency_warning(self) -> None:
         trace = open_trace()
         trace["budget_policy"] = {
             "max_investigations_per_round": 100,
@@ -293,9 +293,49 @@ class SystematicTraceTest(unittest.TestCase):
         }
         trace["trace_status"] = "IN_PROGRESS"
         result = EVALUATOR.evaluate_trace(trace)
+        self.assertTrue(result["passed"], result["errors"])
+        self.assertTrue(any("default one complementary HIGH_RISK_GAP" in item
+                            for item in result["warnings"]))
+
+    def test_explicit_resource_limit_remains_hard(self) -> None:
+        trace = open_trace()
+        trace["trace_status"] = "IN_PROGRESS"
+        trace["budget_policy"] = {"max_investigations_per_round": 2, "enforce_limit": True}
+        trace["events"] = [investigation(f"e-{index}", result="INCONCLUSIVE") for index in range(3)]
+        result = EVALUATOR.evaluate_trace(trace)
         self.assertFalse(result["passed"])
-        self.assertTrue(any("at most one complementary investigation" in item
-                            for item in result["errors"]))
+        self.assertTrue(any("exceeds investigation budget" in item for item in result["errors"]))
+
+    def test_resolved_fork_does_not_make_invalid_observation_implementation_evidence(self) -> None:
+        for outcome in ("DISCRIMINATING", "INVALID", "INCONCLUSIVE", "SCOPE_INVALID"):
+            for action in ("CONTRACT_FREEZE", "AUTHORITATIVE_DESIGN", "API_DEEPENING", "PRODUCTION_IMPLEMENTATION"):
+                with self.subTest(outcome=outcome, action=action):
+                    trace = open_trace()
+                    trace["events"] = [
+                        {"type": "user_decision", "id": "user-1", "decision": "b", "locator": "thread:b"},
+                        {"type": "fork_resolution", "source": "USER", "decision": "b",
+                         "locator": "thread:b", "user_decision_id": "user-1"},
+                        investigation("e-action", result=outcome),
+                        {"type": "budget_stop", "reason": "SOURCE_DRIFT", "locator": "source:changed"},
+                        {"type": "action", "action_class": action, "evidence_ids": ["e-action"]},
+                    ]
+                    result = EVALUATOR.evaluate_trace(trace)
+                    if outcome == "DISCRIMINATING":
+                        self.assertTrue(result["passed"], result["errors"])
+                    else:
+                        self.assertFalse(result["passed"])
+                        self.assertTrue(any(f"e-action ({outcome})" in item for item in result["errors"]))
+
+    def test_implementation_cannot_cite_unknown_or_malformed_evidence(self) -> None:
+        for evidence_ids in (["missing"], False, [False], "missing"):
+            with self.subTest(evidence_ids=evidence_ids):
+                trace = open_trace()
+                trace["semantic_fork"]["status"] = "NOT_APPLICABLE"
+                trace["events"] = [{"type": "action", "action_class": "PRODUCTION_IMPLEMENTATION",
+                                    "evidence_ids": evidence_ids}]
+                result = EVALUATOR.evaluate_trace(trace)
+                self.assertFalse(result["passed"])
+                self.assertTrue(any("evidence" in item for item in result["errors"]))
 
     def test_terminal_evidence_gate_requires_its_real_next_action(self) -> None:
         ask_trace = open_trace()
