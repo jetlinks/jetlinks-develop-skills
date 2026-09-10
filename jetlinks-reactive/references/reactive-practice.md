@@ -85,7 +85,7 @@
 ### 控制链路长度
 
 - Reactor 链不可避免，但长链必须按业务阶段拆小方法，让主链像流程目录。
-- 当链路同时包含校验、权限、命令发送、持久化、日志、事件或结果转换时，优先抽成 `validateAndXxx(...)`、`saveXxxAndReturn(...)`、`publishXxxEvent(...)` 等命名步骤。
+- 当链路同时包含已由业务契约要求且由当前边界拥有的校验、权限、命令发送、持久化、日志、事件或结果转换时，按真实业务阶段拆成命名步骤，例如 `checkTransitionAndSend(...)`、`saveXxxAndReturn(...)`、`publishXxxEvent(...)`。不要因方法名模板主动新增 `validateAndXxx(...)` 或重复上游 / 框架 guard。
 - 不把嵌套 `flatMap` 当缩进版过程式代码；嵌套里超过一个业务动作时，先抽方法。
 - 拆出的响应式方法仍返回 `Mono` / `Flux`，让超时、重试、错误传播和测试仍能组合。
 
@@ -132,18 +132,16 @@ return repository.findById(id)
     .delayUntil(this::publishUpdatedEvent);
 
 private DeviceEntity prepareUpdate(DeviceEntity entity, UpdateRequest request) {
-    return applyUpdate(requireEnabled(entity), request);
+    return applyUpdate(entity, request);
 }
 ```
 
-多来源组合用组合算子表达依赖关系：
+多来源组合用组合算子表达依赖关系。下面是内部数据组合示例，不表达独立安全入口；若调用发生在用户可访问边界，读权限仍由该入口或提供方的唯一 AssetsHolder owner 负责一次：
 
 ```java
-return deviceService.findById(id)
-    .switchIfEmpty(notFound(id))
-    .flatMap(device -> permission.assertRead(device).thenReturn(device))
-    .zipWhen(device -> productService.findById(device.getProductId()))
-    .map(tuple -> toDetail(tuple.getT1(), tuple.getT2()));
+return repository.findById(id)
+    .zipWhen(entity -> detailRepository.findByEntityId(entity.getId()))
+    .map(tuple -> toView(tuple.getT1(), tuple.getT2()));
 ```
 
 可复用的链路片段用函数表达，不复制过程式 lambda：

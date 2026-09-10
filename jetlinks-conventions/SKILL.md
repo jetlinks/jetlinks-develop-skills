@@ -1,11 +1,11 @@
 ---
 name: jetlinks-conventions
-description: 在当前 JetLinks 工作区中应用共享编码规范。适用于需要确认注解和导入、遵循本地命名与包结构、保持最小改动，判断模块是否应该补 i18n，实现 LocaleUtils、I18nEnumDict、messages_zh/messages_en、权限动作文案，补充 TraceHolder / MonoTracer / FluxTracer 链路追踪埋点，为常驻任务、缓存、队列等能力设计 MBean 运维可观测性，平衡人类可读性与大模型理解成本来编写代码注释，或当具体场景暴露公共组件、基类、框架、工具类等通用能力缺口时避免硬编码特调并从共同根因修复的场景。
+description: 应用 JetLinks 共享编码规范：命名与导入、注释、i18n、TraceHolder 链路追踪、MBean 运维观测及框架扩展方式。适用于这些约定需要确认、实施或审查的代码变更。
 ---
 
 # JetLinks Conventions
 
-Read [`references/code-conventions.md`](references/code-conventions.md) first.
+Use [`references/code-conventions.md`](references/code-conventions.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 9. Use [`references/tracing.md`](references/tracing.md) when adding or reviewing chain tracing instrumentation, critical business spans, context propagation, or TraceHolder usage.
 10. Use [`references/mbean-observability.md`](references/mbean-observability.md) when adding or reviewing long-lived in-memory tasks, caches, queues, buffers, retries, connection/session managers, or MBean/JMX observability.
 11. Whenever an existing tool, SDK, framework API, library, or local capability does not directly satisfy the requirement (inaccessible method, serialization error, reactive/blocking mismatch, type/generic clash, exception model gap, third-party behavior mismatch, etc.), load [`references/root-cause-and-no-hack-rules.md`](references/root-cause-and-no-hack-rules.md) and resolve the root cause through official extension points, adjacent module abstractions, dependency choice, or by informing the user; never ship reflection / `Unsafe` / visibility hacks / copied source / bytecode injection / monkey patches as a silent workaround.
-12. If the capability gap is complex, crosses multiple boundaries, has more than one plausible root cause, or has already survived one implementation attempt, pair with [`../systematic-solving/SKILL.md`](../systematic-solving/SKILL.md). Let it govern evidence, hypotheses, stagnation, and the validation matrix; keep this skill responsible for implementation conventions and no-hack red lines.
+12. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
 13. Implement the smallest complete, consistent change that matches the existing codebase and explicitly state the i18n decision when it matters.
 
 ## Required Constraints
@@ -34,7 +34,7 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 - Do not use deprecated `org.apache.commons.lang3.StringUtils` methods in new or modified Java code. For Commons Lang string comparison, prefix/suffix, contains, index/search, or plain replace/remove operations, use `org.apache.commons.lang3.Strings.CS` / `Strings.CI` by case-sensitivity when the dependency provides `Strings`; if it does not, do not fall back to deprecated `StringUtils` variants, and use JDK, Spring, local helpers, or state the version constraint. For regex replace/remove use `RegExUtils`; for null-safe string predicates such as `StringUtils.isEmpty` / `isBlank` / `isNotEmpty` / `isNotBlank`, allow non-deprecated `StringUtils` methods when the module already uses Commons Lang or null-safety would otherwise create repetitive code.
 - Keep convention-driven changes scoped to the required consistency fix; do not expand into unrelated cleanup.
 - When a specific scenario exposes a problem in a shared/general capability, fix the common contract, extension point, adapter, default policy, or test matrix so the same class of problems is handled; do not hardcode scenario-specific branches into shared code unless the business rule is explicitly modeled as configuration or strategy.
-- Do not continue adding special conditions, fallbacks, retries, mocks, or compatibility branches after a root-cause hypothesis has failed once. Switch to `$systematic-solving`, record what the result falsified, and rebuild the system model before further edits.
+- When repair evidence contradicts the root-cause hypothesis, use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) before expanding the repair; do not treat ordinary implementation steps as failed investigations.
 - Prefer readable code over dense fluent chains. When a chained call mixes multiple business phases or becomes hard to summarize in one sentence, split it into named local variables, named private methods, or a small existing abstraction.
 - Do not force Java Stream or fluent style onto business workflows, protocol parsing, state transitions, or complex validation. Use imperative code when named intermediate results and early returns make the behavior clearer.
 - Do not hide side effects in `Stream.peek(...)`, `map` / `filter` lambdas, mutable external variables, or stream operations that call remote services, databases, caches, or event publishers.
@@ -51,6 +51,8 @@ Read [`references/code-conventions.md`](references/code-conventions.md) first.
 - Do not keep compatibility code for an earlier implementation that only exists inside the same unreleased PR. Prefer the final best-practice shape and update in-PR callers, tests, fixtures, docs, and examples together; only preserve old behavior when it is released, persisted, externally depended on, or explicitly requested by the user.
 
 ## Response Shape
+
+Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
 
 1. Conventions to follow
 2. Adjacent files or patterns checked

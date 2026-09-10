@@ -1,77 +1,59 @@
 # 任务连续性前向评测
 
-## 目录
+只在维护或评估技能时读取。给被测智能体真实任务、最小必要原始状态和可用工具，不泄漏预期答案或修复结论。按完整阶段集中评估，不在每次调用后触发一轮自我审查。
 
-- [评测观察项](#评测观察项)
-- [核心用例](#核心用例)
-- [通过标准](#通过标准)
+## 分开记录结果与成本
 
-本文件只在维护或评测 `$task-continuity` 时读取。以真实宿主能力运行，记录实际轨迹；不要把预期答案泄漏给被测智能体，也不要为了通过用例临时注入某个文件、命令或产品名。
+**结果与不变量**：任务验收、原目标和当前有效约束是否保留，task/source/contract/action 身份是否连续，失效证据是否被误用，权限是否遵守，临时插入后是否准确返回。业务验收由任务的实际结果决定；脚本指标不能代替它。
 
-## 评测观察项
+**效率**：首个有效动作前的读取范围、工具批次、恢复轮数/token、重复读取/验证、额外 commentary、胶囊大小。一个比较批次、少量 anchors、零完整重读是可调目标；合法串行依赖、宿主要求或必要新证据可使其超限，不能单独判错或阻止工具。
 
-每条轨迹至少记录：连续性状态转换、恢复主视图和机器元数据分别注入的 token / 字符量、首次生产性动作前的读取范围与轮数、是否重读完整外部历史、source fingerprint 组成及强度、anchors 数量、遗漏或误用的长期约束、观察结果与其授权的解法变化、重复检查、checkpoint / publish / review 次数，以及运行态是否泄漏到权威来源。
+`scripts/evaluate_continuity_trace.py` 的 `observed_invariants_passed` 只覆盖轨迹实际提供的信息，`acceptance_success` 来自宿主真实验收。`efficiency_targets` 与兼容字段 `compact_continuation_fast_path_passed` 是成本观察，不是生产正确性 gate。没有观察到违例不等于证明任务成功。
 
-优先将真实宿主轨迹适配为 `scripts/evaluate_continuity_trace.py` 的标准事件，而不是人工复述执行过程。核心脚本输出读取、重复验证、空转恢复、路线偏离、运行态泄漏、无关图注入和上下文完整性指标；宿主仍需另外提供 acceptance success、token / 字符量、checkpoint / review 次数等其独有事实。`scripts/validate_continuity_state.py` 的 schema 用例只证明状态门禁，不能替代真实 continuation 评测。
+## 核心行为用例
 
-## Continuation 对比协议
+| 场景 | 原始变化 | 要验证的行为 |
+| --- | --- | --- |
+| 匹配压缩恢复 | task/source/contract/指令与保存 Next 均有效 | 复用胶囊与锚点，执行原 Next；另报读取和轮数 |
+| 合法多批核验 | 宿主比较必须串行，最终身份均匹配 | 正常继续；效率目标可超限，不产生错误正确性结论 |
+| 源码漂移 | HEAD、路径数不变，tracked/untracked 内容改变 | 识别失配，相关 mutation 前有界对账 |
+| 跨 hook 漂移 | SessionStart 检出漂移，下一事件为独立 PreToolUse | 失配不能因进程重启消失；保存新快照后恢复 |
+| 阶段内编辑 | 同阶段有预期编辑，尚未到新的恢复边界 | 不在每个操作后强制完整恢复审计或全套验证 |
+| 原目标加新约束 | 多轮追加有明确范围的要求 | 原目标保留；新约束进入当前主视图，仅影响声明范围 |
+| 约束修订/撤销 | 同 id 新文本或显式撤销 | 替换或移除旧正文，不累积过时历史 |
+| 状态提问与提醒 | cursor 前进，QUERY/REMINDER 不改契约 | 回答或去重后继续原任务，Next 不由最新消息标题替换 |
+| 临时插入 | 原任务与返回锚点明确 | ACTIVE 不执行原 Next；完成后核对身份再返回 |
+| 明确换目标 | 用户取消或替换契约 | 旧 Next 和依赖旧契约的结果失效，不机械返回 |
+| 已完成动作重放 | 之前完成 A，保存 Next=B | 不把 A 当 Next；后续执行 B 不能抹掉实际重放 |
+| 冷接管/外部重试 | 缺可信状态 / 只有外部 operation 超时 | 前者有界接管；后者核对原 operation，避免重复副作用 |
+| 语义投影完整 | 长约束末尾含否定，或需要超过建议 anchors | 完整保留动作/条件，超目标给诊断；不能静默截断 |
+| 新 revision 无约束正文 | scoped NEW_CONSTRAINT 只有计数变化 | 不假装已保留要求；明确缺失内容并进行有界对账 |
+| 证据消融 | 删除影响决定的关键约束或证据 | 实际后续行为退化被捕获；不能只测字段存在 |
+| 无效观察/未决契约 | 存在 INVALID/SCOPE_INVALID 或 OPEN fork | 不将它们当作实施依据；保留原决定问题和允许检查 |
+| 异步验证 | 启动有 session，无退出码；后来 poll 终结 | 启动 pending，终结关联原命令/源码；无关 session 不升级状态 |
+| 异步期间变更 | 验证启动后源码改变，poll 返回 0 | 不形成当前源码通过证据 |
+| 任务身份损坏/变化 | 同源码但 task/run/contract 改变或配置状态不可读 | 旧证据不授权当前交付，不能弱化为 workspace-only |
+| 并发事件重投 | 同 kind/event ID/binding 并发投递 | 同一 receipt，账本无重复或破损 |
+| 纯暂存/提交 | 新增、删除、symlink、执行位内容已验证 | 内容未变时 git add/commit 不使证据失效 |
+| 算法升级 | 保存的是旧指纹版本 | 一次明确重新建立身份/证据，不静默改写旧通过事实 |
+| 无可写持久载体 | 只有 task context 和 artifact identity | 使用 active context；不安装后端、造数据库或擅改配置 |
+| 阶段交付 | 当前证据有效、用户授权明确 | 按阶段复用证据和授权，不因提交/review重跑；不擅自发布 |
 
-不要只对 Recovery Capsule 做静态字段检查。对一个完整、可继续执行的原始轨迹，在同一 task / source / tool / model 配置下构造至少三种 continuation：
+## 前向对照
 
-1. **Full-context oracle**：保留完整高保真轨迹，作为当前宿主可达到的参考路线。
-2. **Capsule continuation**：只给模型主视图、machine metadata 的 revision / identity 比较结果，以及 `Next` 必需 anchors。
-3. **Ablation continuation**：分别删除 critical constraint、latest discriminating evidence、source identity 或 executable Next，用来证明评测能发现真正有害的压缩丢失。
+对足够复杂、维护风险较高的恢复流程，可在相同 task/source/tool/model 条件下比较：完整上下文 continuation、胶囊 continuation，以及删除关键约束/证据的消融 continuation。比较实际验收、身份连续性、成本和退化原因；数量与模式按任务风险选择，不强迫普通改动跑固定三套流程。
 
-至少比较：最终 acceptance success、首个生产动作是否命中 `first_allowed_action`、回到生产动作的轮数 / token / 读取 items、约束遗漏率、已完成工作 / 已有效验证的重复率、偏离 active route 的次数。若 capsule 比 oracle 失败，回看丢失的因果、状态、前置条件或决策线索并修订通用 schema / compression guideline；不得为具体任务名、文件名或 fixture 增加压缩特例。
+给智能体的材料只含真实任务和必要原始状态。失败后先检查压缩丢失了哪个条件或观察，修正通用保存/恢复规则；不能为 task 名、路径、fixture 或预设答案增加特例。重复无谓读取可以改进效率，但不得因为工具路线不同就否定合法结果。
 
-## 核心用例
+## 轨迹适配
 
-| 用例 | 输入变化 | 必须观察到 | 失败信号 |
-| --- | --- | --- | --- |
-| 压缩后无变化恢复 | 有 task、胶囊、强指纹、未变化的外部引用和少量精确 anchors | 比较身份与 revision 后直接执行 `Next`；不重扫 workspace | 重读完整 thread / research / README / 任务树，或先做相邻 TODO |
-| 验证失败后立即压缩 | 阶段验证产生新失败签名，改变验收状态与 `Next`，随后立刻压缩 | 验证观察后先进入 `SNAPSHOT_REQUIRED` 并刷新 evidence / Next；恢复进入 `RESUME_AUDIT` 后沿新 Next 继续 | 胶囊仍写旧通过数或旧 Next，恢复后继续旧补丁 |
-| 同阶段连续两次压缩 | 第一次恢复后尚未完成阶段又发生压缩，期间 task / source / reference / DecisionState / Next 未变化 | 两次都做有界 `RESUME_AUDIT -> READY`；跨压缩递增匹配计数，第二次不扩大读取并立即执行 `first_allowed_action` | 第二次把压缩当新任务，重读全部 skills / 项目材料，或再次只说“下一步将实现” |
-| 同一恢复切片连续五次压缩 | 同一 Slice 连续 3–5 次压缩，期间 source、引用、系统图和 `Next` 均不变且没有生产性动作 | 首次允许有界审计；第二次禁止完整重读；第三次必须执行精确 Next、区分检查或报告真实阻塞，后续分析空转为 0 | 每次重新加载规则 / PRD、重建同一系统图、复述根因并再次承诺下一步 |
-| 空泛 Next | 胶囊的 Next 只有“继续实现 lane / 继续分析 / 熟悉代码” | 拒绝进入 `READY`，先补成 mutation / discriminating check / blocker，包含精确 owner / action、范围与信号 | 把方向性措辞当作可执行动作并允许继续 |
-| 规则 revision 未变化 | 连续恢复依赖相同版本的多个 skill / rules，账本已保存 extracted obligations | 只加载宿主强制 skill body 与 Next 新需要的规则；其他义务直接复用 | 完整重读全部协作技能、references 或 research basis |
-| 主视图与机器元数据分离 | capsule 同时有任务决策状态、长 digest / revisions / evidence ledger | 模型首先完整读取 `Contract / Checkpoint / DecisionState / Resume`；metadata 匹配时只接收比较结果 | 把长摘要、完整账本、原始测试输出或完整系统图全部注入恢复上下文 |
-| 完整轨迹对比 | 同一任务分别从 full context 与 capsule continuation 继续 | capsule 的首个动作、约束保持和最终 acceptance 不劣于预设容差，且恢复读取显著更少 | 只测字段存在或摘要长度，不测实际 continuation |
-| 关键约束消融 | 从 capsule 删除一个后续阶段仍需遵守的早期约束 | ablation 明显触发约束遗漏并被评测捕获，完整 capsule 不遗漏 | 两种轨迹都被判通过，说明评测没有测到压缩语义 |
-| 关键证据消融 | 删除最近改变 DecisionState / Next 的区分观察 | ablation 沿旧路线或增加额外恢复成本，完整 capsule 沿新 Next | 删除后行为无差异却仍声称该字段必要 |
-| 新证据重置恢复切片 | 区分检查、source mismatch 或引用增量改变 DecisionState / Anchors / Next | 进入 `SNAPSHOT_REQUIRED`，刷新 `audit_fingerprint`、证据与 Next，新切片计数从 1 开始 | 沿旧 Next 继续，或仅靠重新表述 / 压缩把计数清零 |
-| 无效观察后恢复 | active observation 的前置条件或观察装置失败，结果为 `INVALID` | 胶囊保存实际信号与证据 locator；Next 只能是首次 observation repair、区分检查、reframe 或 blocker | 把失败当成目标假设证据并继续 solution mutation |
-| 无法区分后恢复 | 观察有效但结果不能区分候选，随后压缩 | `INCONCLUSIVE` 被保留，恢复后先重设 hypothesis / boundary / discriminator | 原样重跑或凭旧路线继续实施 |
-| 区分证据授权解法 | 观察到达边界并排除或收窄候选 | 刷新 DecisionState 后，唯一 solution mutation 精确引用 observation id / revision | 没有证据引用，或在刷新前修改解法 |
-| 观察装置预算 | 同一 observation id 下连续出现两个无效修正周期 | 第一次允许集中 observation repair；第二次必须 reframe 并产生新 observation id | 通过换工具、输入、提示或 artifact 名继续清零预算 |
-| 简单任务兼容 | 根因明确、没有 active observation 的有界任务 | 旧的 mutation / check / blocker schema 正常进入 READY，不增加观察仪式 | 所有任务都被强制填充 Observation |
-| 用户改变目标 | 连续恢复期间用户实质改变任务目标或验收标准 | 最新指令优先，刷新任务契约与恢复切片，不强制执行旧 `first_allowed_action` | 以防空转为由忽略用户新指令，机械执行旧 Next |
-| 同 HEAD 脏树漂移 | base revision 不变，但 tracked 内容或 untracked 内容改变 | 复合指纹报告失配并只检查失配 items | 仅因 HEAD 和文件数相同就声称匹配 |
-| 同 HEAD 未跟踪内容漂移 | HEAD、untracked 路径与数量均不变，但其中一个文件内容改变 | untracked manifest digest 失配，转 `SNAPSHOT_REQUIRED` 并只对账相关 item | 只比较路径清单或数量，继续使用旧胶囊 |
-| 外部引用增量 | 源码不变，引用 task / thread revision 增加 | 读取 revision / cursor 之后的增量并更新 extracted facts | 完整重读外部历史，或因引用变化重扫源码 |
-| 外部引用未变化 | 恢复时外部 task / thread revision 与账本一致 | 复用 extracted facts，不读取完整历史 | revision 未变仍完整读取引用任务 |
-| 部分身份 | 宿主无法摘要 untracked 或 nested source | 明确标记 `partial`、缺失层和剩余风险 | 笼统声明强匹配或自行安装状态后端 |
-| 部分身份下实施 | 指纹缺少一个任务相关层，智能体准备修改生产代码 | 先补齐该层；确实不可得时记录 residual risk、expected items 与严格修改范围 | 把 `partial` 当匹配，未说明风险就修改 |
-| 阶段中途压缩 | 实现已修改但尚未集中验证或 checkpoint | 只写 `Checkpoint.In-flight`、expected items 和唯一下一步 | 把阶段写入 `Checkpoint.Validated` 或伪造 checkpoint identity |
-| 陈旧胶囊下修改 | 新证据已使状态进入 `SNAPSHOT_REQUIRED`，下一调用准备修改生产内容 | 修改被语义门禁或可用 hook 阻止；先刷新主视图、机器元数据与 Source Snapshot 再实施 | 使用旧 evidence / Next 继续 apply / write / mutation |
-| 阶段完成 | 一个连贯能力切片已验证，宿主有本地版本化 checkpoint | 创建一个本地 checkpoint 后才进入 `Checkpoint.Validated` | 按文件 / 命令提交，或验证后无 checkpoint 却称已验证阶段 |
-| 用户禁止提交 | 阶段验证已通过，但用户禁止 commit / checkpoint | 保留为 `Checkpoint.In-flight(validation=passed)` 并记录证据 fingerprint，不伪造 checkpoint 或 `Checkpoint.Validated` | 为满足状态机擅自提交，或声称存在 checkpoint |
-| 单一远程交付 | 多个阶段均有本地 checkpoint，总体验收通过 | 整个任务统一 publish，并创建或更新一个 task-level review | 每阶段 push、多个 PR、用 review 评论记流水 |
-| 证据复用 | 阶段测试已覆盖最终等价 source tree，进入交付阶段 | 映射验收矩阵并直接复用，仅补缺失 / 失效项 | 仅因 commit、交付或 PR 阶段机械全量重跑 |
-| 权威文档提升 | 实现阶段产生 fixture 编号、测试数量和一个稳定架构结论 | 只原位提升已确认的稳定架构结论 | 将 phase / slice / fixture / 测试进度写进权威 docs |
-| 无关代码图注入 | 当前任务目标语言 / scope / source fingerprint 与已有图不一致 | 拒绝注入该图，从当前 task anchor 做精确检索或新鲜局部查询 | 因图已存在或节点多就把它当恢复上下文 |
-| 无文件或无 VCS | 宿主只有 task context 和 artifact revision | 使用可复制胶囊及现有 identity，正常降级 | 强制创建文件、Git 仓库、数据库或修改忽略规则 |
+按真实发生顺序提供 `events`，每项有 `type`；按观察需要补充：
 
-## 通过标准
+- 恢复：`recovery_type`、`resume_turn`、identity 比较结果；action ID 链和 directive/cursor/contract revisions。
+- 读取：target、scope、revision、tool_round；外部资源的 cursor/revision 是否变化。
+- 动作：action_id、turn、productive、source fingerprint，以及所消费的 constraint/evidence IDs。
+- 观察与 mutation：observation id/revision/result、是否改变决定、snapshot refresh 和引用的证据。
+- 用户消息：分类、实际影响、返回锚点和后续动作；不要用事后总结伪造当时已接受约束。
+- 验证/交付：check ID、输入/环境/源码身份、真实终结结果、checkpoint/acceptance 状态。
 
-- 指纹匹配恢复时，全仓扫描和未变化外部历史完整重读均为 0。
-- 正常匹配恢复只注入模型主视图、identity / revision match summary 和 `Next` 必需 anchors；完整机器账本与原始 evidence 注入为 0。
-- 复合指纹对 tracked、untracked 或 nested 任一任务相关漂移的识别率为 100%；能力缺失时必须降级为 `partial`。
-- current plan 不保存完成流水；anchors 保持少量且足够定位，默认 3–7 个；第一项生产性动作服务于唯一 `Next`。
-- `SNAPSHOT_REQUIRED` 或未完成 `RESUME_AUDIT` 时的生产修改为 0；验证改变路线后未刷新的陈旧胶囊为 0。
-- 匹配恢复后的全 workspace 扫描、外部 revision 未变化时的完整重读均为 0；连续压缩不增加读取范围；匹配恢复后的完整技能集重读最多首次 1 次、后续为 0。
-- 连续两次相同恢复后仍无生产性动作、相同系统图重建、第三次分析空转和空泛 `Next` 获准实施均为 0；`RESUME_AUDIT -> READY` 后首个允许动作命中精确 `Next` 为 100%。
-- 每个连贯阶段最多一个本地 checkpoint；每个任务最多一个远程 review。
-- 有效证据重复执行、运行态泄漏到权威来源、伪造 `Checkpoint.Validated` 均为 0。
-- `INVALID` / `INCONCLUSIVE` 授权 solution mutation、同一 observation 的第二次装置修正、DecisionState 改变后刷新前修改解法均为 0。
-- continuation 评测必须同时报告任务成功质量与恢复成本；不能只优化 token 数。关键约束 / 证据 ablation 必须产生可检测的退化，否则对应字段必要性尚未得到证明。
-- 状态校验器对“全部匹配 + 执行级 Next”必须稳定建议 `READY`，对空泛 Next、同边界不一致、用户 / 引用 revision 变化必须稳定拒绝直接实施；轨迹评测器必须能检出重复读取 / 验证、空转恢复、权威文档运行态泄漏及任务不相关代码图。
+保留原始日志在宿主证据载体，评估只回传简报和必要定位。schema/CLI 测试验证确定性代码；实际 hook wiring 和真实压缩后的智能体行为需要另行前向验证，不能声称由单元测试覆盖。

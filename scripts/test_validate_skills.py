@@ -68,130 +68,226 @@ class ValidateSkillsTest(unittest.TestCase):
             result = VALIDATOR.validate_repository(root)
             self.assertTrue(any("macOS user absolute path" in error for error in result["errors"]))
 
-    def test_rejects_missing_continuity_state_contract(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            self.create_skill(root, "task-continuity")
-            result = VALIDATOR.validate_repository(root)
-            joined = "\n".join(result["errors"])
-            self.assertIn("missing required behavioral contract marker: READY", joined)
-            self.assertIn("required behavioral contract file missing", joined)
+    def create_contract_resources(self, skill: Path) -> None:
+        """Create the declared package interfaces; prose has no fixed wording."""
+        for relative in VALIDATOR.REQUIRED_SKILL_RESOURCES.get(skill.name, ()):
+            path = skill / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# Current rules\n\nUse relevant task evidence.\n", encoding="utf-8")
+        for relative, contract in VALIDATOR.REQUIRED_PYTHON_CONTRACTS.get(skill.name, {}).items():
+            path = skill / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if contract.get("test_suite"):
+                content = (
+                    "import unittest\n\nclass ContractTest(unittest.TestCase):\n"
+                    "    def test_reworded_case(self):\n"
+                    "        self.assertEqual(1, 1)\n"
+                )
+            else:
+                content = "\n".join(
+                    f"def {name}(document):\n    return {{'input': document}}\n"
+                    for name in contract["functions"]
+                )
+            path.write_text(content, encoding="utf-8")
 
-    def test_accepts_required_behavioral_contracts(self) -> None:
+    def test_rejects_missing_public_resource(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot "
-                "Contract Checkpoint DecisionState Resume "
-                "consecutive_matching_audits first_allowed_action\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
-                "空泛 Next 规则 revision 未变化 Continuation 对比协议 "
-                "Full-context oracle Ablation continuation 陈旧胶囊下修改 用户禁止提交 "
-                "无关代码图注入 scripts/evaluate_continuity_trace.py\n",
-                encoding="utf-8",
-            )
-            (continuity / "scripts").mkdir()
-            (continuity / "scripts" / "validate_continuity_state.py").write_text(
-                "def validate_state():\n    return {'suggested_gate': 'SNAPSHOT_REQUIRED'}\n",
-                encoding="utf-8",
-            )
-            (continuity / "scripts" / "evaluate_continuity_trace.py").write_text(
-                "def evaluate_trace():\n    return {'repeated_read_count': 0, "
-                "'irrelevant_graph_injection_count': 0}\n",
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "references" / "task-state-and-recovery-rules.md").unlink()
+            result = VALIDATOR.validate_repository(root)
+            self.assertTrue(any("required skill resource missing" in item for item in result["errors"]))
+
+    def test_accepts_reworded_rules_and_renamed_test_cases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "SKILL.md").write_text(
+                "---\nname: task-continuity\ndescription: Resume a task.\n---\n\n"
+                "Continue from the current objective and saved next step.\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
             self.assertEqual([], result["errors"])
 
-    def test_rejects_missing_anti_idle_resume_contract(self) -> None:
+    def test_words_do_not_replace_executable_resources(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "LoadedRules\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 陈旧胶囊下修改 用户禁止提交\n",
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            script = skill / "scripts" / "validate_continuity_state.py"
+            script.write_text(
+                "CONTRACT = 'READY SNAPSHOT_REQUIRED validate_state'\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
-            joined = "\n".join(result["errors"])
-            self.assertIn("missing required behavioral contract marker: consecutive_matching_audits", joined)
-            self.assertIn("missing required behavioral contract marker: audit_fingerprint", joined)
-            self.assertIn("missing required behavioral contract marker: 同一恢复切片连续五次压缩", joined)
+            self.assertTrue(
+                any("missing executable contract function validate_state" in item for item in result["errors"])
+            )
 
-    def test_rejects_missing_continuation_evaluation_contract(self) -> None:
+    def test_rejects_invalid_python_and_inputless_public_entry(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot Contract Checkpoint "
-                "DecisionState Resume consecutive_matching_audits first_allowed_action\n",
-                encoding="utf-8",
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "scripts" / "validate_continuity_state.py").write_text(
+                "def validate_state():\n    return {}\n", encoding="utf-8"
             )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "生产修改 区分检查 真实阻塞\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
-                "空泛 Next 规则 revision 未变化 陈旧胶囊下修改 用户禁止提交\n",
-                encoding="utf-8",
+            (skill / "scripts" / "prepare_resume_context.py").write_text(
+                "def project_context(document\n", encoding="utf-8"
             )
             result = VALIDATOR.validate_repository(root)
             joined = "\n".join(result["errors"])
-            self.assertIn("missing required behavioral contract marker: Continuation 对比协议", joined)
-            self.assertIn("missing required behavioral contract marker: Ablation continuation", joined)
+            self.assertIn("must accept input", joined)
+            self.assertIn("invalid Python executable contract", joined)
 
-    def test_rejects_superseded_continuity_schema(self) -> None:
+    def test_rejects_empty_required_resource_and_assertion_free_suite(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "repo"
-            root.mkdir()
-            continuity = self.create_skill(root, "task-continuity")
-            (continuity / "SKILL.md").write_text(
-                "---\nname: task-continuity\ndescription: Example.\n---\n\n"
-                "READY SNAPSHOT_REQUIRED RESUME_AUDIT Source Snapshot Contract Checkpoint "
-                "DecisionState Resume consecutive_matching_audits first_allowed_action\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "task-state-and-recovery-rules.md").write_text(
-                "Continuity Metadata LoadedRules audit_fingerprint RESUME_AUDIT -> READY "
-                "Checkpoint.Validated Checkpoint.In-flight 生产修改 区分检查 真实阻塞\n"
-                "Resume.audit_fingerprint 维护两个有界逻辑视图\n",
-                encoding="utf-8",
-            )
-            (continuity / "references" / "evaluation-cases.md").write_text(
-                "验证失败后立即压缩 同阶段连续两次压缩 同一恢复切片连续五次压缩 "
-                "空泛 Next 规则 revision 未变化 Continuation 对比协议 Full-context oracle "
-                "Ablation continuation 陈旧胶囊下修改 用户禁止提交\n",
+            root = Path(directory)
+            skill = self.create_skill(root, "task-continuity")
+            self.create_contract_resources(skill)
+            (skill / "references" / "evaluation-cases.md").write_text("", encoding="utf-8")
+            (skill / "scripts" / "test_continuity_tools.py").write_text(
+                "import unittest\nclass EmptyTest(unittest.TestCase):\n"
+                "    def test_placeholder(self):\n        pass\n",
                 encoding="utf-8",
             )
             result = VALIDATOR.validate_repository(root)
             joined = "\n".join(result["errors"])
-            self.assertIn("superseded behavioral contract marker: Resume.audit_fingerprint", joined)
-            self.assertIn("superseded behavioral contract marker: 维护两个有界逻辑视图", joined)
+            self.assertIn("required skill resource is empty", joined)
+            self.assertIn("test suite must contain an executable assertion", joined)
+
+    def test_validates_codex_agent_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "agent-orchestration"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: agent-orchestration\ndescription: Test.\n---\n", encoding="utf-8")
+            agents = root / ".codex" / "agents"
+            agents.mkdir(parents=True)
+            (root / ".codex" / "config.toml").write_text(
+                "[features]\nmulti_agent = true\n\n[agents]\nmax_threads = 2\nmax_depth = 1\ninterrupt_message = true\n",
+                encoding="utf-8",
+            )
+            profiles = {
+                "bounded-explorer.toml": ("bounded_explorer", True),
+                "mechanical-worker.toml": ("mechanical_worker", False),
+                "bounded-worker.toml": ("bounded_worker", False),
+                "stage-reviewer.toml": ("stage_reviewer", True),
+            }
+            for filename, (name, read_only) in profiles.items():
+                sandbox = 'sandbox_mode = "read-only"\n' if read_only else ""
+                mechanical_settings = (
+                    'model = "gpt-5.6-luna"\nmodel_reasoning_effort = "medium"\n'
+                    'sandbox_mode = "workspace-write"\n'
+                    if name == "mechanical_worker"
+                    else ""
+                )
+                (agents / filename).write_text(
+                    f'name = "{name}"\ndescription = "Test profile"\n{sandbox}{mechanical_settings}'
+                    'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                    'Do not spawn further agents."\n',
+                    encoding="utf-8",
+                )
+            self.assertEqual([], VALIDATOR.validate_codex_adapter(root))
+
+            (root / ".codex" / "config.toml").write_text(
+                "[features]\nmulti_agent = true\n\n[agents]\n"
+                "max_threads = 2\nmax_depth = 2\ninterrupt_message = true\n",
+                encoding="utf-8",
+            )
+            errors = VALIDATOR.validate_codex_adapter(root)
+            self.assertTrue(any("agents.max_depth must be exactly 1" in error for error in errors))
+
+            (root / ".codex" / "config.toml").write_text(
+                "[features]\nmulti_agent = true\n\n[agents]\nmax_threads = 2\n"
+                "max_depth = 1\ninterrupt_message = true\n",
+                encoding="utf-8",
+            )
+
+            (agents / "bounded-explorer.toml").write_text(
+                'name = "bounded_explorer"\ndescription = "Test profile"\n'
+                'sandbox_mode = "workspace-write"\n'
+                'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                'Do not spawn further agents."\n',
+                encoding="utf-8",
+            )
+            errors = VALIDATOR.validate_codex_adapter(root)
+            self.assertTrue(any("read-only profile" in error for error in errors))
+
+            (agents / "mechanical-worker.toml").write_text(
+                'name = "mechanical_worker"\ndescription = "Test profile"\n'
+                'model = "gpt-5.6-terra"\nmodel_reasoning_effort = "high"\n'
+                'sandbox_mode = "read-only"\n'
+                'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                'Do not spawn further agents."\n',
+                encoding="utf-8",
+            )
+            errors = VALIDATOR.validate_codex_adapter(root)
+            joined = "\n".join(errors)
+            self.assertIn("model must be 'gpt-5.6-luna'", joined)
+            self.assertIn("model_reasoning_effort must be 'medium'", joined)
+            self.assertIn("sandbox_mode must be 'workspace-write'", joined)
+
+            (agents / "mechanical-worker.toml").unlink()
+            errors = VALIDATOR.validate_codex_adapter(root)
+            self.assertTrue(any("mechanical-worker.toml: required Codex Agent profile missing" in error for error in errors))
+
+    def test_codex_adapter_is_optional_without_project_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "agent-orchestration"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\nname: agent-orchestration\ndescription: Host-neutral test.\n---\n",
+                encoding="utf-8",
+            )
+            self.assertEqual([], VALIDATOR.validate_codex_adapter(root))
+            self.assertTrue(
+                any(
+                    "Codex adapter config missing" in error
+                    for error in VALIDATOR.validate_codex_adapter(root, required=True)
+                )
+            )
+
+    def test_accepts_current_codex_agent_concurrency_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "agent-orchestration"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: agent-orchestration\ndescription: Test.\n---\n", encoding="utf-8")
+            agents = root / ".codex" / "agents"
+            agents.mkdir(parents=True)
+            (root / ".codex" / "config.toml").write_text(
+                "[features]\nmulti_agent = true\n\n"
+                "[agents]\nmax_concurrent_threads_per_session = 2\nmax_depth = 1\n"
+                'default_subagent_model = "balanced"\n'
+                'default_subagent_reasoning_effort = "medium"\n',
+                encoding="utf-8",
+            )
+            profiles = {
+                "bounded-explorer.toml": ("bounded_explorer", True),
+                "mechanical-worker.toml": ("mechanical_worker", False),
+                "bounded-worker.toml": ("bounded_worker", False),
+                "stage-reviewer.toml": ("stage_reviewer", True),
+            }
+            for filename, (name, read_only) in profiles.items():
+                sandbox = 'sandbox_mode = "read-only"\n' if read_only else ""
+                mechanical_settings = (
+                    'model = "gpt-5.6-luna"\nmodel_reasoning_effort = "medium"\n'
+                    'sandbox_mode = "workspace-write"\n'
+                    if name == "mechanical_worker"
+                    else ""
+                )
+                (agents / filename).write_text(
+                    f'name = "{name}"\ndescription = "Test profile"\n{sandbox}{mechanical_settings}'
+                    'developer_instructions = "Treat scope as hard upper bounds; return an escalation request. '
+                    'Do not spawn further agents."\n',
+                    encoding="utf-8",
+                )
+            self.assertEqual([], VALIDATOR.validate_codex_adapter(root))
 
 
 if __name__ == "__main__":

@@ -15,15 +15,40 @@ READ_TYPES = {
     "capsule_read",
     "identity_compare",
     "reference_compare",
+    "reference_read",
     "rule_compare",
+    "rule_reload",
+    "skill_reload",
+    "thread_read",
     "history_read",
+    "workspace_scan",
     "graph_read",
 }
 PRODUCTIVE_TYPES = {"mutation", "solution_mutation", "action", "check", "verification", "blocker"}
 VERIFICATION_TYPES = {"check", "verification"}
-OBSERVATION_RESULTS = {"DISCRIMINATING", "INVALID", "INCONCLUSIVE"}
+COMMENTARY_TYPES = {"commentary", "recovery_commentary"}
+OBSERVATION_RESULTS = {"DISCRIMINATING", "INVALID", "INCONCLUSIVE", "SCOPE_INVALID"}
+MESSAGE_CLASSES = {
+    "QUERY",
+    "REMINDER",
+    "NEW_CONSTRAINT",
+    "CONTRACT_CHANGE",
+    "TEMPORARY_INTERRUPT",
+    "OVERRIDE",
+    "OBSERVATION",
+    "DECISION",
+}
+PASSIVE_MESSAGE_CLASSES = {"QUERY", "REMINDER"}
 FULL_HISTORY_SCOPES = {"full_history", "full_task_history", "full_thread", "full_prd", "full_research"}
 REPOSITORY_WIDE_SCOPES = {"repository_wide", "workspace_wide", "full_repository", "full_workspace"}
+FULL_RULE_SCOPES = {"full_skill", "full_skill_set", "full_rules", "full_reference_set"}
+REPLAY_RECOVERY_CLASSES = {
+    "full_history_reread",
+    "full_rule_reload",
+    "previous_action_replay",
+    "suppressed_action_replay",
+    "workspace_rescan",
+}
 RUNTIME_CONTENT_CLASSES = {
     "runtime",
     "progress",
@@ -51,6 +76,19 @@ def _strings(value: Any) -> set[str]:
 def _event_action_id(event: dict[str, Any]) -> str | None:
     value = event.get("action_id")
     return value if isinstance(value, str) and value else None
+
+
+def _recovery_action_classes(event: dict[str, Any]) -> set[str]:
+    classes = _strings(event.get("recovery_action_class")) & REPLAY_RECOVERY_CLASSES
+    event_type = str(event.get("type", ""))
+    scope = str(event.get("scope", "bounded"))
+    if event_type in {"skill_reload", "rule_reload"} or scope in FULL_RULE_SCOPES:
+        classes.add("full_rule_reload")
+    if event_type == "workspace_scan" or scope in REPOSITORY_WIDE_SCOPES or event.get("repository_wide") is True:
+        classes.add("workspace_rescan")
+    if scope in FULL_HISTORY_SCOPES or event.get("full_history") is True:
+        classes.add("full_history_reread")
+    return classes
 
 
 def _observation_key(event: dict[str, Any]) -> tuple[str, str] | None:
@@ -88,7 +126,77 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     events = trace.get("events", [])
     if not isinstance(events, list):
         raise ValueError("events must be a list")
-    expected_action_id = trace.get("expected_action_id", inherited.get("expected_action_id"))
+    pre_compaction_next_action_id = trace.get(
+        "pre_compaction_next_action_id",
+        inherited.get("pre_compaction_next_action_id"),
+    )
+    expected_action_id = trace.get(
+        "expected_action_id",
+        inherited.get("expected_action_id", pre_compaction_next_action_id),
+    )
+    if pre_compaction_next_action_id is None:
+        pre_compaction_next_action_id = expected_action_id
+    previous_productive_action_id = trace.get(
+        "previous_productive_action_id",
+        inherited.get("previous_productive_action_id"),
+    )
+    suppressed_action_ids = _strings(
+        trace.get("suppressed_action_ids", inherited.get("suppressed_action_ids", []))
+    )
+    directive_revision_at_snapshot = trace.get(
+        "directive_revision_at_snapshot",
+        inherited.get(
+            "directive_revision_at_snapshot",
+            trace.get(
+                "instruction_revision_at_snapshot",
+                inherited.get("instruction_revision_at_snapshot"),
+            ),
+        ),
+    )
+    post_compaction_directive_revision = trace.get(
+        "post_compaction_directive_revision",
+        inherited.get(
+            "post_compaction_directive_revision",
+            trace.get(
+                "post_compaction_instruction_revision",
+                inherited.get("post_compaction_instruction_revision"),
+            ),
+        ),
+    )
+    explicit_directive_changed = trace.get(
+        "directive_changed",
+        inherited.get(
+            "directive_changed",
+            trace.get("instruction_changed", inherited.get("instruction_changed")),
+        ),
+    )
+    directive_revision_compared = isinstance(explicit_directive_changed, bool) or (
+        isinstance(directive_revision_at_snapshot, str)
+        and isinstance(post_compaction_directive_revision, str)
+    )
+    if isinstance(explicit_directive_changed, bool):
+        directive_changed = explicit_directive_changed
+    elif isinstance(directive_revision_at_snapshot, str) and isinstance(post_compaction_directive_revision, str):
+        directive_changed = directive_revision_at_snapshot != post_compaction_directive_revision
+    else:
+        directive_changed = None
+    # Retain the old metric names for readable historical traces.
+    instruction_revision_compared = directive_revision_compared
+    instruction_changed = directive_changed
+    conversation_cursor_at_snapshot = trace.get(
+        "conversation_cursor_at_snapshot",
+        inherited.get("conversation_cursor_at_snapshot"),
+    )
+    post_compaction_conversation_cursor = trace.get(
+        "post_compaction_conversation_cursor",
+        inherited.get("post_compaction_conversation_cursor"),
+    )
+    conversation_advanced = (
+        conversation_cursor_at_snapshot != post_compaction_conversation_cursor
+        if isinstance(conversation_cursor_at_snapshot, str)
+        and isinstance(post_compaction_conversation_cursor, str)
+        else None
+    )
     expected_fingerprint = trace.get("source_fingerprint", inherited.get("source_fingerprint"))
     required_constraints = _strings(trace.get("required_constraint_ids", inherited.get("required_constraint_ids", [])))
     required_evidence = _strings(trace.get("required_evidence_ids", inherited.get("required_evidence_ids", [])))
@@ -96,13 +204,27 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "requires_discriminating_evidence",
         inherited.get("requires_discriminating_evidence", False),
     ) is True
+    recovery_type = trace.get("recovery_type", inherited.get("recovery_type"))
+    resume_turn = trace.get("resume_turn", inherited.get("resume_turn"))
+    identity_match = trace.get("identity_match", inherited.get("identity_match")) is True
+    default_matching_audit = trace.get(
+        "matching_audit_number",
+        inherited.get("matching_audit_number", 0),
+    )
 
     read_keys: list[tuple[str, str, str]] = []
     productive: list[tuple[int, dict[str, Any]]] = []
     verification_keys: list[tuple[str, str, str, str]] = []
     route_deviations: list[int] = []
+    recovery_route_deviations: list[dict[str, Any]] = []
+    post_compaction_full_skill_reload_count = 0
     full_history_reads = 0
+    full_thread_reads = 0
     repository_wide_reads = 0
+    unchanged_reference_reads = 0
+    matching_audit_full_reference_reads = 0
+    resume_audit_tool_round_ids: set[str] = set()
+    recovery_turns: dict[Any, dict[str, bool]] = {}
     authoritative_runtime_leaks: list[dict[str, Any]] = []
     irrelevant_graph_injections: list[dict[str, Any]] = []
     observed_constraints: set[str] = set()
@@ -116,10 +238,23 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     solution_change_count = 0
     solution_without_evidence: list[int] = []
     invalid_observation_used: list[int] = []
+    scope_invalid_observation_used: list[int] = []
     repeated_nondiscriminating: list[int] = []
     observation_repair_budget_exceeded: list[int] = []
     solution_change_before_snapshot: list[int] = []
     snapshot_refresh_pending = False
+    correct_next_seen = False
+    message_route_deviations: list[dict[str, Any]] = []
+    unnecessary_plan_refreshes: list[int] = []
+    duplicate_reminder_revisions: list[int] = []
+    missing_return_anchors: list[int] = []
+    wrong_mainline_returns: list[int] = []
+    stale_contract_actions: list[int] = []
+    pending_return_action_id: str | None = None
+    pending_return_turn: Any = None
+    pending_return_ready = False
+    pending_message_class: str | None = None
+    mainline_invalidated = False
 
     for index, raw_event in enumerate(events):
         if not isinstance(raw_event, dict):
@@ -127,6 +262,69 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         event = raw_event
         event_type = str(event.get("type", ""))
         turn = event.get("turn", index + 1)
+        turn_state = recovery_turns.setdefault(turn, {"commentary": False, "productive": False})
+        if event_type in COMMENTARY_TYPES:
+            turn_state["commentary"] = True
+
+        if event_type == "user_message":
+            message_class = str(event.get("message_class", ""))
+            if message_class not in MESSAGE_CLASSES:
+                message_route_deviations.append(
+                    {"event_index": index, "class": "unclassified_user_message"}
+                )
+            affects_saved_next = event.get("affects_saved_next") is True
+            if message_class in PASSIVE_MESSAGE_CLASSES:
+                pending_message_class = message_class
+                pending_return_action_id = str(
+                    event.get("saved_next_action_id") or pre_compaction_next_action_id or ""
+                ) or None
+                pending_return_turn = turn
+                pending_return_ready = True
+                revision_changed = event.get("directive_changed") is True or (
+                    isinstance(event.get("directive_revision_before"), str)
+                    and isinstance(event.get("directive_revision_after"), str)
+                    and event.get("directive_revision_before") != event.get("directive_revision_after")
+                )
+                if message_class == "REMINDER" and revision_changed:
+                    duplicate_reminder_revisions.append(index)
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "duplicate_reminder_revision"}
+                    )
+                if affects_saved_next or _strings(event.get("affected_assignment_ids")):
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "passive_message_route_change"}
+                    )
+            elif message_class == "TEMPORARY_INTERRUPT":
+                anchor = event.get("return_anchor")
+                pending_message_class = message_class
+                pending_return_ready = False
+                if not isinstance(anchor, dict) or not isinstance(anchor.get("saved_next_action_id"), str):
+                    missing_return_anchors.append(index)
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "missing_return_anchor"}
+                    )
+                    pending_return_action_id = None
+                else:
+                    pending_return_action_id = anchor["saved_next_action_id"]
+                    pending_return_turn = turn
+            elif message_class in {"CONTRACT_CHANGE", "OVERRIDE"} or affects_saved_next:
+                mainline_invalidated = True
+
+        if event_type in {"plan_refresh", "route_refresh", "assignment_redispatch"}:
+            if pending_message_class in PASSIVE_MESSAGE_CLASSES and pending_return_ready:
+                unnecessary_plan_refreshes.append(index)
+                message_route_deviations.append(
+                    {"event_index": index, "class": "passive_message_plan_refresh"}
+                )
+
+        if event_type == "interrupt_complete" and pending_message_class == "TEMPORARY_INTERRUPT":
+            pending_return_ready = True
+            pending_return_turn = turn
+
+        if event_type in {"snapshot_refreshed", "contract_snapshot_refreshed"} and event.get(
+            "refreshes_user_change"
+        ) is True:
+            mainline_invalidated = False
         observed_constraints.update(_strings(event.get("constraint_ids")))
         observed_evidence.update(_strings(event.get("evidence_ids")))
         recovery_id = event.get("recovery_id")
@@ -135,15 +333,64 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
             cycle["events"] += 1
             cycle["turns"].add(turn)
 
+        event_action_id = _event_action_id(event)
+        recovery_classes = _recovery_action_classes(event)
+        if event_action_id in suppressed_action_ids:
+            recovery_classes.add("suppressed_action_replay")
+        continuity_slice_matches = (
+            recovery_type == "COMPACT_CONTINUATION"
+            and identity_match
+            and instruction_revision_compared
+            and instruction_changed is False
+        )
+        if continuity_slice_matches and not correct_next_seen:
+            if "full_rule_reload" in recovery_classes:
+                post_compaction_full_skill_reload_count += 1
+            for recovery_class in sorted(recovery_classes):
+                recovery_route_deviations.append(
+                    {"event_index": index, "class": recovery_class}
+                )
+                route_deviations.append(index)
+            if pending_message_class in PASSIVE_MESSAGE_CLASSES and pending_return_ready and recovery_classes:
+                message_route_deviations.append(
+                    {"event_index": index, "class": "passive_message_recovery_replay"}
+                )
+
         is_productive = event.get("productive") is True or (
             event_type in PRODUCTIVE_TYPES and event.get("productive") is not False
         )
+        inline_message_action = event.get("serves_user_message") is True
         if is_productive:
-            productive.append((index, event))
+            if not inline_message_action:
+                productive.append((index, event))
+            target_action_id = pre_compaction_next_action_id or expected_action_id
+            if not inline_message_action and (target_action_id is None or event_action_id == target_action_id):
+                correct_next_seen = True
+            turn_state["productive"] = True
             if isinstance(recovery_id, str) and recovery_id:
                 recovery_cycles[recovery_id]["productive"] = True
             if event.get("serves_next") is False:
                 route_deviations.append(index)
+            if not inline_message_action and pending_return_ready and pending_return_action_id is not None:
+                if event_action_id == pending_return_action_id:
+                    if pending_message_class in PASSIVE_MESSAGE_CLASSES and turn != pending_return_turn:
+                        wrong_mainline_returns.append(index)
+                        message_route_deviations.append(
+                            {"event_index": index, "class": "passive_message_delayed_return"}
+                        )
+                    pending_return_ready = False
+                    pending_message_class = None
+                    pending_return_action_id = None
+                else:
+                    wrong_mainline_returns.append(index)
+                    message_route_deviations.append(
+                        {"event_index": index, "class": "wrong_mainline_return"}
+                    )
+            if mainline_invalidated and event_type in {"mutation", "solution_mutation", "action"}:
+                stale_contract_actions.append(index)
+                message_route_deviations.append(
+                    {"event_index": index, "class": "stale_contract_action"}
+                )
 
         if event_type in READ_TYPES:
             target = str(event.get("target", "<unknown>"))
@@ -152,8 +399,42 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
             read_keys.append((target, revision, scope))
             if scope in FULL_HISTORY_SCOPES or event.get("full_history") is True:
                 full_history_reads += 1
+            target_kind = str(event.get("target_kind", ""))
+            is_reference_read = event_type in {"reference_read", "thread_read", "history_read"} or target_kind in {
+                "thread",
+                "task",
+                "issue",
+                "reference",
+                "research",
+            }
+            is_full_reference_read = scope in FULL_HISTORY_SCOPES or event.get("full_history") is True
+            if scope == "full_thread" or (target_kind == "thread" and is_full_reference_read):
+                full_thread_reads += 1
+            revision_unchanged = (
+                event.get("revision_changed") is False
+                or event.get("cursor_changed") is False
+                or event.get("reference_unchanged") is True
+            )
+            if is_reference_read and revision_unchanged:
+                unchanged_reference_reads += 1
+            matching_audit_number = event.get("matching_audit_number", default_matching_audit)
+            if (
+                is_reference_read
+                and is_full_reference_read
+                and isinstance(matching_audit_number, int)
+                and matching_audit_number >= 2
+            ):
+                matching_audit_full_reference_reads += 1
             if scope in REPOSITORY_WIDE_SCOPES or event.get("repository_wide") is True:
                 repository_wide_reads += 1
+            in_resume_audit = (
+                event.get("resume_audit") is True
+                or event.get("continuity_phase") == "RESUME_AUDIT"
+                or event.get("phase") == "RESUME_AUDIT"
+            )
+            if in_resume_audit:
+                tool_round = event.get("tool_round", turn)
+                resume_audit_tool_round_ids.add(str(tool_round))
 
         if event_type in VERIFICATION_TYPES:
             verification_keys.append(
@@ -218,6 +499,8 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
                     solution_without_evidence.append(index)
                 if result == "INVALID":
                     invalid_observation_used.append(index)
+                if result == "SCOPE_INVALID":
+                    scope_invalid_observation_used.append(index)
 
         if event_type in {"authoritative_doc_write", "prd_write"}:
             leaked = sorted(_strings(event.get("content_classes")) & RUNTIME_CONTENT_CLASSES)
@@ -235,9 +518,38 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     first_event = productive[0][1] if productive else None
     first_turn = first_event.get("turn", first_index + 1) if first_event is not None else None
     first_action_id = _event_action_id(first_event) if first_event is not None else None
+    action_identity_continuity_applicable = (
+        recovery_type == "COMPACT_CONTINUATION"
+        and identity_match
+        and instruction_revision_compared
+        and instruction_changed is False
+        and pre_compaction_next_action_id is not None
+    )
+    action_identity_continuity = (
+        first_action_id == pre_compaction_next_action_id
+        if action_identity_continuity_applicable and first_action_id is not None
+        else None
+    )
     next_action_hit = expected_action_id is None or first_action_id == expected_action_id
-    if expected_action_id is not None and first_event is not None and not next_action_hit:
+    if action_identity_continuity_applicable and first_event is not None and action_identity_continuity is False:
         route_deviations.append(first_index)
+    elif expected_action_id is not None and first_event is not None and not next_action_hit and instruction_changed is not True:
+        route_deviations.append(first_index)
+    previous_action_replay = (
+        action_identity_continuity_applicable
+        and isinstance(previous_productive_action_id, str)
+        and first_action_id == previous_productive_action_id
+        and first_action_id != pre_compaction_next_action_id
+    )
+    if previous_action_replay and first_index is not None:
+        recovery_route_deviations.append(
+            {"event_index": first_index, "class": "previous_action_replay"}
+        )
+        route_deviations.append(first_index)
+    if pending_return_ready and pending_return_action_id is not None:
+        message_route_deviations.append(
+            {"event_index": len(events), "class": "mainline_return_missing"}
+        )
     idle_cycles = sorted(key for key, value in recovery_cycles.items() if not value["productive"])
     missing_constraints = sorted(required_constraints - observed_constraints)
     missing_evidence = sorted(required_evidence - observed_evidence)
@@ -245,22 +557,95 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
     actions_per_discriminating_observation = (
         len(productive) / discriminating_count if discriminating_count else None
     )
+    recovery_commentary_only_turns = sum(
+        1 for value in recovery_turns.values() if value["commentary"] and not value["productive"]
+    )
+    first_productive_action_on_resume_turn = (
+        first_turn == resume_turn if resume_turn is not None and first_turn is not None else None
+    )
+    compact_fast_path_applicable = (
+        recovery_type == "COMPACT_CONTINUATION"
+        and identity_match
+        and instruction_revision_compared
+        and instruction_changed is False
+    )
+    compact_fast_path_passed = None
+    if compact_fast_path_applicable:
+        compact_fast_path_passed = (
+            len(resume_audit_tool_round_ids) <= 1
+            and instruction_revision_compared
+            and full_thread_reads == 0
+            and unchanged_reference_reads == 0
+            and recovery_commentary_only_turns == 0
+            and first_productive_action_on_resume_turn is True
+            and matching_audit_full_reference_reads == 0
+            and action_identity_continuity is True
+            and not recovery_route_deviations
+        )
 
+    invariant_violations = []
+    for label, failed in (
+        ("action_identity", action_identity_continuity is False),
+        ("required_context", bool(missing_constraints or missing_evidence)),
+        ("stale_contract_action", bool(stale_contract_actions)),
+        ("wrong_mainline_return", bool(wrong_mainline_returns)),
+        ("missing_return_anchor", bool(missing_return_anchors)),
+        ("invalid_observation_evidence", bool(invalid_observation_used or scope_invalid_observation_used)),
+        ("solution_without_evidence", bool(solution_without_evidence)),
+        ("solution_before_snapshot", bool(solution_change_before_snapshot)),
+    ):
+        if failed:
+            invariant_violations.append(label)
     return {
         "event_count": len(events),
+        "observed_invariants_passed": not invariant_violations,
+        "invariant_violations": invariant_violations,
+        "acceptance_success": trace.get("acceptance_success"),
+        "efficiency_targets": {"compact_fast_path_met": compact_fast_path_passed},
+        "metric_semantics": "Efficiency targets and legacy compact_continuation_fast_path_passed do not determine correctness or business acceptance.",
         "first_productive_action_event": first_index,
         "first_productive_action_turn": first_turn,
         "first_action_id": first_action_id,
+        "pre_compaction_next_action_id": pre_compaction_next_action_id,
+        "post_compaction_first_productive_action_id": first_action_id,
+        "previous_productive_action_id": previous_productive_action_id,
+        "instruction_changed": instruction_changed,
+        "instruction_revision_compared": instruction_revision_compared,
+        "directive_changed": directive_changed,
+        "directive_revision_compared": directive_revision_compared,
+        "conversation_advanced": conversation_advanced,
+        "action_identity_continuity_applicable": action_identity_continuity_applicable,
+        "action_identity_continuity": action_identity_continuity,
+        "previous_action_replay_count": 1 if previous_action_replay else 0,
         "next_action_hit": next_action_hit,
         "read_event_count": len(read_keys),
         "distinct_read_count": len(set(read_keys)),
         "repeated_read_count": repeated_reads,
         "full_history_read_count": full_history_reads,
+        "full_thread_reads": full_thread_reads,
         "repository_wide_read_count": repository_wide_reads,
+        "unchanged_reference_reads": unchanged_reference_reads,
+        "matching_audit_full_reference_reads": matching_audit_full_reference_reads,
+        "resume_audit_tool_rounds": len(resume_audit_tool_round_ids),
+        "recovery_commentary_only_turns": recovery_commentary_only_turns,
+        "resume_turn": resume_turn,
+        "first_productive_action_on_resume_turn": first_productive_action_on_resume_turn,
+        "compact_continuation_fast_path_applicable": compact_fast_path_applicable,
+        "compact_continuation_fast_path_passed": compact_fast_path_passed,
         "verification_count": len(verification_keys),
         "repeated_verification_count": repeated_verifications,
         "route_deviation_count": len(set(route_deviations)),
         "route_deviation_events": sorted(set(route_deviations)),
+        "message_route_deviation_count": len(message_route_deviations),
+        "message_route_deviations": message_route_deviations,
+        "unnecessary_plan_refresh_count": len(unnecessary_plan_refreshes),
+        "duplicate_reminder_revision_count": len(duplicate_reminder_revisions),
+        "missing_return_anchor_count": len(missing_return_anchors),
+        "wrong_mainline_return_count": len(wrong_mainline_returns),
+        "stale_contract_action_count": len(stale_contract_actions),
+        "recovery_route_deviation_count": len(recovery_route_deviations),
+        "recovery_route_deviations": recovery_route_deviations,
+        "post_compaction_full_skill_reload_count": post_compaction_full_skill_reload_count,
         "idle_recovery_count": len(idle_cycles),
         "idle_recovery_ids": idle_cycles,
         "authoritative_runtime_leak_count": len(authoritative_runtime_leaks),
@@ -276,11 +661,14 @@ def evaluate_trace(trace: dict[str, Any], inherited: dict[str, Any] | None = Non
         "discriminating_observation_count": discriminating_count,
         "invalid_observation_count": observation_counts["INVALID"],
         "inconclusive_observation_count": observation_counts["INCONCLUSIVE"],
+        "scope_invalid_observation_count": observation_counts["SCOPE_INVALID"],
         "solution_change_count": solution_change_count,
         "solution_change_without_discriminating_evidence_count": len(solution_without_evidence),
         "solution_change_without_discriminating_evidence_events": solution_without_evidence,
         "invalid_observation_used_as_evidence_count": len(invalid_observation_used),
         "invalid_observation_used_as_evidence_events": invalid_observation_used,
+        "scope_invalid_observation_used_as_evidence_count": len(scope_invalid_observation_used),
+        "scope_invalid_observation_used_as_evidence_events": scope_invalid_observation_used,
         "repeated_nondiscriminating_observation_count": len(repeated_nondiscriminating),
         "repeated_nondiscriminating_observation_events": repeated_nondiscriminating,
         "observation_repair_budget_exceeded_count": len(observation_repair_budget_exceeded),
@@ -303,10 +691,25 @@ def evaluate_document(document: Any) -> dict[str, Any]:
         key: document[key]
         for key in (
             "expected_action_id",
+            "pre_compaction_next_action_id",
+            "previous_productive_action_id",
+            "suppressed_action_ids",
+            "instruction_revision_at_snapshot",
+            "post_compaction_instruction_revision",
+            "instruction_changed",
+            "directive_revision_at_snapshot",
+            "post_compaction_directive_revision",
+            "directive_changed",
+            "conversation_cursor_at_snapshot",
+            "post_compaction_conversation_cursor",
             "source_fingerprint",
             "required_constraint_ids",
             "required_evidence_ids",
             "requires_discriminating_evidence",
+            "recovery_type",
+            "resume_turn",
+            "identity_match",
+            "matching_audit_number",
         )
         if key in document
     }

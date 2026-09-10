@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Orchestration"
+  short_description: "Orchestrate and verify bounded multi-agent work"
+  default_prompt: "Use $agent-orchestration to choose a useful route, preserve the accepted goal and constraints, and coordinate bounded assignments through current acceptance and integration."

@@ -1,11 +1,11 @@
 ---
 name: jetlinks-capture
-description: 沉淀 JetLinks 开发过程中稳定、跨任务可复用的知识。适用于任务完成后判断结论是否应原位更新现有权威文档、项目规范、knowledge、playbook、提示词或 skill，并在用户确认后落档；不用于把单次任务流水、阶段总结或测试证据固化为仓库文档。若已成熟到可抽成通用 skill，则继续询问是否并入官方技能仓库 PR。
+description: 维护跨任务仍有效的 JetLinks 知识、规范、playbook、提示词或 skill。适用于任务后发现稳定可复用结论、需要更新现有权威来源或上游技能包；单次进度、调试流水和测试输出不属于知识沉淀。
 ---
 
 # JetLinks Capture
 
-Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
+Use [`references/capture-workflow.md`](references/capture-workflow.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
 
 ## Workflow
 
@@ -15,7 +15,7 @@ Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
 4. Present the recommendation first: whether capture is needed, why, the form/path, and the concise summary.
 5. Only write the formal capture after the user confirms, unless the user already asked for direct generation.
 6. If the knowledge is stable across tasks, recommend updating the related skill or prompt.
-7. If the result is generic enough to become a reusable JetLinks skill, ask whether to merge it into `jetlinks-develop-skills` and prepare a PR for `https://github.com/jetlinks/jetlinks-develop-skills`.
+7. If the result is generic enough to become a reusable JetLinks skill, reuse any explicit authorization to update or publish `jetlinks-develop-skills`; otherwise ask before preparing an upstream PR for `https://github.com/jetlinks/jetlinks-develop-skills`.
 
 ## Required Constraints
 
@@ -32,6 +32,8 @@ Read [`references/capture-workflow.md`](references/capture-workflow.md) first.
 - Always separate verified project facts from temporary assumptions.
 
 ## Response Shape
+
+Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
 
 1. Whether capture is recommended
 2. Why it is or is not worth capturing

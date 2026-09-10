@@ -20,7 +20,7 @@
    - 历史取舍只有在理解当前决策仍必需时才保留；ADR 的状态和替代关系遵循仓库既有 ADR 规范，但不记录执行流水。
 
 3. **待确认设计和实时计划先进入任务运行态**
-   - 设计尚未被用户接受时，写入 Trellis task artifact；无 Trellis 时写入经 Git 忽略验证的单一运行态文件，不先修改权威 docs。
+   - 设计尚未被用户接受时，写入宿主已有 task / runtime store 或 Trellis task artifact；仅在 VCS 与 ignore 校验可用时使用经验证的单一 ignored 文件。无安全载体时保留在 active task context 并准备 portable capsule，不创建 docs 或修改 ignore 规则。
    - 实时执行顺序、checkbox、扫描记录、调试尝试、失败日志、临时下一步、阶段总结和会话恢复信息永不进入权威文档。
    - 计划是当前状态投影，不是历史账本：阶段切换时原位改写并压缩，移除已失效步骤和假设，不逐轮追加完成记录。
    - 当前计划只保留任务契约引用、当前阶段、一个有效工作假设、尚未完成的阶段及其验收信号、唯一下一步和一个阻塞区块。已完成 checkbox 不保留也不汇总计数；最近已验证阶段只在 Recovery Capsule 的 `Checkpoint.Validated` 中保留一个 commit / evidence 指针。
@@ -40,20 +40,21 @@
 | 制品 | 主要内容 | 默认落点 | 更新方式 | 任务结束 |
 | --- | --- | --- | --- | --- |
 | 权威设计 | 已接受需求、当前契约、架构 / API / 模块设计、长期风险 | 既有 `docs/`、ADR、API / 模块文档 | 原位替换并删除失效描述 | 持续维护 |
-| 任务契约 | 本次目标、范围、非目标、待确认方案、验收标准 | Trellis task；否则本地忽略运行态文件 | 保持当前版本，不写执行流水 | 按工作流归档或清理 |
-| 实时执行状态 | 当前阶段、步骤、下一步、假设、失败签名、阻塞、恢复胶囊 | Trellis 的非版本化 runtime / checkpoint；否则单一本地忽略文件 | 原位压缩；需要审计时由工作流追加 | 归档、截断或删除 |
-| 调研证据 | 来源、关键事实、区分假设的结果 | Trellis research；否则同一运行态文件 | 保留决策所需最小证据 | 只提升稳定结论 |
+| 任务契约 | 本次目标、范围、非目标、待确认方案、验收标准 | 已有宿主 task / Trellis；其次已验证忽略位置；无安全载体时 active context | 保持当前版本，不写执行流水 | 按工作流归档或清理 |
+| 实时执行状态 | 当前阶段、步骤、下一步、假设、失败签名、阻塞、恢复胶囊 | 已有 runtime / checkpoint；其次已验证忽略位置；无安全载体时 active context | 原位压缩；需要审计时由工作流追加 | 归档、截断或删除 |
+| 调研证据 | 来源、关键事实、区分假设的结果 | 已有 research / runtime；无安全载体时 active context | 保留决策所需最小证据 | 只提升稳定结论 |
 | 测试证据 | 命令、passed / failed / skipped、覆盖率、CI / 性能结果 | PR / CI | 结果导向 | 随交付保留 |
 | 稳定知识 | 跨任务规则、操作契约、通用技能 | 既有规范、`.trellis/spec/`、playbook 或 skill | 更新 canonical 来源 | 持续维护 |
 
 ## 运行态选择顺序
 
-1. 工作区有 `.trellis/`：按 [`trellis-integration-rules.md`](trellis-integration-rules.md) 使用当前 task / research；实时计划与 Recovery Capsule 使用本地 workflow 提供的非版本化 runtime / checkpoint。若没有这种载体，使用一个 Git-ignored sidecar，不把含 commit hash 的胶囊写入受跟踪 task 文件。
-2. 没有 Trellis，但仓库已有 issue / task / agent runtime 机制或已忽略的本地目录：沿用它，不创建平行体系。
-3. 都没有：为当前任务使用**一个**仓库本地运行态文件；优先放入已有忽略位置。若没有合适位置，可选择 `.agent-runtime/<task>/state.md` 作为兜底，并用 `git rev-parse --git-path info/exclude` 找到仓库本地 exclude，登记最小忽略规则。
-4. 写入前后都用 `git check-ignore -v <path>` 验证确实不会进入版本控制。不要默认修改共享 `.gitignore`，也不要仅凭目录名假设它已被忽略。
+1. 使用宿主或项目已有且适用于当前任务的 task / runtime store；Trellis 存在时按 [集成规则](trellis-integration-rules.md) 发现其当前载体与跟踪策略，不猜固定目录。
+2. 确实需要持久化且没有上述载体时，使用已有可写、经 `git check-ignore -v` 或等价能力证明不入版本控制的位置。只维护一个有界当前状态，不把胶囊写入受跟踪的任务文档。
+3. 没有安全持久载体、非 Git 或只读环境：保留有界 active task context，交接 / 压缩前输出可携带的恢复胶囊。继续已授权工作，不为运行态创建目录、修改 `.gitignore` / `info/exclude` 或建立平行机制。
 
-无 Trellis 的单一运行态文件保持有界，推荐只保留：任务契约、当前阶段、当前计划、有效假设与证据、最近一次失败签名、下一步、阻塞和 [`context-recovery-rules.md`](context-recovery-rules.md) 定义的 Recovery Capsule。阶段完成后重写这些区块，不追加逐轮总结。任务完成且不再需要恢复时，删除该运行态文件和空目录；若为它向仓库本地 `info/exclude` 增加了任务专属规则，同时删除该精确规则，避免本地配置持续膨胀。不要清理由已有工作流或共享忽略目录拥有的规则。
+用户或既有工作流已明确授权配置运行态时，可按该授权建立载体；普通实现、审查或恢复请求不隐含此类配置变更。清理只覆盖本任务创建且不再需要的制品；不删除其他工作流拥有的文件或忽略规则。
+
+状态内容和刷新时机由 [task-continuity](../../task-continuity/SKILL.md) 定义，JetLinks 映射见 [恢复适配](context-recovery-rules.md)。本文件只决定落点，不另建恢复字段与审计门槛。
 
 ## 权威文档写入门禁
 
@@ -74,7 +75,7 @@
 
 ## 常见判断
 
-- **确认后的设计发生变化**：先更新任务契约并重新确认；确认后原位更新权威设计。
+- **已接受设计发生变化**：更新受影响契约；按 [授权规则](backend-design-test-driven-rules.md) 判断是否有新未决选择，再原位同步权威设计。
 - **实现路径变化但契约不变**：只更新运行态，不动 docs。
 - **测试失败或根因假设被否定**：更新运行态的证据和下一步，不在设计稿追加复盘。
 - **任务完成**：PR / CI 保存验证证据；将必要的稳定结论提升到权威来源；不要追加完成总结。

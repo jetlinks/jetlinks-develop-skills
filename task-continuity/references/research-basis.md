@@ -4,6 +4,8 @@
 
 - [OpenAI：Build skills](https://learn.chatgpt.com/docs/build-skills) 强调 focused skill、渐进披露、命令式输入 / 输出和真实触发测试，支持把任务连续性与领域求解、代码导航拆成独立能力。
 - [OpenAI：Hooks](https://learn.chatgpt.com/docs/hooks) 当前提供 `PreCompact`、`PostCompact`、`SessionStart`、`PreToolUse`、`PostToolUse`、`Stop` 等事件；根会话压缩后会在下一次模型请求前触发 `SessionStart(source=compact)`，自动压缩发生在 turn 中间时也会把附加上下文交给紧接着的 continuation。官方同时说明多个 hooks / plugins 的上下文会累积并可能降低模型表现，tool hooks 也存在未覆盖路径。这支持在宿主可用时只注入有大小上限的恢复索引和精确 `first_allowed_action`，而不反复注入技能、任务和系统图全文；hooks 仍只作为需信任审查的可选 guardrail，不能替代通用语义门禁。
+- [context-mode](https://github.com/mksglu/context-mode) 已实现 Codex `PreCompact` / `SessionStart`、本地 SQLite 事件存储、FTS5 检索和压缩恢复快照，说明数据库、全文索引、hook installer 与按需检索应优先复用成熟后端而不是在技能仓库重造。其事件型快照不包含复合 source identity、reference cursor、evidence freshness 或执行级 `Next`，且会注入额外 routing / search 指令，因此这里只把它作为可选 host backend，不用它替代连续性 gate。
+- [MemPalace](https://github.com/MemPalace/mempalace) 提供 Codex 压缩 hooks、本地语义检索和跨会话记忆，支持把长期语义记忆视为独立可选层；其 transcript / embedding 路径不能证明当前 source、契约和验收证据仍匹配，不能直接授权任务续跑。
 - [Context as a Tool / Cat](https://arxiv.org/abs/2512.22087) 将长程软件代理上下文分为稳定任务语义、可演化长期记忆和近期高保真交互，并在阶段边界主动折叠历史；其 SWE-bench Verified 实验支持“稳定契约 + 可演化决策状态 + 近期关键观察”的模型主视图，而不是 append-only 历史或固定阈值通用摘要。
 - [ACON](https://arxiv.org/abs/2510.00615) 用完整上下文成功而压缩上下文失败的成对轨迹优化压缩指南，指出长任务摘要必须保留因果关系、环境状态、前置条件和未来决策线索。这支持用 continuation 成功率和遗漏约束评测恢复胶囊，而不只检查长度或字段存在。
 - [HORIZON](https://arxiv.org/abs/2604.11978) 在跨领域长程轨迹中区分 planning error、history error accumulation、catastrophic forgetting 与 memory limitation，并指出长程难度不能只按动作数定义。这支持保存长期约束、最新转折证据和可执行 next，同时对恢复后偏航做轨迹级诊断。
@@ -18,4 +20,4 @@
 
 维护本技能时使用 [`evaluation-cases.md`](evaluation-cases.md) 前向验证：除无文件 / 无 VCS、非 Git identity、计划收敛、阶段 checkpoint、单一 review 和证据复用外，必须覆盖验证改变路线后立即压缩、同一恢复切片连续 3–5 次压缩、空泛 `Next` 拒绝进入 `READY`、规则 revision 未变化时复用已提取义务、同 HEAD 下 untracked 内容漂移、部分指纹下实施、陈旧胶囊阻断生产修改、外部引用 revision 未变化时不完整重读、revision 变化时只取增量，以及运行态不能提升到权威文档。
 
-上述来源支撑的是分层状态、主动阶段压缩、identity-bound replay、结果复用和轨迹评测原则。`Contract / Checkpoint / DecisionState / Resume`、`READY / SNAPSHOT_REQUIRED / RESUME_AUDIT`、默认 3–7 个 anchors，以及第二 / 第三次恢复止空转门槛是基于这些原则形成的工程协议，必须通过真实宿主轨迹调优，不能表述成论文直接规定的字段或常数。
+上述来源支撑的是分层状态、主动阶段压缩、identity-bound replay、结果复用和轨迹评测原则。ACON 对未来决策线索的要求、HORIZON 的规划 / 历史错误分型和 Diagnosis Before Recovery 的选择性干预，也支持在压缩前保留当前 semantic decision、停止后的 evidence budget 与阶段准入，而不是恢复后重新做产品选择或扩大检索。`Contract / Checkpoint / DecisionState / Resume`、`READY / SNAPSHOT_REQUIRED / RESUME_AUDIT`、`previous_productive_action_id / pre_compaction_next_action_id / post_compaction_first_productive_action_id` 动作链、`SemanticFork / EvidenceBudget` 字段、默认 3–7 个 anchors，以及第二 / 第三次恢复止空转门槛是基于这些原则和真实任务轨迹形成的工程协议，必须继续通过宿主轨迹调优，不能表述成论文直接规定的字段或常数。

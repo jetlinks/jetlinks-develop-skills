@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import filecmp
 import json
 import re
@@ -13,106 +14,54 @@ from pathlib import Path
 
 NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
-GENERIC_SKILLS = {"systematic-solving", "task-continuity", "code-navigation"}
-REQUIRED_SKILL_CONTRACTS = {
-    "task-continuity": {
-        "SKILL.md": (
-            "READY",
-            "SNAPSHOT_REQUIRED",
-            "RESUME_AUDIT",
-            "Source Snapshot",
-            "Contract",
-            "Checkpoint",
-            "DecisionState",
-            "Resume",
-            "consecutive_matching_audits",
-            "first_allowed_action",
-        ),
-        "references/task-state-and-recovery-rules.md": (
-            "Continuity Metadata",
-            "LoadedRules",
-            "audit_fingerprint",
-            "Checkpoint.Validated",
-            "Checkpoint.In-flight",
-            "RESUME_AUDIT -> READY",
-            "生产修改",
-            "区分检查",
-            "真实阻塞",
-        ),
-        "references/evaluation-cases.md": (
-            "验证失败后立即压缩",
-            "同阶段连续两次压缩",
-            "同一恢复切片连续五次压缩",
-            "空泛 Next",
-            "规则 revision 未变化",
-            "Continuation 对比协议",
-            "Full-context oracle",
-            "Ablation continuation",
-            "陈旧胶囊下修改",
-            "用户禁止提交",
-            "无关代码图注入",
-            "scripts/evaluate_continuity_trace.py",
-        ),
-        "scripts/validate_continuity_state.py": (
-            "def validate_state",
-            "suggested_gate",
-            "SNAPSHOT_REQUIRED",
-        ),
-        "scripts/evaluate_continuity_trace.py": (
-            "def evaluate_trace",
-            "repeated_read_count",
-            "irrelevant_graph_injection_count",
-        ),
+GENERIC_SKILLS = {"systematic-solving", "task-continuity", "code-navigation", "agent-orchestration"}
+# Resource paths and public entry points are package interfaces. Natural-language
+# phrasing and individual test method names are deliberately not interfaces:
+# prose may be reworded or progressively disclosed without weakening behavior.
+REQUIRED_SKILL_RESOURCES = {
+    "agent-orchestration": (
+        "references/orchestration-and-routing-rules.md",
+        "references/evaluation-cases.md",
+        "references/codex-adapter.md",
+    ),
+    "task-continuity": (
+        "references/task-state-and-recovery-rules.md",
+        "references/evaluation-cases.md",
+    ),
+    "systematic-solving": (
+        "references/systematic-solving-rules.md",
+        "references/evaluation-cases.md",
+    ),
+    "code-navigation": ("references/navigation-and-evidence-rules.md",),
+    "jetlinks-router": (
+        "references/ai-prompt.md",
+        "references/context-recovery-rules.md",
+        "references/evaluation-cases.md",
+    ),
+}
+
+# Check Python syntax and public callables without executing arbitrary repository
+# code. Behavioral correctness is assessed by the coherent-stage test suites and
+# real task evaluations, not by searching documentation for contract vocabulary.
+REQUIRED_PYTHON_CONTRACTS = {
+    "agent-orchestration": {
+        "scripts/evaluate_orchestration_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/test_orchestration_tools.py": {"test_suite": True},
     },
     "systematic-solving": {
-        "SKILL.md": (
-            "stale consumer / oracle",
-            "invalid fixture / input",
-            "mechanical assembly defect",
-        ),
-        "references/evaluation-cases.md": (
-            "停滞后再次实施",
-            "混合失败批次",
-        ),
+        "scripts/evaluate_systematic_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/test_systematic_tools.py": {"test_suite": True},
     },
-    "code-navigation": {
-        "SKILL.md": (
-            "adaptive local structure view",
-            "eager repository-wide graph",
-        ),
-        "references/navigation-and-evidence-rules.md": (
-            "自适应局部图策略",
-            "任务相关性门禁",
-            "decision_question",
-            "target_languages",
-            "source fingerprint",
-            "增量刷新受影响节点",
-        ),
+    "task-continuity": {
+        "scripts/validate_continuity_state.py": {"functions": ("validate_state",)},
+        "scripts/evaluate_continuity_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/prepare_resume_context.py": {"functions": ("project_context",)},
+        "scripts/test_continuity_tools.py": {"test_suite": True},
+        "scripts/test_codex_execution_adapter.py": {"test_suite": True},
     },
     "jetlinks-router": {
-        "SKILL.md": (
-            "Before ordinary classification",
-            "first_allowed_action",
-            "Graph size is not evidence of relevance",
-        ),
-        "references/ai-prompt.md": (
-            "continuation fast path",
-            "decision question",
-            "目标语言",
-        ),
-        "references/context-recovery-rules.md": (
-            "validate_continuity_state.py",
-            "suggested_gate",
-            "普通 router 分类",
-        ),
-    },
-}
-FORBIDDEN_SKILL_CONTRACTS = {
-    "task-continuity": {
-        "references/task-state-and-recovery-rules.md": (
-            "Resume.audit_fingerprint",
-            "维护两个有界逻辑视图",
-        ),
+        "scripts/evaluate_route_trace.py": {"functions": ("evaluate_trace",)},
+        "scripts/test_router_tools.py": {"test_suite": True},
     },
 }
 AUTHOR_LOCAL_PATTERNS = {
@@ -200,38 +149,83 @@ def validate_generic_portability(skill_root: Path) -> list[str]:
     return errors
 
 
-def validate_required_contracts(skill_root: Path) -> list[str]:
-    """Keep cross-file behavioral contracts from silently regressing."""
-    required_files = REQUIRED_SKILL_CONTRACTS.get(skill_root.name)
-    if required_files is None:
-        return []
+def validate_required_resources(skill_root: Path) -> list[str]:
+    """Require documented public resources without prescribing their wording."""
     errors: list[str] = []
-    for relative, markers in required_files.items():
+    for relative in REQUIRED_SKILL_RESOURCES.get(skill_root.name, ()):
         path = skill_root / relative
         if not path.is_file():
-            errors.append(f"{path}: required behavioral contract file missing")
-            continue
-        text = path.read_text(encoding="utf-8")
-        for marker in markers:
-            if marker not in text:
-                errors.append(f"{path}: missing required behavioral contract marker: {marker}")
+            errors.append(f"{path}: required skill resource missing")
+        elif not path.read_text(encoding="utf-8").strip():
+            errors.append(f"{path}: required skill resource is empty")
     return errors
 
 
-def validate_forbidden_contracts(skill_root: Path) -> list[str]:
-    """Reject superseded contract shapes that would create parallel state schemas."""
-    forbidden_files = FORBIDDEN_SKILL_CONTRACTS.get(skill_root.name)
-    if forbidden_files is None:
+def _test_methods(tree: ast.AST) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
+    methods: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    for node in getattr(tree, "body", []):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        is_test_case = any(
+            (isinstance(base, ast.Name) and base.id == "TestCase")
+            or (isinstance(base, ast.Attribute) and base.attr == "TestCase")
+            for base in node.bases
+        )
+        if not is_test_case:
+            continue
+        for item in node.body:
+            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name.startswith("test_"):
+                methods[item.name] = item
+    return methods
+
+
+def validate_python_contracts(skill_root: Path) -> list[str]:
+    """Validate executable contract structure without executing repository code."""
+
+    required_files = REQUIRED_PYTHON_CONTRACTS.get(skill_root.name)
+    if required_files is None:
         return []
     errors: list[str] = []
-    for relative, markers in forbidden_files.items():
+    for relative, contract in required_files.items():
         path = skill_root / relative
         if not path.is_file():
+            errors.append(f"{path}: required executable contract file missing")
             continue
-        text = path.read_text(encoding="utf-8")
-        for marker in markers:
-            if marker in text:
-                errors.append(f"{path}: contains superseded behavioral contract marker: {marker}")
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        except (OSError, SyntaxError) as error:
+            errors.append(f"{path}: invalid Python executable contract: {error}")
+            continue
+
+        functions = {
+            node.name: node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        for name in contract.get("functions", ()):
+            function = functions.get(name)
+            if function is None:
+                errors.append(f"{path}: missing executable contract function {name}")
+            elif not (
+                function.args.posonlyargs
+                or function.args.args
+                or function.args.kwonlyargs
+                or function.args.vararg
+                or function.args.kwarg
+            ):
+                errors.append(f"{path}: public contract function {name} must accept input")
+
+        if contract.get("test_suite"):
+            methods = _test_methods(tree)
+            has_assertion = any(
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr.startswith("assert")
+                for method in methods.values()
+                for node in ast.walk(method)
+            )
+            if not methods or not has_assertion:
+                errors.append(f"{path}: test suite must contain an executable assertion")
     return errors
 
 
@@ -260,11 +254,133 @@ def validate_mirror(skill_root: Path, mirror_root: Path) -> list[str]:
     return errors
 
 
+def validate_codex_adapter(repository_root: Path, *, required: bool = False) -> list[str]:
+    """Validate the optional project adapter when agent-orchestration is present."""
+    if not (repository_root / "agent-orchestration" / "SKILL.md").is_file():
+        return []
+
+    errors: list[str] = []
+    config_path = repository_root / ".codex" / "config.toml"
+    if not config_path.is_file():
+        # The skill is host-neutral.  Validate Codex files only when a project
+        # deliberately installs that optional adapter.
+        return [f"{config_path}: Codex adapter config missing"] if required else []
+    try:
+        config_text = config_path.read_text(encoding="utf-8")
+    except OSError as error:
+        return [f"{config_path}: cannot read config: {error}"]
+    features_match = re.search(r"(?ms)^\[features\]\s*$\n(.*?)(?=^\[|\Z)", config_text)
+    if features_match is None:
+        errors.append(f"{config_path}: missing [features] table")
+    else:
+        multi_agent = re.search(
+            r"(?m)^multi_agent\s*=\s*(true|false)\s*$",
+            features_match.group(1),
+        )
+        if multi_agent is None or multi_agent.group(1) != "true":
+            errors.append(f"{config_path}: primary features.multi_agent must be true")
+
+    agents_match = re.search(r"(?ms)^\[agents\]\s*$\n(.*?)(?=^\[|\Z)", config_text)
+    if agents_match is None:
+        errors.append(f"{config_path}: missing [agents] table")
+    else:
+        agents_text = agents_match.group(1)
+        current_max = re.search(r"(?m)^max_concurrent_threads_per_session\s*=\s*([0-9]+)\s*$", agents_text)
+        legacy_max = re.search(r"(?m)^max_threads\s*=\s*([0-9]+)\s*$", agents_text)
+        if current_max is not None and legacy_max is not None:
+            errors.append(f"{config_path}: use only one concurrency field")
+        max_match = current_max or legacy_max
+        if max_match is None or int(max_match.group(1)) < 1:
+            errors.append(
+                f"{config_path}: max_concurrent_threads_per_session or max_threads must be a positive integer"
+            )
+        max_depth = re.search(r"(?m)^max_depth\s*=\s*([0-9]+)\s*$", agents_text)
+        if max_depth is None or int(max_depth.group(1)) != 1:
+            errors.append(f"{config_path}: agents.max_depth must be exactly 1 for the flat adapter")
+        for field in ("default_subagent_model", "default_subagent_reasoning_effort"):
+            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]*)"\s*$', agents_text)
+            if value is not None and not value.group(1).strip():
+                errors.append(f"{config_path}: agents.{field} must be non-empty when present")
+
+    required_profiles = {
+        "bounded-explorer.toml": {"name": "bounded_explorer", "read_only": True},
+        "mechanical-worker.toml": {
+            "name": "mechanical_worker",
+            "model": "gpt-5.6-luna",
+            "reasoning": "medium",
+            "sandbox": "workspace-write",
+        },
+        "bounded-worker.toml": {"name": "bounded_worker", "read_only": False},
+        "stage-reviewer.toml": {"name": "stage_reviewer", "read_only": True},
+    }
+    seen_names: set[str] = set()
+    for filename, requirements in required_profiles.items():
+        expected_name = requirements["name"]
+        read_only = requirements.get("read_only", False)
+        path = repository_root / ".codex" / "agents" / filename
+        if not path.is_file():
+            errors.append(f"{path}: required Codex Agent profile missing")
+            continue
+        try:
+            profile_text = path.read_text(encoding="utf-8")
+        except OSError as error:
+            errors.append(f"{path}: cannot read profile: {error}")
+            continue
+        profile: dict[str, str] = {}
+        for field in ("name", "description"):
+            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+            if value is None or not value.group(1).strip():
+                errors.append(f"{path}: {field} must be a non-empty string")
+            else:
+                profile[field] = value.group(1)
+        instructions_match = re.search(
+            r'(?ms)^developer_instructions\s*=\s*"""\s*\n(.*?)^"""\s*$',
+            profile_text,
+        ) or re.search(r'(?m)^developer_instructions\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+        if instructions_match is None or not instructions_match.group(1).strip():
+            errors.append(f"{path}: developer_instructions must be a non-empty string")
+            instructions = ""
+        else:
+            instructions = instructions_match.group(1)
+            profile["developer_instructions"] = instructions
+        name = profile.get("name")
+        if name != expected_name:
+            errors.append(f"{path}: name must be {expected_name!r}")
+        if isinstance(name, str) and name in seen_names:
+            errors.append(f"{path}: duplicate Codex Agent name {name!r}")
+        if isinstance(name, str):
+            seen_names.add(name)
+        sandbox_match = re.search(r'(?m)^sandbox_mode\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+        sandbox_mode = sandbox_match.group(1) if sandbox_match else None
+        if read_only and sandbox_mode != "read-only":
+            errors.append(f"{path}: read-only profile must set sandbox_mode = 'read-only'")
+        expected_sandbox = requirements.get("sandbox")
+        if expected_sandbox is not None and sandbox_mode != expected_sandbox:
+            errors.append(f"{path}: sandbox_mode must be {expected_sandbox!r}")
+        for field, expected_value in (("model", requirements.get("model")), ("model_reasoning_effort", requirements.get("reasoning"))):
+            if expected_value is None:
+                continue
+            value = re.search(rf'(?m)^{field}\s*=\s*"([^"\r\n]+)"\s*$', profile_text)
+            actual_value = value.group(1) if value is not None else None
+            if actual_value != expected_value:
+                errors.append(f"{path}: {field} must be {expected_value!r}")
+        if "spawn further agents" not in instructions:
+            errors.append(f"{path}: profile must prohibit recursive Agent fan-out")
+        if "hard upper bounds" not in instructions or "escalation request" not in instructions:
+            errors.append(f"{path}: profile must treat capsule authority as bounded and escalate scope needs")
+    return errors
+
+
 def discover_skills(repository_root: Path) -> list[Path]:
     return sorted(path.parent for path in repository_root.glob("*/SKILL.md"))
 
 
-def validate_repository(repository_root: Path, mirror_root: Path | None = None) -> dict[str, object]:
+def validate_repository(
+    repository_root: Path,
+    mirror_root: Path | None = None,
+    *,
+    codex_adapter: bool | None = None,
+) -> dict[str, object]:
     skills = discover_skills(repository_root)
     errors: list[str] = []
     names: set[str] = set()
@@ -283,13 +399,20 @@ def validate_repository(repository_root: Path, mirror_root: Path | None = None) 
         for markdown in sorted(skill_root.rglob("*.md")):
             errors.extend(validate_links(markdown, repository_root))
         errors.extend(validate_generic_portability(skill_root))
-        errors.extend(validate_required_contracts(skill_root))
-        errors.extend(validate_forbidden_contracts(skill_root))
+        errors.extend(validate_required_resources(skill_root))
+        errors.extend(validate_python_contracts(skill_root))
         if mirror_root is not None:
             errors.extend(validate_mirror(skill_root, mirror_root))
 
     if not skills:
         errors.append(f"{repository_root}: no root-level skill packages found")
+    should_validate_codex_adapter = (
+        (repository_root / ".codex").exists()
+        if codex_adapter is None
+        else codex_adapter
+    )
+    if should_validate_codex_adapter:
+        errors.extend(validate_codex_adapter(repository_root, required=True))
     return {
         "repository": str(repository_root),
         "skill_count": len(skills),
@@ -303,10 +426,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repository", nargs="?", default=".", type=Path)
     parser.add_argument("--mirror-root", type=Path, help="compare every skill with an installed mirror")
+    parser.add_argument(
+        "--validate-codex-adapter",
+        action="store_true",
+        help="require and validate the optional project-scoped Codex adapter",
+    )
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     args = parser.parse_args()
     mirror_root = args.mirror_root.resolve() if args.mirror_root else None
-    result = validate_repository(args.repository.resolve(), mirror_root)
+    result = validate_repository(
+        args.repository.resolve(),
+        mirror_root,
+        codex_adapter=True if args.validate_codex_adapter else None,
+    )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif result["errors"]:

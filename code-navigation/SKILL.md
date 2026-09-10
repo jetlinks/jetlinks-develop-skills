@@ -1,46 +1,25 @@
 ---
 name: code-navigation
-description: 在任意语言、构建系统和代码仓库中进行环境无关的代码结构检索、符号导航、依赖与调用关系分析、执行路径追踪和变更影响定位。适用于需要查找定义 / 引用 / 实现、识别组件所有权、梳理调用方与消费者、建立最小系统图、根据变更推荐候选测试，或在上下文恢复时从精确代码锚点继续工作的场景；先发现当前环境实际提供的检索能力并按证据强度选择，不要求特定版本控制、语言服务器、索引器、数据库、MCP 或本地安装工具。
+description: 从精确文件或符号查找定义、调用方、所有者、执行路径和变更影响。按证据逐步扩大检索，适配当前语言和工具；已有明确锚点的普通查询不需要任务恢复或持久索引。
 ---
 
 # Code Navigation
 
-Read [`references/navigation-and-evidence-rules.md`](references/navigation-and-evidence-rules.md) first. Read [`references/tooling-options.md`](references/tooling-options.md) only when comparing, installing, evaluating, or replacing a retrieval backend.
+Start with the user's decision question and existing anchor. A new task such as “find callers of this method” is a bounded query, not a recovery event; do not load continuity, construct a capsule or fingerprint the whole workspace for it.
 
-## Workflow
+## Retrieval
 
-1. State the decision question before searching: literal fact, ownership, definition / reference / implementation, hierarchy, build dependency, caller / callee, framework or domain flow, change impact, test impact, or conceptual similarity.
-2. Discover the current workspace facts and available retrieval capabilities. Reuse valid user-provided paths, symbols, changed items, task anchors, indexes, and source fingerprints. Do not assume a version-control system, language, build tool, graph backend, or installed command.
-3. Select the cheapest available capability that can provide sufficient evidence:
-   - Exact path, literal, configuration, and source-history lookup for known facts.
-   - Build or package metadata for component dependencies and ownership.
-   - Compiler, language service, or semantic index for definitions, references, implementations, hierarchy, and type-aware navigation.
-   - Syntax extractors or persisted structure indexes for bounded cross-file relationships and impact candidates.
-   - Framework / domain extractors for registrations, messages, routes, resources, and other relations generic call graphs cannot resolve.
-   - Program analysis or runtime evidence only when cheaper static evidence cannot answer the question.
-4. Start from one explicit anchor and expand the minimum next relation needed for the decision. Bound nodes, paths, files, depth, output size, and uncertainty; expand again only when the result changes the next action.
-5. Prefer an adaptive local structure view over an eager repository-wide graph: exact text / path, then resolved symbol relations, then high-confidence local callers / callees / hierarchy / registrations, and only then deeper static or runtime paths. Before reusing or injecting a graph, require a decision question, task anchor, matching source fingerprint, target-language coverage, and overlapping task scope. Reuse a fingerprint-matched view across resume and refresh only affected regions when possible.
-6. Confirm high-impact conclusions against the strongest available source: current code, build / package metadata, compiler semantics, tests, or scoped runtime evidence. Treat stale, partial, syntactic, heuristic, and similarity-based results as candidates.
-7. Return a minimal map with stable locators, relation kinds, evidence sources, source fingerprints, confidence, affected consumers, and candidate tests. Pass only these anchors to the active task, domain, recovery, or delivery workflow.
+1. Reuse supplied files, symbols, changed items and still-valid source anchors. Discover only the retrieval capability needed now: exact search for literals, build manifests for ownership, semantic navigation for definitions/callers, or a bounded runtime observation for behavior static evidence cannot decide.
+2. Expand from the anchor only while a relation can change the answer. Distinguish imports, build dependencies, calls, possible dynamic targets and event/registration flows. Treat syntactic, inferred and similarity matches as candidates, not proof of resolved behavior.
+3. Check high-impact conclusions against current source, build facts or scoped runtime evidence. Preserve uncertainty for reflection, dynamic dispatch, injection and generated code. Cover the smallest complete producer–boundary–consumer path for a cross-boundary defect.
+4. Before reusing a graph, require a relevant decision question, source identity, language coverage, task scope and needed relation kinds. Refresh only invalidated anchors and necessary incoming/outgoing relations. Existing graph size is not evidence of relevance, and edits alone do not require an index rebuild.
 
-## Required Constraints
+Use available host tools and degrade to exact lookup when richer capabilities are absent. Do not silently install indexers, create databases, start services or scan the entire repository. Keep generated indexes and runtime evidence outside authoritative docs unless the repository explicitly owns those artifacts.
 
-- Remain environment-neutral. Do not require or silently install a particular search command, VCS, LSP, index format, graph database, hosted service, MCP server, or runtime probe.
-- Do not select a backend because it exists in the skill author's environment. Discover capabilities in the active environment and degrade cleanly when a layer is unavailable.
-- Do not call every relation “dependency”. Distinguish containment, build dependency, import, reference, inheritance, call, possible dynamic target, registration, message / event flow, data access, routing, test, coverage, and historical co-change.
-- Do not use textual or vector similarity as proof of an exact symbol, call, dependency, coverage, or runtime relationship.
-- Do not read an entire repository or graph when exact anchors or a bounded query can answer the next decision.
-- Do not inject or persist dense structure by default. Large call graphs, forward hub edges, similarity neighbors, and repeated annotations must prove decision value against their context and maintenance cost.
-- Do not treat graph size as relevance. Reject a graph whose language, scope, source fingerprint, or anchor does not match the task; start from a one-hop high-confidence local relation instead.
-- Do not stop at the failing file for complex work. Cover the smallest complete producer-boundary-transform-consumer path and the variants relevant to the hypothesis.
-- Preserve uncertainty for dynamic dispatch, dependency injection, proxies, reflection, generated code, runtime registration, and constructed identifiers. Record provenance and confidence and request stronger evidence only when needed.
-- Keep generated indexes, caches, visualizations, and runtime traces outside authoritative source documentation and normal version control unless the active repository explicitly defines another artifact policy.
+## Details only when needed
 
-## Response Shape
+- For multihop ownership, dynamic flows, graph freshness or impact/test selection, read the relevant section of [navigation-and-evidence-rules.md](references/navigation-and-evidence-rules.md).
+- For comparing or configuring a retrieval backend, read [tooling-options.md](references/tooling-options.md).
+- During a real resume, consume identity and anchors already checked by the continuity owner. Do not repeat its audit or replace the saved mainline with a new exploration. New user questions and reminders do not invalidate otherwise current anchors.
 
-1. Retrieval question and starting anchor
-2. Available capabilities and selected evidence layers
-3. Minimal structure or execution path with stable locators
-4. Confirmed relations versus extracted, inferred, runtime-scoped, or ambiguous relations
-5. Impacted consumers and candidate tests
-6. Remaining uncertainty and the cheapest next discriminating query
+Return the answer with stable file/symbol locators and the evidence limits that matter. Produce a graph, capability inventory or candidate-test list only when it helps the current decision; ordinary lookups need no fixed report template.

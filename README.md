@@ -13,6 +13,7 @@ jetlinks-develop-skills/
 │   └── pull_request_template.md
 ├── jetlinks-router/
 ├── systematic-solving/
+├── agent-orchestration/
 ├── task-continuity/
 ├── code-navigation/
 ├── scripts/
@@ -25,7 +26,6 @@ jetlinks-develop-skills/
 ├── jetlinks-boundary/
 ├── jetlinks-events/
 ├── jetlinks-web/
-├── jetlinks-web-style/
 ├── jetlinks-capture/
 └── jetlinks-delivery/
 ```
@@ -44,11 +44,15 @@ jetlinks-develop-skills/
 
 ### `systematic-solving`
 
-用于任意领域复杂、高难度、高不确定性、跨边界或反复失败任务的环境无关系统性求解。它约束智能体先建立可证伪的问题模型和完整执行路径；同一根因假设的一次实现仍未通过验收、问题转移到同类场景或需要继续追加特例 / fallback / mock / retry / 兼容分支时，必须停止编辑、重构假设。批量验证中的失败会先分为生产契约、陈旧 oracle、无效 fixture、机械装配或 unresolved，避免为了整批变绿把测试 / fixture 问题吸收到生产代码。
+用于存在实质因果不确定、未决共享契约风险或无证据反复修补的问题，准入以 [Admission](systematic-solving/SKILL.md#admission) 为准。已明确的机械跨层实现、正常测试替身和已授权 retry 能力直接按领域规则推进；只有在诊断中掩盖未解释失败、替换争议边界或反复执行无法产生新信息的检查，才构成停滞信号。失败先区分生产契约、陈旧 oracle、无效 fixture、机械装配或未决原因；根据新证据决定补齐实现还是修正假设，不因一次失败自动重建理论。
+
+### `agent-orchestration`
+
+用于任意执行环境中的单 Agent / 多 Agent 动态路由、真实委派、能力分层、并行边界、Assignment Capsule、失败升级、Result Packet 集成和阶段验证。默认只有明确质量、关键路径或上下文隔离收益时才委派；一旦当前执行选择非 `SINGLE_OWNER` 且宿主允许，必须真实 dispatch、收集和集成，不能只输出 Agent 角色或提示词。模型档位由判断量、影响面和验收 oracle 的通用 `CapabilityFloor` 决定，不按角色固定。进入委派程序后，主智能体是控制面经理，只负责规划、协调、监督、接受结果和请求宿主级合并 / 阶段验证，不代替 Worker 编写或修复生产代码、测试、文档或审查结论；需要源码改动时重新派发有界 Worker。默认采用扁平拓扑：主智能体是唯一调度者，委派深度 1，叶子 Agent 在宿主支持时硬关闭继续委派，同时只运行 1–2 个切片。一次有效失败后升级或重构任务，不让弱模型通过换提示词反复重试。协议、安全、身份和必需验收可以作为硬门禁，文风、展示和可选 confidence 只作为软指导或离线指标。核心技能不依赖 Codex、具体模型、Trellis、Git 或本地路径。
 
 ### `task-continuity`
 
-用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`，源码指纹、引用 / 规则 revisions 和完整证据 locator 留在机器 Continuity Metadata / Source Snapshot；并用 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 门禁阻止陈旧状态下继续修改。跨压缩拒绝空泛 `Next`，连续匹配恢复时直接进入精确动作而不反复重读；真实 continuation 对比和关键字段消融用于检验压缩是否丢失约束或决策证据。不要求 Trellis、Git、GitHub、本地文件或 hooks。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
+用于任意执行环境中的长任务计划压缩、上下文恢复、运行态与权威文档分流、验证证据复用及阶段性交付。模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`；匹配的压缩续跑最多一个身份批次，并在同一恢复轮直接执行精确 `first_allowed_action`，不得先完整重读技能、线程、工作区、重新确认计划或做 confidence-only 验证。只有 identity 或验收边界失配才定向快照恢复。Codex 宿主可显式启用 execution adapter，以任务 / 运行 / 工作区 / 契约绑定且幂等的机器收据约束阶段验证、Agent 接受和 whole-task 发布；未配置时保持 no-op。环境存在 VCS / review 时，阶段验证后只保留本地 checkpoint，整体完成后才统一 push 并更新一个 task-level review。
 
 ### `code-navigation`
 
@@ -103,7 +107,8 @@ jetlinks-develop-skills/
 推荐按场景直接使用 focused skill，不确定时再走总入口：
 
 - 不确定该用哪个 skill：`$jetlinks-router`
-- 复杂、高难度、跨边界或已开始反复修补：`$systematic-solving` + `$jetlinks-router` 领域扩展 + 对应领域 skill；长任务再加 `$task-continuity`
+- 存在实质因果不确定、未决共享契约或无证据诊断循环：先按 [systematic-solving Admission](systematic-solving/SKILL.md#admission) 判断准入，再按需加入领域扩展与对应 skill；机械跨层不自动升级，长任务状态另由 `$task-continuity` 管理
+- 只想设计或执行多 Agent / 大小模型协作：`$agent-orchestration`；未知根因先加 `$systematic-solving`，长任务再加 `$task-continuity`
 - 只想压缩计划、恢复上下文、复用测试证据或约束阶段 / PR 生命周期：`$task-continuity`
 - 只想检索定义 / 引用 / 调用链、组件依赖、领域流、变更影响或候选测试：`$code-navigation`
 - 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
@@ -117,6 +122,30 @@ jetlinks-develop-skills/
 - 只想处理前端页面改造、能力复用、前端质量约束或在现有设计体系内优化交互：`$jetlinks-web`；若涉及页面壳层、首屏组织或信息架构，由其按内置页面分型规则先建立方案档案
 - 只想判断是否值得沉淀知识：`$jetlinks-capture`
 - 只想整理提交、设计门禁、测试和 PR：`$jetlinks-delivery`
+
+## Codex Multi-Agent Adapter
+
+通用 `$agent-orchestration` 不要求 subagent。仓库同时提供可选的 Codex 项目适配：
+
+- [`.codex/config.toml`](.codex/config.toml) 显式开启主会话的多 Agent 能力，并使用官方仍支持的保守并发别名将项目级 subagent 上限设为 3；模型档位由各 Agent profile 负责。
+- [`.codex/agents/bounded-explorer.toml`](.codex/agents/bounded-explorer.toml) 用于低成本只读证据检索。
+- [`.codex/agents/mechanical-worker.toml`](.codex/agents/mechanical-worker.toml) 用于已冻结契约、验收确定且写集独占的低影响机械修改；首次有效失败后升级，不重试猜测。
+- [`.codex/agents/bounded-worker.toml`](.codex/agents/bounded-worker.toml) 用于契约稳定、写集互斥的有界实现。
+- [`.codex/agents/stage-reviewer.toml`](.codex/agents/stage-reviewer.toml) 用于高影响阶段的只读审查。
+
+四个 profile 都是叶子角色；项目级 `[agents]` 设置 `max_depth = 1`，由宿主硬性阻止孙级 Agent。profile 中的升级约束是 defense in depth，范围不足时必须返回 escalation request，由主会话决定是否创建另一个独立叶子任务。
+
+复杂跨模块任务可以由 `$agent-orchestration` 建立通用 `OrchestrationProgram`：主会话保留需求、问题模型、共享契约、调度、监督、集成、验收和交付，但不亲自承担委派切片的编码、测试、文档或审查工作；有界 workers 只处理互斥叶子切片，需要额外源码改动时由主会话重新派工。它不是“复杂任务一律多 Agent”，也不创建前端 / 后端专用模式；并行写入必须先满足阶段依赖、冻结相关跨切片契约并证明 write set 互斥，否则顺序 handoff。
+
+这些 `.codex/` 文件只配置当前项目；仅安装 skill 不会修改其他项目或个人 Codex 配置。需要跨项目复用时，再显式复制到目标项目 `.codex/agents/` 或个人 `~/.codex/agents/`，并按 [OpenAI 官方 Codex subagents 文档](https://learn.chatgpt.com/docs/agent-configuration/subagents) 核对当前模型和配置字段。个人或项目根配置保持 `features.multi_agent = true` 与 `[agents].max_depth = 1`；不要只复制其中一半。验证时必须让承载会话的准确 runtime 完整解析配置并观察一次真实 spawn，同时确认叶子会话受宿主 max depth 限制；`codex --version`、profile 文件存在或只输出编排计划都不能证明已经生效。App / IDE 的内置 runtime 可能与终端 `PATH` 中的 `codex` 不同，需要分别检查。
+
+## Optional Continuity Backends
+
+`$task-continuity` 本身不安装状态服务。若宿主已有 task store、Trellis、memory、event index 或 lifecycle hooks，优先把它们映射为运行态 / reference backend。Codex 需要自动会话事件恢复时，可评估 [context-mode](https://github.com/mksglu/context-mode)；它已经实现 Codex `PreCompact` / `SessionStart`、SQLite/FTS5 和按需检索，避免重复建设数据库与 hook installer。它不提供复合源码指纹、reference cursor、证据 freshness 或 `first_allowed_action`，因此仍由 `$task-continuity` 负责是否可以继续执行。
+
+若需要把“已验证 / 已接收 / 可提交 / 可发布”从模型声明提升为宿主门禁，可显式配置 [`task-continuity/scripts/codex_execution_adapter.py`](task-continuity/scripts/codex_execution_adapter.py)。它复用原生 hooks，自动记录少量 source / validation / delegation / delivery receipts，并在 source fingerprint 变化后让旧证据失效；stage / commit 不改变内容指纹，因此不会在交付时重复测试。源码写入只给代码索引置 dirty，实际选择图后端并发生真实查询时才刷新，避免每次 Bash 更新整图。运行态路径应位于宿主、Trellis 或其他不进入普通 Git 交付的位置；安装与配置见 [`task-continuity/references/host-adapters.md`](task-continuity/references/host-adapters.md)。
+
+需要跨任务长期语义记忆时可单独评估 [MemPalace](https://github.com/MemPalace/mempalace)。第三方插件会新增本地数据、依赖、hook trust 和模型上下文，必须显式安装并做真实 compaction continuation 测试；MCP 已连接或快照出现不等于恢复有效。详细选择边界见 [`task-continuity/references/host-adapters.md`](task-continuity/references/host-adapters.md)。
 
 ## Install
 
@@ -189,9 +218,13 @@ python3 -m unittest scripts/test_validate_skills.py
 python3 scripts/validate_skills.py --mirror-root /path/to/installed/skills
 ```
 
-校验器只检查技能包结构、frontmatter、UI metadata、本地引用、三个通用技能的作者环境泄漏，以及可选镜像同步；它不假定 CC Switch、Codex、Git 或某个固定安装位置，也不替代真实 prompt 的前向评测。
+校验器检查技能包结构、frontmatter、UI metadata、本地引用、公开可执行资源与 Python 接口结构、四个通用技能的作者环境泄漏、可选 Codex 项目适配，以及镜像同步；它不假定 CC Switch、Trellis、Git 或某个固定安装位置，也不替代真实 prompt 的前向评测。
 
 ## Usage
+
+从当前动作选择最少入口，已知 focused skill 时直接使用它。router 负责选择，领域技能负责实施；复杂求解准入、委派与恢复分别由对应通用技能拥有。跨层文件数或技术关键词不自动触发复杂流程。
+
+已有目标、约束与实施授权在多轮中持续有效。进度提问或新提醒应融入原主线；压缩恢复只对账相关身份、已接受决定与保存的下一动作。读取是否更少、恢复是否更快都要由真实任务观察，不能仅凭文档短或离线测试通过宣称收益。
 
 总入口调用：
 
@@ -202,8 +235,9 @@ Use $jetlinks-router to classify this JetLinks scaffold task, choose the right f
 Focused skill 示例：
 
 - 使用 `$jetlinks-routing` 判断这个能力应该落在哪个模块。
-- 使用 `$systematic-solving` 对复杂或反复失败的问题冻结目标与不变量，建立竞争假设和区分证据；第一次实现仍未通过验收时停止追加局部补丁，重建系统图与验证矩阵。
-- 使用 `$task-continuity` 原位压缩实时计划，将模型恢复视图收敛为 `Contract / Checkpoint / DecisionState / Resume`，把完整 digest / revision / evidence ledger 留在机器元数据；验证改变路线时先刷新，压缩恢复时完成 `RESUME_AUDIT -> READY` 后从少量锚点和执行级 `Next` 继续，连续匹配恢复不重读完整技能集或重建同一系统图，并复用仍覆盖当前验收矩阵的验证证据；维护技能时用 full-context / capsule / ablation continuation 评测实际恢复质量；在 JetLinks 工作区通过 `$jetlinks-router` 加载 Trellis / Git 适配。
+- 使用 `$systematic-solving` 判断复杂求解准入，区分根因与证据有效性，并防止修复反复扩成局部特例；已明确的机械跨层任务沿领域路径实施。
+- 使用 `$agent-orchestration` 判断真实委派收益并划分可独立负责的切片。选中多 Agent 后实际派发；总控负责规划、公共契约、协调与验收，实施、测试、文档和独立审查交给对应 owner，写集互斥。
+- 使用 `$task-continuity` 保存原目标、持续约束、当前证据和唯一下一动作。实际恢复时核对必要身份；匹配后直接继续，失配时只对账相关范围。只有需要 Git / Trellis 映射时加载 JetLinks 恢复扩展。
 - 使用 `$code-navigation` 先发现当前环境可用的检索能力，再从精确 symbol 或 changed items 出发，有界查询定义、引用、调用、组件 / 领域关系和候选测试；保留关系来源与置信度，不把语义相似度或作者机器上的工具当成精确事实或必需依赖。
 - 使用 `$jetlinks-protocol` 分析协议包入口、编解码链路和二进制报文。
 - 使用 `$jetlinks-crud` 为设备管理模块新增一个查询接口，并在自定义接口、复杂校验、权限边界或复杂查询处补必要代码注释。
@@ -214,7 +248,7 @@ Focused skill 示例：
 - 使用 `$jetlinks-conventions` 判断常驻任务、缓存、队列或重试池是否需要 MBean，并给出统计、监控和运维操作方案。
 - 使用 `$jetlinks-boundary` 判断该能力应该走直接依赖还是命令服务。
 - 使用 `$jetlinks-events` 为现有模块增加订阅逻辑。
-- 使用 `$jetlinks-web` 在前端改造中优先复用 `@jetlinks-web-core/@jetlinks-web` 组件、hooks、utils，并按目录/状态/类型约束落地；函数封装、设计模式、组件边界和职责抽离按其 `code-organization-rules.md` 执行；先分析真实业务目标，做到业务优先、参考为辅，不要默认套后台 CRUD；若页面壳层、首屏组织、信息架构或视觉节奏会受影响，必须先按其内置页面分型规则建立页面交互方案档案；视觉与组件语言默认沿用 Ant Design；如需交互或视觉优化，遵循 `$jetlinks-web` 的交互与视觉优化规则，只借鉴相似业务案例中真正适配的设计，且不要加入无意义的统计数字或装饰性数据块；用户可见字段展示名、列头、按钮与提示文案统一走 i18n，可用中文作默认值；线框图和设计说明只用于沟通，最终页面不要展示“交互方式”“设计原理”等开发者导向内容；若结构不确定，先问用户或先给线框图/效果图。
+- 使用 `$jetlinks-web` 实现 Vue 页面、交互、组件与状态。局部字段、文案、样式或 props 修改走局部路径；新增页面或主要交互变化才建立方案，按相关导出复用组件，沿用 Ant Design 与本地 i18n。技术受众所需的 API / Topic 等内容可以准确展示。
 - 使用 `$jetlinks-delivery` 起草中文 commit、生成 shell 提交命令、落实后端新增功能或行为变动的测试门禁、整理测试证据和 PR 描述。
 
 ## Prompt Templates
@@ -239,7 +273,7 @@ Focused skill 示例：
 
 ```text
 我需要实现 <后端能力>。
-先分析现有代码和影响范围；需要待确认设计或测试目标时，先写入 Trellis / 本地忽略运行态并等我确认，再开发。确认后的长期结论再原位同步权威文档。
+先结合现有代码明确改变的行为和验证目标，按已明确需求直接实施；只有影响结果或权限的实质未决选择再问我。使用已有任务载体；无安全持久载体时保留有界上下文。长期结论有变化再原位同步权威文档。
 ```
 
 ### CRUD 管理能力
@@ -274,7 +308,7 @@ Focused skill 示例：
 
 ```text
 这个问题已经尝试修过一次，但验收仍失败或失败转移到了同类场景。
-请停止继续加条件、fallback、retry、mock 或兼容分支，重新列出已验证事实、被否定假设、竞争根因和最小区分检查；确认共同不变量和完整验证矩阵后再实现。
+请停止继续加条件、fallback、retry、mock 或兼容分支，重新列出已验证事实、被否定假设、竞争根因和最小区分检查；确认共同不变量和按实际行为变化选择的验证范围后再实现。
 ```
 
 ### 代码结构与影响面
@@ -398,146 +432,49 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 
 1. 从目标基线分支同步最新代码。
 2. 创建临时分支实现需求或修复。
-3. 按少量连贯阶段推进；每个阶段完成并集中验证后创建一个本地 commit，不按步骤、文件或单个小修提交。
+3. 按少量连贯阶段推进；提交已获授权时，在阶段完成并集中验证后创建本地 commit，不按步骤、文件或单个小修提交。
 4. 阶段提交后更新任务运行态中的 Recovery Capsule；上下文压缩或恢复时先校验 task、Git 指纹和少量锚点，不重新全仓扫描。
 5. 所有阶段和总体验收完成后，统一 push 临时分支并创建或更新一次 PR；PR 只写当前最终事实，不记阶段流水。
 6. 通过 PR 合入目标版本分支。
 
-### Testing Requirement
+### Testing And Delivery
 
-- 较大的后端改动或新功能必须先形成任务契约和测试目标：有 Trellis 时写 active task；否则写经 Git 忽略验证的单一本地运行态文件。
-- 待确认设计不先写入权威 `docs`。用户明确确认后，只把长期需求、稳定契约、架构 / API / 模块设计、验收语义和长期风险提升到权威来源；若实现证据要求这些结论变化，先更新任务契约并重新确认。
-- 测试目标必须先于实现制定，映射真实使用场景和真实数据形态，而不是为了让测试通过而补形式化用例。
-- 复杂业务、公共契约、SPI 扩展点、兼容逻辑、并发 / 生命周期保护、安全边界、TraceHolder 和 MBean 决策必须有合理注释；类注释和 SPI 接口方法注释必须完整，SPI 必要时补真实 `@since` 和指向订阅相关类型 / 参考实现的 `@see`。
-- 注释门禁必须在实现技能中执行：编码前识别注释点，编码时把注释放到类、方法、关键分支或边界调用旁边；只有简单赋值、DTO 搬运、直观委托或模板展示可以明确说明不需要注释。
-- 涉及 CRUD 查询、详情、更新、删除、批量操作、导出或自定义接口时，必须按 `$jetlinks-assets-permission` 分析是否需要 AssetsHolder 数据权限控制；资产类型、关联字段、权限动作、绑定关系或例外规则拿不准时先询问用户。
-- 涉及关键后端业务链路、状态流转、命令执行、事件 / 订阅、协议链路、批处理或外部 I/O 时，必须说明 TraceHolder / MonoTracer / FluxTracer 埋点目标、关键属性、上下文传播和敏感信息排除；不新增埋点时说明已有平台自动追踪或不适用依据。
-- 涉及常驻内存任务、缓存、队列、buffer、重试池、会话 / 连接 / 订阅管理器或后台执行器时，必须说明 MBean 运维可观测性决策、统计指标、监控字段、安全内部操作、生命周期和敏感信息排除；不新增 MBean 时说明已有覆盖或不适用依据。
-- 本次提交必须经过相关单元测试，并按触发条件完成集成测试，至少覆盖本次改动涉及的核心路径。
-- 后端新增功能或既有功能变动必须补充或更新对应单元测试，覆盖正常路径、关键异常路径和回归场景。
-- 涉及数据库、消息、事件、协议联调、跨模块边界、外部依赖或启动装配时，PR 中必须提供集成测试结果；无法执行时只能作为阻塞或 draft 风险说明。
-- 未触发集成测试条件时，PR 中必须写明不适用原因，不能留空。
-- 如果仓库已配置覆盖率阈值，提交前必须满足阈值。
-- 如果仓库没有统一阈值，也必须在 PR 中给出可验证的覆盖证据，而不是只写“已测试”。
-- 不能提供测试结果、覆盖率结果或失败原因的提交，不应进入待合并状态。
+后端契约、已有授权复用与按风险选测试由 [后端设计与测试规则](jetlinks-router/references/backend-design-test-driven-rules.md) 定义；提交与 PR 的团队规范由 [交付规则](jetlinks-delivery/references/git-and-pr-rules.md) 定义，README 不另列一套验收清单。
+
+变化行为必须有有效证据。在连贯阶段结束后集中验证，相关输入未变化时复用结果；只有新变化、失败或证据失效才补跑。共享行为、安全边界、SQL 性能、TraceHolder、MBean、注释和 SPI 等仅按实际变化选择相应规则。已有仓库覆盖率门槛继续遵守，不为无门槛任务凑数字。
 
 ### Documentation Placement
 
-- README 只作为仓库或模块的长期总览，放定位、能力索引、入口说明和长期链接。
-- 不要把单次任务过程、测试报告、PR 描述、临时计划、排查流水或总结放进 README。
-- 权威 `docs` / ADR / API / 模块文档只保留当前已接受的设计与契约；更新时原位替换过时结论，不追加阶段总结、完成清单、验证摘要或时间线。
-- 实时任务拆分、checkbox、假设账本、尝试、失败、临时下一步和会话恢复信息放 Trellis 的非版本化 runtime / checkpoint；没有这种载体或无 Trellis 时放单一 Git-ignored runtime file，不默认修改共享 `.gitignore`。
-- 测试命令、覆盖率、集成测试结果等证据优先放 PR 描述或 CI 报告，不为每次运行新增测试报告文档。
-- 经验沉淀先判断是否跨任务稳定；优先更新已有 canonical 来源，不把单次总结转换成 `worklog`，稳定通用后再考虑 knowledge、playbook、prompt 或 skill。
-- 同一主题只维护一个权威来源，避免拆出多个 plan、summary、test-report、worklog 碎片。
-- 在非版本化 Trellis runtime / checkpoint 或本地 Git-ignored 运行态中维护模型主视图 `Contract / Checkpoint / DecisionState / Resume`、机器 Continuity Metadata 与 Source Snapshot：task ID / revision、当前路线、关键约束、证据 / 规则 locator、跨压缩审计指纹、已验证阶段 commit、branch / HEAD、tracked / untracked / nested 指纹、expected paths、少量锚点和执行级下一步。正常恢复只注入主视图和 identity match summary；验证改变路线时先进入 `SNAPSHOT_REQUIRED` 并刷新；上下文压缩、暂停后继续或交接后进入 `RESUME_AUDIT`，指纹与语义状态一致则显式转 `READY` 并执行 `first_allowed_action`，不重读全仓。
-
-PR 中至少应提供这些数据：
-
-- 执行过的测试命令
-- 较大后端改动或新功能的任务契约路径、用户确认状态、权威文档同步结论和测试目标达成情况
-- 新增或更新的测试类和核心覆盖点
-- 测试类型：单元测试、集成测试、端到端测试中的哪些
-- 通过数量、失败数量、跳过数量
-- 覆盖率数据，例如 line、branch、changed files 或 changed classes 的覆盖结果
-- 若存在限制或未覆盖项，明确列出风险边界
+[制品归属](jetlinks-router/references/document-placement-rules.md) 决定内容落点：README 和权威 docs 保留稳定当前事实；实时计划、失败、下一动作与胶囊留在已有 task / runtime，测试证据留在 PR / CI。无安全持久载体时使用有界 active context，不自动建立目录或修改 Git 忽略配置。恢复状态唯一由 [task-continuity](task-continuity/SKILL.md) 维护。
 
 ### PR Description
 
-PR 描述必须聚焦事实和结果，至少包含：
-
-- 目的：为什么要做这次改动
-- 核心变动：改了哪些模块、行为和边界
-- 设计与测试目标：较大后端改动或新功能需列出任务契约路径、确认状态、权威文档同步结论、测试目标达成情况、CRUD / AssetsHolder 数据权限分析结论、注释 / 公共契约结论、链路追踪结论和 MBean 运维可观测性结论
-- 测试结果：命令、新增或更新的测试类、通过数、失败数、跳过数、覆盖率数据、集成测试结果或不适用原因
-- 文档同步情况：已同步哪些原始文档，或说明无需同步的原因
-- 兼容性与发布边界：说明是否为 PR 内未发布逻辑收敛；已发布、持久化或外部依赖的变更需写清兼容或迁移策略
-- 数据库兼容与 SQL 性能：涉及复杂 SQL / 原生 SQL 时说明标准 SQL、方言范围、索引 / 分页风险和压测结果
-- 风险与影响面：哪些场景受影响，哪些场景未覆盖
-
-推荐模板：
+先说明触发问题与最终行为，再提供实际验证和真实风险。只加入本次涉及的设计、兼容、数据权限、公共契约、追踪或运维内容；已有明确实施授权无需补一张“用户确认状态”表。采用仓库实际模板时，省略未适用项或按其明确要求填写。
 
 ```md
-## 目的
+## 变更
+修复 / 新增的可观察行为，以及关键取舍。
 
-- 修复 / 优化 / 新增什么能力
-- 解决了什么问题
+## 验证
+实际执行或复用的证据、覆盖行为与结果。
 
-## 核心变动
-
-- 模块 A：做了什么调整
-- 模块 B：新增了什么约束或行为
-- 阶段提交：列出已验证的本地阶段 commit；不写步骤流水
-
-## 设计与测试目标
-
-- 任务契约：`.trellis/tasks/<task>/...` / 本地忽略运行态文件
-- 权威文档：已原位同步 `<path>` / 不适用：长期契约未变
-- 用户确认：已确认 / 未确认，当前为 draft
-- 测试目标：真实场景、真实数据、正常路径、异常路径、回归路径和边界路径均已覆盖 / 列出未覆盖原因
-- 注释 / 公共契约：适用 / 不适用；适用时说明类注释、SPI 方法注释、必要 `@since` / `@see` 和复杂逻辑注释已补齐
-- 数据权限：适用 / 不适用；适用时说明 `AssetType`、`CrudAssetPermission`、查询注入、操作校验和关联资产边界
-- 数据库兼容与性能：适用 / 不适用；适用时说明标准 SQL / 方言范围、索引与分页风险、压测结果或替代验证
-- 链路追踪：适用 / 不适用；适用时说明 TraceHolder / MonoTracer / FluxTracer 埋点位置、关键属性、上下文传播和敏感信息排除
-- MBean 运维可观测性：适用 / 不适用；适用时说明 MBean 名称、统计指标、运维操作、生命周期和敏感信息排除
-- 系统性求解：适用 / 不适用；适用时说明违反的不变量、共同根因或显式变化轴、已清理 / 保留的特殊处理，以及原场景 / 同类代表 / 反例边界 / 回归证据
-
-## 测试结果
-
-- 命令：`mvn -pl xxx -am test`
-- 证据来源与复用判断：阶段验证 / CI；对应 `<commit / tree / diff fingerprint>`；相关输入未变化，直接复用 / 因 `<变化>` 定向补跑 `<范围>`
-- 新增/更新测试：`XxxServiceTest` 覆盖新增规则、异常分支和回归场景
-- 单元测试：42 passed, 0 failed, 1 skipped
-- 集成测试：8 passed, 0 failed / 不适用：未涉及数据库、消息、事件、协议、跨模块边界、外部依赖或启动装配
-- 压力测试：适用 / 不适用；适用时给出数据规模、并发数、耗时阈值和结果
-- 覆盖率：line 81.4%, branch 73.2%
-
-## 文档同步情况
-
-- 已同步：模块 README / API 文档 / ADR / AGENTS 等权威来源
-- 未同步：无 / 说明原因
-- 说明：权威文档只保留当前已接受状态；任务流水留在 Trellis / 本地运行态，测试证据放 PR / CI
-
-## 风险与说明
-
-- 影响范围：
-- 兼容性与发布边界：
-- 注释 / 公共契约：
-- 数据库兼容与 SQL 性能：
-- 链路追踪 / 可观测性：
-- MBean / 运维可观测性：
-- 未覆盖场景：
-- 回滚方式：
+## 风险
+真实未覆盖范围、兼容 / 发布影响，以及必要的文档同步。
 ```
 
-结论要求：
-
-- 用数据说话，不要只写“测试通过”
-- 交付前先把已有证据映射到验收矩阵；代码 / Git 指纹和相关输入仍有效时直接复用，只定向补跑缺失、失效或有时效性的检查
-- 没有覆盖率数据时，至少说明为什么缺失，以及提供了哪些替代证据
-- 创建 PR 前先确认任务是否已完成：未完成默认继续本地开发，已完成且用户确认后再统一远程交付
-- 未完成任务默认继续本地开发，不主动 push 或创建 draft；只有用户明确要求共享中间分支、远端 CI 或提前评审时才维护一个 draft PR
-- 每个连贯阶段验证后允许一个本地 commit；整个任务完成后统一 push 并创建或更新一次 PR，禁止每个步骤推送、开 PR 或追加 PR 进度流水
-- 一个任务对应一个 PR；若需求含多个独立主题，先拆成多个任务，各任务完成后分别交付，不按执行阶段拆 PR
-- 如果仓库远端是 GitHub，默认优先使用 `gh pr create` 创建 PR
-- 如果当前工具支持非沙箱审批或提权机制，`gh` 命令应申请非沙箱执行；不支持时说明限制并降级处理
-- 没有 PR 的直推提交流程，视为不符合规范
-- 仓库默认模板见 `.github/pull_request_template.md`
+仅在提交 / 发布已获授权时执行相应操作；任务整体完成后统一远程交付。需要提前共享或远端 CI 时沿授权维护同一个 draft，不按执行步骤创建 PR。使用 `gh` 时先使用当前可用权限，只有实际受限且动作已获授权时再走宿主审批机制。
 
 ## Skill Authoring Notes
 
-为保证该仓库可持续扩展，新增 skill 时遵循这些规则：
+- 新 skill 放在根目录的 `<skill-name>/`。描述只写能力与触发情形，入口保留执行所需最少规则；细节放已有 `references/` 并标明何时读取。
+- 同一规则只设一个 owner；路由、领域调用方、README 示例与 UI metadata 引用它，不复制另一套准入、授权或恢复状态机。
+- 指令细度与错误代价匹配。安全、授权、任务身份和证据真实性是实质约束；轮数、固定工具顺序、表格完整度和字数是诊断信息，不能单独证明完成或阻止已授权工作。
+- 编辑后在一个连贯阶段统一检查结构 / 链接和受影响脚本测试，不按每次操作全量构建。结构检查不能证明智能体正确理解了指令。
+- 维护触发、恢复或协作规则时，使用少量真实任务对照无该规则、当前规则与候选规则；保持模型、工具、源码和验收一致。检查目标保留、第一有效动作、遗漏 / 重问、任务偏航及所有智能体成本。只有观察到差异或不稳定时扩大样本，不给日常任务增加评测仪式。
+- 至少覆盖明确机械跨层、已有协议样例修复、局部前端调整、复杂根因、依赖委派，以及匹配 / 失配恢复；把正确产出与效率分开判定，保留成功与失败轨迹供复审。
+- 同一环境优先维护一个权威安装源。不要同时从多个技能根目录加载同名副本；同步镜像时用校验器明确比较，不自动修改用户安装或配置。
 
-- 新 skill 放在仓库根目录的 `<skill-name>/` 下。
-- `SKILL.md` 只保留触发描述和执行流程，不放仓库级使用文档。
-- 详细规则、索引和参考资料放入 `references/`。
-- 需要 UI 元数据时，在 `agents/openai.yaml` 中维护。
-- 新增或调整 skill 后，运行：
-
-```bash
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" \
-  <skill-name>
-```
+这些维护原则依据 [Agent Skills 规范](https://agentskills.io/specification)、[OpenAI 技能文档](https://learn.chatgpt.com/docs/build-skills)、[Anthropic 编写建议](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) 和 [Agent 评测指南](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)。文档是维护参考，不进入普通业务任务必读链。
 
 ## References
 

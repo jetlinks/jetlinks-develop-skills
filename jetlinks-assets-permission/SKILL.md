@@ -1,21 +1,21 @@
 ---
 name: jetlinks-assets-permission
-description: 在当前 JetLinks 工作区中使用统一 AssetsHolder 资产权限体系处理数据权限。适用于 CRUD 查询、详情、更新、删除、批量、导出、自定义接口、关联资产、命令服务、订阅或聚合查询需要资产权限控制，或需要判断 AssetType、@AssetsController、AssetsHolderCrudController、CorrelatesAssetsHolderCrudController、CrudAssetPermission、AssetsHolder.injectQueryParam / assertPermission / filterAssets 用法的场景。
+description: 通过 JetLinks AssetsHolder 实现资产数据权限。适用于 CRUD、自定义查询、关联资产、命令、订阅、聚合或批量操作的权限边界，以及 AssetType、AssetsController、权限注入与过滤方式的选择。
 ---
 
 # JetLinks Assets Permission
 
-Read [`references/assets-holder-rules.md`](references/assets-holder-rules.md) first.
+Use [`references/assets-holder-rules.md`](references/assets-holder-rules.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
 
 ## Workflow
 
 1. Classify the asset-permission scenario: owned CRUD asset, correlated asset, custom endpoint, aggregate query, command boundary, binding or unbinding, subscription or message filtering.
 2. Inspect adjacent code for `AssetType` enums, `@AssetsController`, `AssetsHolderCrudController`, `CorrelatesAssetsHolderCrudController`, `CrudAssetPermission`, `AssetsHolder.injectQueryParam`, `AssetsHolder.assertPermission`, command handlers, and local tests.
-3. If this is part of a large backend feature, pair with [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): document the asset type, permission boundary, test goals, and user confirmation before implementation.
+3. If this is part of a large backend feature, pair with [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the changed asset type / permission boundary and selected behavior evidence; apply its authorization rule without asking again for an already approved boundary.
 4. Choose the unified AssetsHolder integration pattern that matches the local codebase; do not create ad hoc tenant, user, department, organization, or creator filters.
 5. Before implementing asset permission code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): asset ownership, correlated asset mapping, `ignore = true` equivalent checks, admin / platform exceptions, batch mixed-permission behavior, custom query injection, command or subscription permission propagation.
 6. Pair with `$jetlinks-crud`, `$jetlinks-boundary`, `$jetlinks-events`, or `$jetlinks-reactive` when the asset permission decision belongs to those flows.
-7. Pair with `$systematic-solving` when permission behavior spans several asset types / associations / callers, has competing ownership hypotheses, or a fix shifts the leak / denial to a sibling scenario. Do not accumulate exception branches for individual roles, assets, or callers.
+7. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
 
 ## Required Constraints
 
@@ -25,11 +25,14 @@ Read [`references/assets-holder-rules.md`](references/assets-holder-rules.md) fi
 - Do not assume the asset type string. Find or add the module's `AssetType` / `EnumAssetType` definition and follow adjacent naming.
 - CRUD permissions should normally use `CrudAssetPermission.read`, `save`, `delete`, or `share`; custom permissions require an `AssetPermission` definition and local examples.
 - For related assets, verify whether the permission should apply to the entity itself or a referenced asset, then use the correlated-controller or query-injection pattern.
+- Treat AssetsHolder as the authoritative owner: when `AssetsHolderCrudController`, `CorrelatesAssetsHolderCrudController`, a command provider, or another established boundary already checks the same action, do not repeat `assertPermission` in Service or callers. A caller checks again only when it is itself an independently exposed security boundary with a distinct subject or action.
 - If asset ownership, related asset mapping, permission action, or admin / tenant / platform exception semantics are unclear, ask the user before implementation.
-- Tests must verify allowed and denied asset scopes with realistic IDs, bindings, and permissions; do not bypass the core holder behavior with mocks that make the permission check meaningless.
+- When this change adds or changes an asset-permission boundary, verify the changed owner with the smallest realistic allow / deny pair. Expand to related fields, batch behavior, or distinct actions only when those semantics differ; do not retest unchanged AssetsHolder framework behavior or bypass the core holder behavior with meaningless mocks.
 - Do not leave custom asset permission code comment-free when it encodes non-obvious ownership, correlated asset mapping, `@AssetsController(ignore = true)` replacement checks, admin / platform exceptions, batch mixed-permission behavior, custom query injection, or permission propagation through commands / subscriptions. Add concise comments next to those boundaries.
 
 ## Response Shape
+
+Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
 
 1. Asset permission scenario
 2. Existing AssetsHolder patterns found
