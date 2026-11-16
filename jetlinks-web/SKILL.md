@@ -14,6 +14,8 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 3. 新增能力时从相关锚点按 [能力复用](references/capability-reuse-rules.md) 选型，找到可信组件即停止扩搜；只有职责或抽象发生变化时再查 [代码组织](references/code-organization-rules.md)。
 4. 沿用 Vue 3 SFC、`script setup lang="ts"`、组件库和样式 token；阶段末按实际改变的交互、类型与状态风险集中验证。
 
+跨页面共享契约、前后端状态链路或公共能力替换发生实质变化时，集成收尾按 [任务整体审查](../jetlinks-review/references/review-method.md#任务整体审查) 核对累计结果与受影响消费者；局部文案、prop 或样式调整沿当前范围验证。
+
 ## 按需细则
 
 | 当前动作 | 读取 |
