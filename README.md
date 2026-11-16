@@ -19,6 +19,7 @@ jetlinks-develop-skills/
 ├── scripts/
 ├── jetlinks-protocol/
 ├── jetlinks-conventions/
+├── jetlinks-review/
 ├── jetlinks-reactive/
 ├── jetlinks-routing/
 ├── jetlinks-crud/
@@ -64,11 +65,15 @@ jetlinks-develop-skills/
 
 ### `jetlinks-conventions`
 
-用于共享编码规范、注解/导入确认、命名约束、代码注释、i18n 判断与实现，以及 TraceHolder 链路追踪和 MBean 运维可观测性判断。
+用于职责与依赖方向、语义命名、魔法值、通用策略与初始化，以及导入、注释、i18n、TraceHolder 和 MBean 等共享开发规范。
 
 ### `jetlinks-reactive`
 
-用于响应式编程实践、非阻塞链路、批处理和 reactive 风险控制。
+用于响应式链路、非阻塞与订阅语义、批处理、事务数据库串行操作，以及事务外有界并发和背压控制。
+
+### `jetlinks-review`
+
+用于代码、PR 和方案审查，检查组件职责、平台依赖、过度校验、语义与魔法值、响应式事务 / 并发、数据权限和场景特调。开发约束分别由 boundary、conventions、CRUD、reactive、assets-permission 等技能拥有；审查技能引用同一规则，补充证据判定和正反场景，不把规范延后到审查才执行。
 
 ### `jetlinks-routing`
 
@@ -84,7 +89,7 @@ jetlinks-develop-skills/
 
 ### `jetlinks-boundary`
 
-用于直接依赖、命令服务、代理和跨模块边界选择。
+用于应用与平台的依赖边界、标准实体字段扩展及版本选择，以及命令服务、代理和跨模块调用。
 
 ### `jetlinks-events`
 
@@ -114,6 +119,7 @@ jetlinks-develop-skills/
 - 只想处理协议包、编解码、认证或二进制报文：`$jetlinks-protocol`
 - 只想确认代码规范、导入、注释、i18n 判断、国际化实现、TraceHolder 埋点边界或 MBean 运维可观测性：`$jetlinks-conventions`
 - 只想处理响应式链路：`$jetlinks-reactive`
+- 只想审查代码 / PR / 方案中的职责、依赖、过度设计与校验、响应式风险和通用性：`$jetlinks-review`；只加载当前问题涉及的开发规则
 - 只想找模块或新建模块：`$jetlinks-routing`
 - 只想做 CRUD 或复杂查询：`$jetlinks-crud`
 - 只想判断或实现 AssetsHolder 数据权限边界：`$jetlinks-assets-permission`

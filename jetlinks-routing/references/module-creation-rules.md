@@ -107,6 +107,7 @@
    - 先从相邻模块复制基础依赖，再按实际功能加最少依赖。
 
 3. 依赖方向要一致
+   - 应用使用平台能力先遵循 [应用与平台边界](../../jetlinks-boundary/references/application-platform-rules.md)：不能因处于同一部署而直接引入标准 manager 实现；公开契约和平台宿主装配按各自职责处理。
    - `core` / 契约模块不要反向依赖 `manager` / 实现模块。
    - `manager` 可以依赖 `core` 中的公共 DTO、命令、事件和领域契约；`core` 不依赖 CRUD、Web、Repository、运行时管理实现。
 

@@ -1,6 +1,6 @@
 ---
 name: jetlinks-reactive
-description: 在当前 JetLinks 工作区中应用响应式与非阻塞实现实践。适用于需要处理 Mono 或 Flux 链路、避免阻塞调用、批量化响应式 CRUD 副作用，或判断响应式处理器如何与事件、订阅和远程调用协作的场景。
+description: 在当前 JetLinks 工作区中应用响应式与非阻塞实践。适用于 Mono / Flux 链路精简、惰性执行、事务与数据库串行操作、有界并发读和背压，以及响应式 CRUD、事件、订阅与远程调用协作。
 ---
 
 # JetLinks Reactive
@@ -13,6 +13,7 @@ Use [`references/reactive-practice.md`](references/reactive-practice.md) for the
 2. If this is a new backend feature or large reactive behavior change, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable reactive contracts when needed.
 3. If the module is reactive, keep `Mono` or `Flux` end-to-end and avoid imperative fallbacks.
 4. If blocking I/O is unavoidable, isolate it explicitly and only use the scheduler pattern already accepted by the codebase.
+   For database composition, first identify the transaction / connection owner and apply [transaction and concurrency rules](references/reactive-practice.md#事务与数据库并发). Choose fan-out and prefetch from real resource limits, not operator defaults or copied numbers.
 5. Before editing non-trivial reactive code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): async boundaries, backpressure or collection limits, cancellation / retry / timeout behavior, lifecycle cleanup, tracing context propagation, compatibility, and extracted business stages whose purpose is not obvious from the method name.
 6. Combine this skill with `$jetlinks-crud`, `$jetlinks-boundary`, or `$jetlinks-events` when the task spans those scenarios.
 
@@ -29,7 +30,8 @@ Use [`references/reactive-practice.md`](references/reactive-practice.md) for the
 - Split long Reactor chains by business stage. If a chain mixes validation, permission, command execution, persistence, event publication, and result conversion, keep the chain but move stages into named methods such as `validateAndSendCommand(...)` or `saveLogAndReturn(...)`.
 - Do not start a chain with `Mono.just(request)` only to transform a local value before the first async boundary; compute the argument directly and call the reactive API, such as `repository.save(request.toEntity())`.
 - For critical reactive business stages, use `MonoTracer` / `FluxTracer` or the existing domain tracer to create manual spans and attributes; route detailed TraceHolder rules to [`../jetlinks-conventions/references/tracing.md`](../jetlinks-conventions/references/tracing.md).
-- Do not wrap pure synchronous helpers as `Mono` / `Flux`. Data conversion, field calculation, predicate checks, and other non-I/O logic should remain plain methods and be called from `map`, `filter`, or before entering the chain.
+- Do not wrap pure synchronous helpers as `Mono` / `Flux`. Data conversion, field calculation, predicate checks, and other non-I/O logic should remain plain methods and be called from `map`, `filter`, or before entering the chain. Preserve required subscription-time execution, exception signals and Context; `defer` / `fromSupplier` at a genuine lifecycle boundary is not redundant wrapping.
+- Do not concurrently execute database operations on the shared connection / session of one transaction. Serial composition or existing batch / set-based operations must preserve the transaction; ordered output from `flatMapSequential` does not serialize execution. Outside that boundary, concurrent reads require justified capacity and ordering semantics.
 - Do not call `collectList()` on unbounded or potentially large streams; only collect when the source is clearly bounded by page, limit, batch, protocol size, or validated input size. Prefer pagination, bounded `buffer` / `window`, streaming, or existing query-composition helpers.
 - Keep lambdas as glue code. If a lambda contains validation plus query plus mutation plus side effect, nested branching, loops, `try/catch`, or multiple DB / remote calls, extract a named method and test that method through the reactive chain.
 - When the reactive API or library does not satisfy the requirement (signature mismatch, missing extension point, serialization error inside the chain), follow [`../jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../jetlinks-conventions/references/root-cause-and-no-hack-rules.md): solve at the root via official extension points / adjacent abstractions / dependency choice, or inform the user with concrete trade-offs; do not use reflection / visibility hacks / copied source / silent `catch` to make the chain compile.

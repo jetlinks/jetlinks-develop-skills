@@ -75,8 +75,8 @@
 
 ## 何时跳转其他规则
 
-- 事件里需要批量更新或复杂查询：继续读取 `advanced-crud-rules.md`
-- 事件里要调用其他边界能力：继续读取 `cross-service-call-rules.md`
+- 事件里需要批量更新或复杂查询：读取 [高级 CRUD](../../jetlinks-crud/references/advanced-crud-rules.md)
+- 事件里要调用其他边界能力：读取 [应用 / 平台边界](../../jetlinks-boundary/references/application-platform-rules.md) 与 [命令调用](../../jetlinks-boundary/references/cross-service-call-rules.md)
 
 ## 自检清单
 

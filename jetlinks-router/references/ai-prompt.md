@@ -10,6 +10,8 @@
 | --- | --- | --- |
 | 已知实体字段按既有契约贯通 DTO 与 Controller | CRUD | 新增权限边界才加 assets-permission；跨层本身不触发复杂求解 |
 | 查询结果受资产权限控制 | CRUD + assets-permission | 自定义跨边界调用出现时加 boundary |
+| 应用引入平台依赖或扩展标准实体字段 | boundary 的应用 / 平台规则 | CRUD、数据权限与迁移按实际动作补充；不等待审查再检查依赖 |
+| 审查代码 / PR 的职责、依赖、复杂度、校验和并发 | review | 按实际问题读取开发规则 owner；审查不自动授权修复 |
 | 生命周期变动产生领域副作用 | events | Mono / Flux 链路需要处理时加 reactive |
 | 协议报文已有明确样例和目标字段 | protocol | 竞争根因或语义未决时由 systematic-solving 判定准入 |
 | 查找 Command 的生产者与消费者 | code-navigation + JetLinks 导航扩展 | 改写交互方式时加 boundary |
@@ -28,6 +30,7 @@
 - 后端任务契约、已有授权复用、按风险选测试：[后端设计与测试规则](backend-design-test-driven-rules.md)。
 - 权威文档与临时运行态的落点：[制品归属](document-placement-rules.md)。
 - 编码约定、兼容性、注释、i18n、追踪与运维：[conventions](../../jetlinks-conventions/SKILL.md)。
+- 审查取证、合理反例与发现表达：[review](../../jetlinks-review/SKILL.md)；具体开发约束仍由各领域技能拥有。
 - 前端页面分型、组件和质量：[web](../../jetlinks-web/SKILL.md)。
 - 分支、中文 Conventional Commit 与 PR：[delivery](../../jetlinks-delivery/SKILL.md)。
 

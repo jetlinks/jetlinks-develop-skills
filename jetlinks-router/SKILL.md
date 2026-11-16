@@ -1,6 +1,6 @@
 ---
 name: jetlinks-router
-description: 为尚未确定入口或当前边界发生变化的 JetLinks 开发任务选择最少的相关技能。覆盖模块定位、协议、CRUD、权限、事件、响应式、前端、编码规范及交付；恢复、复杂求解和多智能体协作分别交给对应通用技能。
+description: 为尚未确定入口或当前边界发生变化的 JetLinks 开发任务选择最少的相关技能。覆盖模块定位、协议、CRUD、权限、事件、响应式、前端、编码规范、代码审查及交付；恢复、复杂求解和多智能体协作分别交给对应通用技能。
 ---
 
 # JetLinks Router
@@ -22,6 +22,7 @@ description: 为尚未确定入口或当前边界发生变化的 JetLinks 开发
 | 当前动作 / 判断 | 入口 |
 | --- | --- |
 | 精确符号、调用关系、依赖、影响范围 | [code-navigation](../code-navigation/SKILL.md) |
+| 代码 / PR / 方案的职责、依赖、复杂度、过度校验与质量审查 | [jetlinks-review](../jetlinks-review/SKILL.md)，由其按问题选择开发规则，不默认修改代码 |
 | 工作区结构、模块归属或新模块 | [jetlinks-routing](../jetlinks-routing/SKILL.md) |
 | 协议注册、传输编解码、二进制报文、认证与应答关联 | [jetlinks-protocol](../jetlinks-protocol/SKILL.md) |
 | Entity / Service / Controller、查询与批处理 | [jetlinks-crud](../jetlinks-crud/SKILL.md) |
@@ -46,3 +47,5 @@ description: 为尚未确定入口或当前边界发生变化的 JetLinks 开发
 - 需要更细的场景组合示例时：[路由索引](references/ai-prompt.md)；维护路由行为时：[评测用例](references/evaluation-cases.md) 与 [离线评测器](scripts/evaluate_route_trace.py)。
 
 局部事实以当前工作区代码、导出、构建声明和有效锚点为准；不猜固定模块名，不忽略软链接模块。以上 references 按需读取，不是每次任务的前置阅读清单。
+
+开发阶段直接执行对应技能的约束：平台依赖与字段扩展由 boundary 拥有，职责 / 语义 / 特调与初始化由 conventions 拥有，校验归 CRUD，事务与并发归 reactive，数据权限归 assets-permission。review 负责证据和判定，不是应用这些规则的前置条件。

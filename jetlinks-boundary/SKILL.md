@@ -1,6 +1,6 @@
 ---
 name: jetlinks-boundary
-description: 在当前 JetLinks 工作区中选择并实现跨边界交互方式。适用于需要在直接依赖、命令服务、代理或其他跨模块访问模式之间做决策和落地的场景，尤其是响应式模块或低上下文脚手架中的边界选择。
+description: 在当前 JetLinks 工作区中选择并实现跨边界交互。适用于应用对平台的依赖约束、标准实体字段扩展与版本选择、跨服务命令，以及直接依赖、代理或其他跨模块访问方式的决策与落地。
 ---
 
 # JetLinks Boundary
@@ -10,6 +10,7 @@ Use [`references/module-reference.md`](references/module-reference.md) for the c
 ## Workflow
 
 1. Identify the capability boundary that the task needs to cross.
+   For application dependencies on platform modules, cross-service calls, or standard-entity field extensions, first apply [application/platform rules](references/application-platform-rules.md). Same-process deployment does not permit application coupling to platform manager implementations.
 2. If this is a new backend feature, large cross-boundary behavior change, or boundary decision that affects data ownership, permissions, transactions, or external messages, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable boundary changes when needed.
 3. Confirm whether the current workspace already has command services, proxies, support IDs, or concrete command classes.
 4. Read [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md) before implementing providers or consumers.

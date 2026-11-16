@@ -102,9 +102,9 @@
 - `createUpdate()`、`createDelete()`、`setNull(...)`、批量更新 / 删除：继续读取 `query-dsl-rules.md`
 - `QueryHelper`、复杂 SQL、原生 SQL、分页结果转换、一对多组合：继续读取 `query-dsl-rules.md`
 - 自定义 `termType`、动态条件、关联表 exists 查询：继续读取 `dynamic-term-rules.md`
-- 跨模块能力调用：继续读取 `cross-service-call-rules.md`
-- 生命周期副作用：继续读取 `event-driven-rules.md`
-- 实时消息流处理：继续读取 `realtime-subscription-rules.md`
+- 跨模块能力调用：读取 [应用 / 平台边界](../../jetlinks-boundary/references/application-platform-rules.md) 与 [命令调用](../../jetlinks-boundary/references/cross-service-call-rules.md)
+- 生命周期副作用：读取 [事件规则](../../jetlinks-events/references/event-driven-rules.md)
+- 实时消息流处理：读取 [订阅规则](../../jetlinks-events/references/realtime-subscription-rules.md)
 
 ## 自检清单
 

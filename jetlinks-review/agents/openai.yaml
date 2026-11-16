@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Review"
+  short_description: "按真实契约审查职责、依赖、校验、响应式并发与通用性"
+  default_prompt: "使用 $jetlinks-review 审查当前代码、PR 或方案，按实际变化引用对应开发技能，核实调用链和合理反例，报告有准确位置、触发条件与实际影响的发现。"
