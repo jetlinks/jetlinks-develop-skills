@@ -22,7 +22,7 @@ description: 为尚未确定入口或当前边界发生变化的 JetLinks 开发
 | 当前动作 / 判断 | 入口 |
 | --- | --- |
 | 精确符号、调用关系、依赖、影响范围 | [code-navigation](../code-navigation/SKILL.md) |
-| 代码 / PR / 方案的职责、依赖、复杂度、过度校验与质量审查 | [jetlinks-review](../jetlinks-review/SKILL.md)，由其按问题选择开发规则，不默认修改代码 |
+| 代码 / PR / 方案的业务正确性、安全、生命周期与质量审查 | [jetlinks-review](../jetlinks-review/SKILL.md)，由其沿业务链路选择开发规则，不局限于已列举问题，不默认修改代码 |
 | 工作区结构、模块归属或新模块 | [jetlinks-routing](../jetlinks-routing/SKILL.md) |
 | 协议注册、传输编解码、二进制报文、认证与应答关联 | [jetlinks-protocol](../jetlinks-protocol/SKILL.md) |
 | Entity / Service / Controller、查询与批处理 | [jetlinks-crud](../jetlinks-crud/SKILL.md) |
@@ -30,7 +30,8 @@ description: 为尚未确定入口或当前边界发生变化的 JetLinks 开发
 | 直接依赖、Command / Provider / Proxy 边界 | [jetlinks-boundary](../jetlinks-boundary/SKILL.md) |
 | 生命周期事件、领域事件、Topic / 订阅 | [jetlinks-events](../jetlinks-events/SKILL.md) |
 | Mono / Flux、非阻塞与异步生命周期 | [jetlinks-reactive](../jetlinks-reactive/SKILL.md) |
-| 命名、导入、注释、i18n、TraceHolder、MBean、扩展方式 | [jetlinks-conventions](../jetlinks-conventions/SKILL.md) |
+| 职责、语义 / 数据契约、配置 / 初始化、编码、注释、i18n 与框架扩展 | [jetlinks-conventions](../jetlinks-conventions/SKILL.md) |
+| 缓存、队列、热路径、运行资源、历史 / 审计、TraceHolder 与 MBean | [运行状态规则](../jetlinks-conventions/references/runtime-state-rules.md)，由 conventions 按实际生命周期选择细则 |
 | Vue 页面、交互、组件复用、前端状态与质量 | [jetlinks-web](../jetlinks-web/SKILL.md) |
 | 分支、提交、验证证据或 PR | [jetlinks-delivery](../jetlinks-delivery/SKILL.md) |
 | 跨任务稳定知识的维护 | [jetlinks-capture](../jetlinks-capture/SKILL.md) |

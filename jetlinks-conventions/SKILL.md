@@ -1,6 +1,6 @@
 ---
 name: jetlinks-conventions
-description: 应用 JetLinks 共享编码规范：职责与依赖方向、语义命名、魔法值、通用策略与初始化、导入与注释、i18n、TraceHolder、MBean 及框架扩展方式。适用于这些约定需要设计、实施或审查的代码变更。
+description: 应用 JetLinks 共享开发规范：职责与依赖、语义与数据契约、魔法值、配置与初始化、缓存及运行资源生命周期、历史留痕、导入与注释、i18n、TraceHolder、MBean 和框架扩展。适用于相关设计、实现及审查。
 ---
 
 # JetLinks Conventions
@@ -8,6 +8,8 @@ description: 应用 JetLinks 共享编码规范：职责与依赖方向、语义
 Use [`references/code-conventions.md`](references/code-conventions.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
 
 For component responsibilities, dependency direction, abstraction, semantic names, magic values, scenario-specific policies or initialization, use [responsibility and generality rules](references/responsibility-and-generality-rules.md) while designing and implementing, not only during review.
+
+For caches, derived state, hot-path compilation, buffers, resource ownership, reconfiguration or history / audit storage, use [runtime-state rules](references/runtime-state-rules.md); tracing and MBean references cover observability, not the business consistency or resource lifecycle itself.
 
 ## Workflow
 
