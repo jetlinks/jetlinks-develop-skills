@@ -5,7 +5,7 @@
 ## 类型与数据契约
 
 - 沿用 Vue 3 SFC + TypeScript，补齐 API、组件 props / emits、状态和路由边界的真实类型，避免 any、宽泛断言或重复接口隐藏契约差异。
-- API 请求放当前模块既有 api 层；跨端点业务编排放 service，响应式生命周期放 composable，纯转换放 mapper / util，不把职责混在模板里。
+- API 请求复用既有 api 层；简单提交与刷新可留页面命名事件，独立跨端点编排用 service，复杂状态 / 生命周期用 composable；纯转换可留局部函数，不为套分层拆出无职责文件。
 - defineProps 的类型声明与运行时声明按当前编译器版本和相邻约定选择。运行时默认值 / 校验需要时使用 PropType 等能力；`defineProps<T>()` 本身不是错误，缺调用括号、版本不支持或违反模块既定声明方式才需修正。
 - 枚举以 [EnumDict 规则](enum-rendering-rules.md) 为准；业务含义不同的 0、无样本、未开启、无权限、未知和失败不能统一伪装为空值。
 

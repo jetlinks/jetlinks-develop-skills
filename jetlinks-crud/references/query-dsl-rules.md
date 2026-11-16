@@ -5,7 +5,7 @@
 ## 先选查询入口
 
 1. 外部请求已有 `QueryParamEntity`
-   - 优先 `createQuery().setParam(param)`，再补服务端固定条件。
+   - 复用 `createQuery().setParam(param)`；增加强制条件前先将用户条件整体分组，保留嵌套 AND / OR 语义。
    - 如果只需要在请求参数上追加条件或排序，可用 `param.toQuery()` / `param.toNestQuery(...)`。
 
 2. 服务内部固定查询
@@ -44,24 +44,25 @@ return service
 
 - `where(field, value)` 常用于第一个条件。
 - `and(field, value)` 追加 AND 条件。
-- `in(field, values)` 处理集合匹配；集合为空时先判断，避免生成无意义查询。
+- `in(field, values)` 处理集合匹配。区分未提交的可选筛选与明确提交的空集合；空集合按字段契约解释，不能为“跳过空条件”把受限查询扩大为全量。
 - `not`、`notIn`、`gte`、`lte`、`between`、`like` 等只在当前模块已有用法或语义明确时使用。
 - 字符串字段名只在时序表、动态列、跨实体 DTO 或没有方法引用时使用；普通实体优先方法引用。
 
 ### 合并 QueryParam 与服务端条件
 
 ```java
+param.toNestQuery().and(Entity::getType, type);
+
 return service
     .createQuery()
     .setParam(param)
-    .where(Entity::getType, type)
     .orderBy(SortOrder.desc(Entity::getId))
     .fetch();
 ```
 
 - `setParam(param)` 承接前端筛选、分页、排序和 termType。
-- 服务端强制业务条件继续追加在 DSL 上，例如类型、状态和业务范围。数据权限沿 AssetsHolder 注入，不在业务 DSL 手写 tenantId、部门或创建人过滤来代替统一契约。
-- 追加条件前先判断是否会和前端同字段条件冲突；冲突时要明确是“收窄”还是“覆盖”。
+- 强制业务范围保持 `强制条件 AND (用户条件)`；直接在顶层 OR 后追加 AND 可能只约束最后一个分支。上述 `toNestQuery()` 会修改参数，参数需要复用时沿现有复制契约处理。数据权限交给 AssetsHolder owner，不在这里另写租户过滤。
+- 用户条件与强制条件冲突时可自然得到空结果，不能为“避免冲突”覆盖或删除强制范围。仅显示默认值等可覆盖条件按公开契约处理。
 
 ### 排序
 
@@ -87,7 +88,7 @@ return service
 ```
 
 - 可选条件优先用 `when(condition, query -> ...)`，不要手写多套重复查询。
-- 空集合、空字符串、零值时间窗口要先判断；不要把空条件交给数据库或 term builder 猜语义。
+- `when(...)` 只省略契约允许缺省的条件；`0`、空字符串或空集合可能是有效值，不统一按真假值丢弃。范围条件和危险操作仍由其 owner 保证。
 
 ### 嵌套 OR / AND
 
@@ -175,7 +176,7 @@ return service
 
 常见场景：
 
-- 状态流转：`set(State)` + `set(stateTime)` + 业务 ID 条件。
+- 状态流转：按 [状态动作](common-crud-rules.md#状态流转与重复请求) 保留合法前态 / revision 等并发仲裁与影响行数检查，不能只按业务 ID 无条件覆盖状态。
 - 解绑或释放资源：`setNull(parentId / ownerNodeId / leaseExpireAt)` + 当前绑定条件。
 - 批量回填：`where().in(id, ids)` + 一个或多个 `set(...)`。
 
@@ -213,7 +214,7 @@ return QueryHelper.transformPageResult(
 - `QueryHelper` 能承接 `QueryParamEntity`、排序、分页和映射时，不要手写字符串拼接的动态 SQL。
 - 原生 SQL 只能在 DSL / QueryHelper 明显无法表达且目标模块已有成熟模式时使用；参数必须结构化传入，禁止按条件拼接多套 SQL 变体。
 - 原生 SQL 默认使用标准 SQL 和通用函数；不要写 `limit` 方言、专有 JSON / array / window 语法、特定锁语句或专用 hint，除非用户明确要求限定某个数据库，或目标模块已有明确数据库限定。
-- 确需使用特定数据库方言时，必须在设计文档和 PR 中说明数据库范围、不可移植风险、回退或替代方案。
+- 确需使用特定数据库方言时，在已有契约或 PR 中说明支持范围与真实兼容风险；不额外强制设计文档或回退机制。
 - 需要分析原生 SQL 结构时，优先走 `DefaultQueryHelper(operator).analysis(sql)` 或目标模块已有封装。
 - 写 SQL 时必须按真实业务数据量、筛选组合、分页深度、排序字段、索引命中和并发访问评估性能，不只满足当前功能输出。
 - 复杂 SQL、原生 SQL、聚合、深分页或多表关联只有在本次改变查询形态、预期规模、索引、分页、并发或资源风险时，才需要相称的执行计划、压力测试或等价性能验证；无法观察已变化风险时再在 PR 中说明替代验证和剩余风险。
@@ -252,6 +253,8 @@ return QueryHelper.combineOneToMany(
 - 只 mock `fetch()` 返回值，不验证 DSL 是否包含关键条件、排序和权限注入。
 
 ## 测试目标
+
+只选择本次改变且既有证据未覆盖的项；平台已保证的权限、分页和查询能力不因列在下方就重复测试。
 
 - 断言核心条件：状态、类型、所属对象、时间范围、关键 termType。
 - 断言排序：默认排序、用户排序、稳定 tie-breaker。

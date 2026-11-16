@@ -27,9 +27,9 @@
    - 批量更新、批量删除、消息消费、联动同步优先使用批量抽象。
    - 避免在 `flatMap` 里逐条做数据库或远程调用，形成 N 次往返。
 
-4. 外部副作用优先后移
-   - 发布消息、远程调用、缓存同步、广播通知等，优先放在事件层或提交后阶段。
-   - 不把所有副作用硬塞进 CRUD 主链路。
+4. 副作用按业务与事务契约组合
+   - 必须参与当前用例结果的操作留在返回链；本地不变量与外部交付按 [事件规则](../../jetlinks-events/references/event-driven-rules.md) 选择时机。
+   - 不因逻辑复杂就异步化，也不假设放进本地事务的远程调用可以回滚。
 
 ## 官方定义与工程边界
 
@@ -47,16 +47,16 @@
 - 响应式链路从已有 `Publisher` 或第一个真实异步边界开始：响应式仓储、远程命令、事件发布、消息订阅、异步缓存等。
 - 当前调用栈上的普通对象不是响应式边界。请求对象校验、DTO 转换、字段计算、条件判断先用普通函数完成。
 - 每个操作符都要能说清语义：转换、筛选、异步调用、顺序组合、并发组合、错误恢复、忽略前值后的下一步、资源或背压控制。
-- 如果一个 lambda 像过程式脚本，说明函数边界还没有拆出来；先按业务意图抽成命名函数，再由操作符组合。
+- lambda 中混入难以追踪的多个业务阶段时，用命名函数表达边界；直观的局部步骤可留在原处，不把过程式写法本身当缺陷。
 
 ## 常见设计准则
 
 ### 选择映射算子
 
 - 需要保持顺序时，优先 `concatMap`
-- 允许并发且当前模块已有此惯例时，使用 `flatMap`
+- 需要并发且独立性、顺序与资源预算允许时，使用 `flatMap`；相邻惯例不能代替这些依据
 - 只做同步映射时，使用 `map`
-- `flatMap` 只用于返回 `Mono` / `Flux` 的异步步骤，不为了“看起来响应式”包一层
+- `flatMap` 用于组合返回 Publisher 的步骤；它本身不创建线程或保证异步，不为纯转换额外包装 Publisher
 - 对象转换、字段计算、条件判断等没有异步边界的函数保持普通返回值，不额外封装成 `Mono` / `Flux`
 - `flatMapSequential` 会并发订阅后按序发出结果，不能把它当串行数据库执行；真正串行选择 `concatMap`，并继续核对上游是否持有未消费的数据库游标。
 
@@ -93,7 +93,7 @@
 - `collectList()` 只用于明确有界的数据：分页结果、固定批次、协议天然小集合、已校验大小的入参
 - 订阅流、消息流、全表查询、设备属性历史、用户可控查询等可能很大的数据，不直接 `collectList()`
 - 需要聚合时优先分页、`take` / limit、定长 `buffer` / `window`、批量仓储接口、`QueryHelper.transformPageResult`、`QueryHelper.combineOneToMany` 等既有组合方式
-- 判断不清数据规模时，先把数据边界写进设计稿或询问用户，不用“先收集再处理”兜底
+- 规模不明时先核对分页、来源和资源契约；只有剩余选择会改变业务结果时询问，不为每处收集新建设计稿。
 
 ### 控制 lambda 复杂度
 
@@ -105,7 +105,7 @@
 
 - Reactor 链不可避免，但长链必须按业务阶段拆小方法，让主链像流程目录。
 - 当链路同时包含已由业务契约要求且由当前边界拥有的校验、权限、命令发送、持久化、日志、事件或结果转换时，按真实业务阶段拆成命名步骤，例如 `checkTransitionAndSend(...)`、`saveXxxAndReturn(...)`、`publishXxxEvent(...)`。不要因方法名模板主动新增 `validateAndXxx(...)` 或重复上游 / 框架 guard。
-- 不把嵌套 `flatMap` 当缩进版过程式代码；嵌套里超过一个业务动作时，先抽方法。
+- 嵌套造成阶段、副作用或错误边界难以追踪时拆分；动作数量不单独决定是否抽方法。
 - 拆出的响应式方法仍返回 `Mono` / `Flux`，让超时、重试、错误传播和测试仍能组合。
 
 ### 链路追踪
@@ -153,14 +153,6 @@ return repository.findById(id)
 private DeviceEntity prepareUpdate(DeviceEntity entity, UpdateRequest request) {
     return applyUpdate(entity, request);
 }
-```
-
-多来源组合用组合算子表达依赖关系。下面是内部数据组合示例，前提是查询已完成且不与未消费游标重叠；需要共享事务连接时遵循上文串行规则。它不表达独立安全入口；若调用发生在用户可访问边界，读权限仍由该入口或提供方的唯一 AssetsHolder owner 负责一次：
-
-```java
-return repository.findById(id)
-    .zipWhen(entity -> detailRepository.findByEntityId(entity.getId()))
-    .map(tuple -> toView(tuple.getT1(), tuple.getT2()));
 ```
 
 可复用的链路片段用函数表达，不复制过程式 lambda：
@@ -224,7 +216,7 @@ return sendCommand(device, command)
 
 - 先找当前仓库有没有同类边界的非阻塞抽象
 - 如果没有，只在必要边界隔离阻塞调用
-- 只有当前模块已有明确惯例时，才沿用现有 scheduler 模式
+- 依据当前执行模型和目标版本选择项目认可的阻塞适配边界；没有相邻样例不阻止必要隔离，换线程也不改变事务或资源所有权。
 - 如果响应式链路里需要超时缓存，优先使用 `org.hswebframework.web.cache.ReactiveCache<E>`；需要本地 TTL / size 控制时，用 `com.github.benmanes.caffeine.cache.Caffeine<K, V>` 构建底层缓存，不要额外拼装临时缓存方案。
 
 ### 事件与订阅
@@ -261,6 +253,6 @@ return sendCommand(device, command)
 - 关键业务阶段是否有 TraceHolder / MonoTracer / FluxTracer 埋点判断
 - 是否对 `collectList()` 给出了明确的数据边界
 - 是否为非显而易见的异步边界、批量 / 背压限制、重试 / 超时、生命周期清理、上下文传播补了必要代码注释
-- 是否把复杂副作用合理拆到了事件层
+- 必须等待的步骤是否仍在返回链，本地不变量与外部交付是否符合事件 / 事务契约
 - 是否保持了链路返回类型与相邻代码一致
 - 是否对高频或批量场景做了批处理而不是逐条处理
