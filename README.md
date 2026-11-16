@@ -92,7 +92,7 @@ jetlinks-develop-skills/
 
 ### `jetlinks-web`
 
-用于 JetLinks 前端页面开发、组件/hook/utils 能力复用、函数封装与组件边界判断、目录落点判断、状态管理与类型质量约束；坚持业务优先、参考为辅，默认沿用 Ant Design 风格；页面壳层、首屏组织、信息架构或视觉节奏受影响时，先按 `$jetlinks-web` 内置页面分型规则建立页面交互方案档案，再进入实现；需要交互打磨时，遵循 `$jetlinks-web` 的交互与视觉优化规则，且最终界面必须面向终端用户而非开发者；用户可见字段展示名、标题、按钮和提示文案统一走国际化，可使用中文作为默认值。
+用于 JetLinks 前端页面开发、组件/hook/utils 能力复用、职责边界、状态与类型质量约束。按业务任务选择页面承载，配置与设计围绕可见内容组织就地编辑、连续操作和结果反馈，避免全量表单及分散弹窗；独立字段轻量编辑，联动配置保留完整草稿与提交。遵循已接受原型的操作路径及平台 Ant Design 设计系统，按需形成方案档案、核验真实导出，并在连贯阶段结束后验证。用户可见文案统一走国际化，可使用中文默认值。
 
 ### `jetlinks-capture`
 
@@ -473,6 +473,7 @@ JetLinks 项目交付代码时，默认遵循以下规范：
 - 维护触发、恢复或协作规则时，使用少量真实任务对照无该规则、当前规则与候选规则；保持模型、工具、源码和验收一致。检查目标保留、第一有效动作、遗漏 / 重问、任务偏航及所有智能体成本。只有观察到差异或不稳定时扩大样本，不给日常任务增加评测仪式。
 - 至少覆盖明确机械跨层、已有协议样例修复、局部前端调整、复杂根因、依赖委派，以及匹配 / 失配恢复；把正确产出与效率分开判定，保留成功与失败轨迹供复审。
 - 同一环境优先维护一个权威安装源。不要同时从多个技能根目录加载同名副本；同步镜像时用校验器明确比较，不自动修改用户安装或配置。
+- JetLinks 前端方案与实现统一由 [jetlinks-web](jetlinks-web/SKILL.md) 路由；宿主遗留 `jetlinks-web-style` 时应收敛为兼容入口，避免旧目录中的固定布局和确认门槛与新规则并用。跨模块一致性按 [公共交互契约](jetlinks-web/references/shared-interaction-contracts.md) 扩展真实已有能力，不另建万能设计器。
 
 这些维护原则依据 [Agent Skills 规范](https://agentskills.io/specification)、[OpenAI 技能文档](https://learn.chatgpt.com/docs/build-skills)、[Anthropic 编写建议](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) 和 [Agent 评测指南](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)。文档是维护参考，不进入普通业务任务必读链。
 

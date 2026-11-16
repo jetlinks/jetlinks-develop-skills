@@ -1,6 +1,6 @@
 # JetLinks Web Core 能力文档读取规则
 
-本文件规定 `jetlinks-web` 如何消费 `cloud.jetlinks/ui/jetlinks-web-core/src` 下的轻量能力说明。文档用于降低发现成本，不替代真实导出、源码、依赖版本和生产用法核验。
+本文件规定 `jetlinks-web` 如何消费目标前端工作区 `jetlinks-web-core/src` 下的轻量能力说明。先定位实际工作区，不假定名为 `ui` 或 `runtime-ui`。文档用于降低发现成本，不替代真实导出、源码、依赖版本和生产用法核验。
 
 ## 何时读取
 

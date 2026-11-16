@@ -13,6 +13,10 @@
 - [dashboard-component-rules.md](dashboard-component-rules.md): `visDashboard` 仪表盘组件目录、注册、分层与接线规则
 - [directory-structure-rules.md](directory-structure-rules.md): 目录层级与模块落点规则
 - [page-pattern-decision-rules.md](page-pattern-decision-rules.md): 根据业务目标选择 CRUD、工作台、详情页、分步流等页面分型
+- [semantic-ui-design-rules.md](semantic-ui-design-rules.md): 基于对象语义与用户任务规划企业菜单、列表、详情分组、业务联动、规则 / 流程及配置；区分标准、设计方法与项目规则
+- [task-interaction-rules.md](task-interaction-rules.md): 从表单设计器、数采、指标模板、属性预处理提炼连续任务、内容操作、语义控件、草稿与结果联动，约束表单感、分散交互和原型验收
+- [shared-interaction-contracts.md](shared-interaction-contracts.md): 公共选项、就地编辑、面板、任务草稿与试验反馈的统一契约、分层和验收；扩展现有能力，保留业务编辑器语义
+- [interaction-design-foundations.md](interaction-design-foundations.md): 直接操作、Nielsen 原则、Ant Design、Carbon、WCAG / APG 与响应性能的文献依据、适用边界和任务体验评估
 - [block-admission-rules.md](block-admission-rules.md): 判断统计卡、图表、快捷入口、概览区等区块是否值得存在
 - [business-ui-example-rules.md](business-ui-example-rules.md): 如何借鉴相似业务案例，以及哪些“看起来高级”的设计不应照搬
 - [condition-filter-rules.md](condition-filter-rules.md): 表达式搜索、Token 化条件输入、远程选项面板、条件路由与快捷筛选联动规则
@@ -39,3 +43,5 @@
 14. 状态边界不清晰：`state-management-rules.md`
 15. 交付前质量或类型风险检查：`quality-and-type-rules.md`
 16. 需要找真实实现样例：`example-locations.md`
+17. 配置、设计器、规则 / 公式编辑，或用户反馈表单感重、操作分散、原型还原差：`task-interaction-rules.md`；只查控件时直接读其“控件按意图选择”节，不重做整页方案
+18. 查询设计规范、整体体验评审、直观性与顺滑度取舍：`interaction-design-foundations.md`；只查相关依据，不将其作为所有前端改动的必读材料

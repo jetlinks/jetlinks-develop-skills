@@ -46,3 +46,5 @@ description: 为尚未确定入口或当前边界发生变化的 JetLinks 开发
 - 需要更细的场景组合示例时：[路由索引](references/ai-prompt.md)；维护路由行为时：[评测用例](references/evaluation-cases.md) 与 [离线评测器](scripts/evaluate_route_trace.py)。
 
 局部事实以当前工作区代码、导出、构建声明和有效锚点为准；不猜固定模块名，不忽略软链接模块。以上 references 按需读取，不是每次任务的前置阅读清单。
+
+JetLinks 前端方案与实现统一路由到 `jetlinks-web`。宿主安装的旧 `jetlinks-web-style` 仅作兼容入口；不并行加载两套页面规则。泛化视觉设计技能只在需要时补充，不能替代当前业务路径与项目设计系统。

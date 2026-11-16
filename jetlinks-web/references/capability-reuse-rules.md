@@ -27,33 +27,31 @@
 - 基础交互控件优先使用 Ant Design Vue：`a-button`、`a-input`、`a-input-number`、`a-select`、`a-radio`、`a-checkbox`、`a-switch`、`a-date-picker`、`a-time-picker`、`a-upload`。
 - 反馈与容器类交互优先使用 Ant Design Vue：`a-modal`、`a-drawer`、`a-popconfirm`、`a-tooltip`、`a-alert`、`a-empty`、`a-spin`、`a-pagination`。
 - 数据展示优先评估项目级 `j-pro-table`；确需基础表格时使用 `a-table`，不要手写 `<table>`、分页、loading 和 empty 状态。
-- 表单优先使用 `a-form` / `a-form-item` 或项目级 `EditDialog` schema，不在页面里堆叠原生 `<label>`、`<input>` 与手写校验。
+- 确需字段录入时复用 `a-form` / `a-form-item` 或已有 schema 与校验；`EditDialog` 只用于适合弹窗的独立任务，不能因有表单能力就反向决定编辑位置。
 - 原生标签不是禁用项；`div`、`section`、`span` 等可用于结构和布局，但不应用原生交互控件绕过组件库能力。
 
-## 卡片列表根节点规则
+## 卡片列表交互语义
 
 - 卡片列表优先复用 `j-pro-table(card)`、`CardBox` 或相邻页面已有卡片布局模式。
-- 卡片、资源块、列表项容器不要使用原生 `button` 作为根节点；卡片根节点优先使用 `CardBox`、`a-card`、模块内卡片组件或语义化 `div`/`section`。
-- 整卡点击场景应在卡片容器上声明点击行为与状态样式；必要时补充 `role="button"`、`tabindex="0"` 和键盘事件，不要为了点击能力把整张卡片写成 `button`。
-- 卡片内部的具体操作按钮使用 `a-button` 或项目操作组件，避免原生 `button` 造成主题、尺寸、权限、loading、禁用态和 hover/focus 风格不一致。
-- 只有单一动作、无复杂内容承载的元素才适合按钮语义；复杂卡片内容、状态、描述和操作区混合时必须保持卡片容器语义。
+- 单一动作卡片优先使用已有按钮组件或合适的原生 `button`；导航用链接，互斥选择优先使用单选语义。主题、禁用、选中与焦点沿项目约定。
+- 含多个独立操作的卡片保持容器语义，各操作使用独立控件；不要嵌套按钮或让点击冒泡误触整卡动作。
+- 确需用非原生元素承载整卡动作时，补全对应角色、焦点和键盘行为；加 `role` 不能替代这些行为。不为禁用原生按钮而手工重建交互。
 
 ## 复用搜索优先级
 
 新增 component / hook / service / API wrapper / util 前，从当前锚点向相关层逐级搜索；找到适合且已验证的能力即停止，已有效的结果可以复用。以下是候选范围，不要求扫描所有范围或逐项提交证明：
 
 1. 当前功能目录：目标页面附近的 `components/**`、`hooks/**`、`utils/**`、`api/**`、`services/**`、`types/**`、schema/config。
-2. 当前模块：`modules/<module>-ui/**` 下相似页面、组件、hook、工具函数、store、API/service。
-3. 同业务域或兄弟子模块：对象模型、流程、字典、权限、搜索、表格操作、表单弹窗、数据转换相同或高度相似的 `modules/*-ui/**` 实现。
-4. 共享层：先查 `@jetlinks-web/components`（`packages/components/src/components.md` → `components.ts` → 单组件文档/源码），再查 `@jetlinks-web-core/components`（`jetlinks-web-core/src/components/index.ts` → 组件源码），随后按需查其他 `@jetlinks-web-core/*`、`@jetlinks-web/*` 导出。
-5. 跨模块公开出口：模块 `index.ts`、`register.ts`、注册中心、运行时扩展位、文档化 API。
+2. 当前任务所属目录：已存在且与本次职责相关的组件、hook、工具、store、API/service；不扩大成其他可选模块参考清单。
+3. 共享层：查 `@jetlinks-web/components` 的映射与根导出，以及 `@jetlinks-web-core/components` 的索引与源码；交互组合示例统一见 [Core 场景](example-locations.md)。
+4. 确有跨模块调用需求时，只核验已声明的公开出口、注册契约或运行时扩展位，不扫描可选模块找模板。
 
 原则：
 
 - 同模块可直接复用符合本模块约定的内部能力。
 - 跨模块复用必须优先走公开导出、注册中心或稳定扩展点。
 - 对其他业务模块的私有实现，可以参考模式，但不要直接深层 import。
-- 若多个实现相似，优先选择同模块或同业务域中最近维护、仍在使用的实现。
+- 同一能力有多个实现时，按当前维护归属和公开契约选择；不以其他业务模块的私有实现替代 core 能力。
 - 若现有能力只差少量适配，优先用 adapter/config/schema/slot 包装，不新建平行体系。
 
 ## 页面组件组合
@@ -72,7 +70,7 @@
 | 主从详情工作区 | 左侧树/列表 + 右侧 `SectionCard` / `TabsCard` | 列表浏览与单对象深度编辑并行 |
 | 配置向导 / 能力开通页 | Steps / 分区表单 + `CardSelect` + `StickyActionBar` | 强流程配置、能力启用、通道开通 |
 | 资源 / 能力选择器 | `MarketplaceResourcePicker` + `CardSelect` | 模型、模板、能力、插件、市场资源选择 |
-| 完整新增/编辑 | `EditDialog` / `JlDrawerShell` / 独立配置页 | 仅用于字段多、依赖强或需要完整校验的流程 |
+| 完整新增/编辑 | 就近分组编辑 / `EditDialog` / `JlDrawerShell` / 独立配置页 | 由任务时长、上下文与提交边界选承载；字段多、依赖强或完整校验不单独构成弹窗理由 |
 | 轻量单项编辑 | `InputEditable` / `Editable` / `FormItemEditable` | 名称、标签、说明、备注、描述等轻量字段 |
 | 条件构建 | `ConditionFilter` / `TermsCascader` / `TermsCascaderGroup` | 优先字段驱动的通用条件、时间/范围、嵌套映射与选项值编辑 |
 | 标签与状态 | `MetaChip` / `ChipGroup` / `AppTag` / `j-badge-status` | 状态、分类、能力标签和计数筛选 |
@@ -101,7 +99,7 @@
 ## 组件引入策略
 
 - 对页面内非首屏关键、按需展示或体积较大的本地组件，优先使用异步组件引入，减少首屏包体积。
-- 不要默认使用 `import TestComponent from './xxxx/index.vue'` 这种同步引入方式；优先改为 `defineAsyncComponent`。
+- 首屏关键、体积小或随宿主一起使用的组件可同步引入；不把全部局部组件改成 `defineAsyncComponent`。异步引入须考虑首次打开延迟、loading 与加载失败恢复。
 - 推荐写法：
 
 ```ts
@@ -160,7 +158,7 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 ## 推荐工作流
 
-1. 先做业务分型与交互方案确认，再做包级能力评估，最后进入具体组件/Hook/utils 选型。
+1. 主交互变化时按 [页面分型](page-pattern-decision-rules.md) 选择方案；已授权且事实明确时继续，再按需评估包级能力和具体组件/Hook/utils。
 2. 优先组合现有能力，避免页面内重复封装。
 3. 按卡片、列表、筛选、详情、轻量编辑、完整编辑、抽屉、底部操作、标签状态、图标、资源选择等场景映射组件。
 4. 管理页若存在通用搜索，先判断 `ConditionFilter` 是否应承担搜索层；再按字段分型判断日期/时间、范围、布尔、选项、嵌套路径、无值条件等是否都能通过通用字段定义、标准条件和值编辑器表达，再衔接列表、编辑、回传等主流程。
@@ -170,18 +168,11 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 
 函数封装、设计模式与组件边界的完整规则见 [`code-organization-rules.md`](code-organization-rules.md)。这里仅保留能力复用时的最短决策流。
 
-出现重复结构时按以下路径判断：
+先区分局部职责拆分与公共抽象：
 
-1. 是否被 2+ 处消费？
-   - 否 → 留在原处，不抽
-   - 是 → 继续判断
-2. 2+ 处的差异是"参数化可解"还是"语义根本不同"？
-   - 参数化可解 → 评估抽组件，通过最小 prop / slot / 配置契约控制差异
-   - 语义不同 → 各留各的，注释说明"视觉相似但语义不同"
-3. 抽到哪里？
-   - 同模块内 2+ 页面复用 → modules/<module>-ui/components/
-   - 跨模块 2+ 模块复用 → jetlinks-web-core/components/
-   - 仅 1 个模块用 → 先留模块内
+1. 单次使用但有独立 UI、状态或生命周期的单元，可按代码组织规则拆为局部组件；无独立职责的包装留在原处。
+2. 多处消费时，确认业务语义、编辑和生命周期一致，差异能由最小 props / slots / 配置表达，再评估公共抽取；视觉相似不构成合并依据。
+3. 按真实消费范围放在 feature、模块或 `jetlinks-web-core`；跨项目基础能力才考虑共享包。统一选项、编辑、面板与结果反馈时见 [公共交互契约](shared-interaction-contracts.md)。
 
 ### 不合并的反例
 
@@ -221,7 +212,7 @@ const TestComponent = defineAsyncComponent(() => import('./xxxx/index.vue'));
 - 不要在多处手工拼接查询参数，优先复用编码工具。
 - 不要用组件内零散 watcher + 回调替代已有 hook 组合能力。
 - 不要因为组件现成就反向决定页面结构；业务分型优先于组件组合。
-- 不要在交互方案还未让用户确认前，就直接进入传统 CRUD 组件组合。
+- 不要未经业务分型就默认传统 CRUD 组件组合；是否询问只由 [页面分型](page-pattern-decision-rules.md#方案档案) 的实质未决选择决定。
 - 不要在 workspace 已提供 `ConditionFilter` 工具链时，仍把 `ProSearch` 当成通用搜索默认值。
 - 不要把“相邻页面仍使用 ProSearch”当成新页面的默认依据；除非是窄改旧页、用户明确要求旧表格风格，或当前筛选确实没有路由回显、远程枚举/引用选项和保存搜索需求，否则优先 `ConditionFilter`。
 - 不要因为某个字段是“项目/用户/区域/字典”就直接新增字段专属搜索组件；先复用 `ConditionFilter` 的通用选项值编辑路径。
