@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Review"
-  short_description: "沿业务链路审查正确性、权限、并发、资源和演进风险"
-  default_prompt: "使用 $jetlinks-review 从当前业务结果出发，沿入口、状态、持久化、外部能力和消费者审查完整链路，按实际风险引用开发规则并检查反例；不要局限于坏味道清单或重复历史评审结论。"
+  short_description: "沿完整业务链路审查正确性与维护成本，以证据和反例避免误报或特调"
+  default_prompt: "使用 $jetlinks-review 沿当前业务链路取证，区分缺陷与合理反例，按实际风险引用开发规则。"

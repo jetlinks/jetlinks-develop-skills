@@ -1,71 +1,35 @@
 ---
 name: jetlinks-conventions
-description: 应用 JetLinks 共享开发规范：职责与依赖、语义与数据契约、魔法值、配置与初始化、缓存及运行资源生命周期、历史留痕、导入与注释、i18n、TraceHolder、MBean 和框架扩展。适用于相关设计、实现及审查。
+description: 应用 JetLinks 共享开发规则：职责与语义、通用策略、运行状态、编码与注释、i18n、追踪和运维观测。按当前问题读取对应细则。
 ---
 
 # JetLinks Conventions
 
-Use [`references/code-conventions.md`](references/code-conventions.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
+负责跨领域的代码与设计约定。模块落点归 routing，平台依赖与命令归 boundary，数据校验归 CRUD，授权归 AssetsHolder，响应式执行归 reactive；不要在此再定义一套领域规则。
 
-For component responsibilities, dependency direction, abstraction, semantic names, magic values, scenario-specific policies or initialization, use [responsibility and generality rules](references/responsibility-and-generality-rules.md) while designing and implementing, not only during review.
+## 使用方式
 
-For caches, derived state, hot-path compilation, buffers, resource ownership, reconfiguration or history / audit storage, use [runtime-state rules](references/runtime-state-rules.md); tracing and MBean references cover observability, not the business consistency or resource lifecycle itself.
+先核验相邻代码与当前依赖，只读取会改变本次决策的细则。已有事实和规则仍有效时复用，不因触碰文件扩展为无关清理。
 
-## Workflow
+| 当前问题 | 规则 owner |
+| --- | --- |
+| 职责、抽象、语义命名、魔法值、配置、场景特调与初始化 | [职责与通用性](references/responsibility-and-generality-rules.md) |
+| 缓存、派生状态、热路径、运行资源、历史 / 审计 | [运行状态](references/runtime-state-rules.md)；订阅取消等执行机制由 reactive 处理 |
+| 工具类、导入家族、链式调用与 Java Stream 可读性 | [编码约定](references/code-conventions.md)；具体包 / 注解不清时查 [导入参考](references/annotations-and-imports-reference.md) |
+| 公共类 / SPI 契约、非显然规则、兼容与并发注释 | [代码注释](references/code-comments.md) |
+| 是否使用 i18n | [i18n 适用边界](references/i18n.md)；需要资源和 API 写法再读 [具体用法](references/i18n-usage.md) |
+| 关键业务 span 与 Context 传播 | [追踪](references/tracing.md) |
+| 常驻任务、缓存 / 队列、连接等运维观测 | [MBean](references/mbean-observability.md) |
+| 工具 / SDK / 框架能力缺口 | [根因与扩展点](references/root-cause-and-no-hack-rules.md) |
+| 后端行为契约与验证组织 | [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) |
 
-1. Classify the task as annotations/imports, general conventions, comments, i18n, tracing, MBean observability, or a capability-gap / hack-avoidance situation (tool, SDK, framework API, or shared capability not directly satisfying the requirement).
-2. Inspect adjacent production code before changing anything.
-3. Confirm the current module's programming style, package roots, naming patterns, and smallest-change expectation.
-4. Use [`references/annotations-and-imports-reference.md`](references/annotations-and-imports-reference.md) when imports or annotations are unclear.
-5. Use [`references/i18n.md`](references/i18n.md) to decide whether the module should receive i18n changes at all.
-6. Use [`references/i18n-usage.md`](references/i18n-usage.md) when the task needs concrete i18n implementation details such as resource layout, `LocaleUtils`, exception `i18nCode` usage, reactive usage, `I18nEnumDict`, or resource synchronization.
-7. Use [`references/code-comments.md`](references/code-comments.md) when adding or reviewing comments around business rules, compatibility, concurrency, lifecycle, permissions, tracing, MBean operations, or public contracts.
-8. Before editing non-trivial backend code, identify the concrete code comment targets from [`references/code-comments.md`](references/code-comments.md); add comments in the touched code when a target exists, and only skip comments when the touched code is straightforward.
-9. Use [`references/tracing.md`](references/tracing.md) when adding or reviewing chain tracing instrumentation, critical business spans, context propagation, or TraceHolder usage.
-10. Use [`references/mbean-observability.md`](references/mbean-observability.md) when adding or reviewing long-lived in-memory tasks, caches, queues, buffers, retries, connection/session managers, or MBean/JMX observability.
-11. Whenever an existing tool, SDK, framework API, library, or local capability does not directly satisfy the requirement (inaccessible method, serialization error, reactive/blocking mismatch, type/generic clash, exception model gap, third-party behavior mismatch, etc.), load [`references/root-cause-and-no-hack-rules.md`](references/root-cause-and-no-hack-rules.md) and resolve the root cause through official extension points, adjacent module abstractions, dependency choice, or by informing the user; never ship reflection / `Unsafe` / visibility hacks / copied source / bytecode injection / monkey patches as a silent workaround.
-12. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
-13. Implement the smallest complete, consistent change that matches the existing codebase and explicitly state the i18n decision when it matters.
+## 关键约束
 
-## Required Constraints
+- 修共同根因和正确 owner，不为产品 ID、租户、路由或某次样例特调公共层；真实业务差异显式建模为策略或配置。纯复制转发、无用途留痕和无消费者抽象不增加价值。
+- 公共标识、包路径和版本以代码 / 构建事实为准。长链按业务阶段拆分；纯转换保持普通函数，不在 Stream 的 `peek / map / filter` 中藏业务副作用。
+- 先区分误用、能力缺口与通用组件缺陷；确认缺陷时在组件 owner 修复并提交 PR，不以业务包装、复制、深覆盖或特调规避。细则由 [根因处理](references/root-cause-and-no-hack-rules.md) 拥有。
+- 同 PR 未发布中间形态直接收敛；只有已发布、持久化、外部依赖或用户明确要求的行为才设计兼容。
+- 注释写公共契约及非显然原因，放在代码旁；明显实现不逐行复述，也无需逐文件报告“无需注释”。
+- i18n、序列化、TraceHolder 与 MBean 复用当前平台能力。已有覆盖时不重复封装、埋点或加监控，不输出无关“不适用”清单。
 
-- Do not invent package names, import families, resource IDs, action IDs, topics, or service IDs.
-- Do not add extra layers, helper classes, or demo code unless the task requires them.
-- Prefer local examples over generic memory.
-- Clearly separate workspace facts from fallback defaults when the repository is low-context.
-- Do not introduce i18n into a module unless the module already follows an i18n convention or the user explicitly asks for it.
-- When Apache Commons utilities are already available or aligned with adjacent code, prefer `ObjectUtils`, `ArrayUtils`, `CollectionUtils`, and `MapUtils` for object, array, collection, and map checks instead of handwritten repetitive branches.
-- Do not use deprecated `org.apache.commons.lang3.StringUtils` methods in new or modified Java code. For Commons Lang string comparison, prefix/suffix, contains, index/search, or plain replace/remove operations, use `org.apache.commons.lang3.Strings.CS` / `Strings.CI` by case-sensitivity when the dependency provides `Strings`; if it does not, do not fall back to deprecated `StringUtils` variants, and use JDK, Spring, local helpers, or state the version constraint. For regex replace/remove use `RegExUtils`; for null-safe string predicates such as `StringUtils.isEmpty` / `isBlank` / `isNotEmpty` / `isNotBlank`, allow non-deprecated `StringUtils` methods when the module already uses Commons Lang or null-safety would otherwise create repetitive code.
-- Keep convention-driven changes scoped to the required consistency fix; do not expand into unrelated cleanup.
-- When a specific scenario exposes a problem in a shared/general capability, fix the common contract, extension point, adapter, default policy, or test matrix so the same class of problems is handled; do not hardcode scenario-specific branches into shared code unless the business rule is explicitly modeled as configuration or strategy.
-- When repair evidence contradicts the root-cause hypothesis, use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) before expanding the repair; do not treat ordinary implementation steps as failed investigations.
-- Prefer readable code over dense fluent chains. When a chained call mixes multiple business phases or becomes hard to summarize in one sentence, split it into named local variables, named private methods, or a small existing abstraction.
-- Do not force Java Stream or fluent style onto business workflows, protocol parsing, state transitions, or complex validation. Use imperative code when named intermediate results and early returns make the behavior clearer.
-- Do not hide side effects in `Stream.peek(...)`, `map` / `filter` lambdas, mutable external variables, or stream operations that call remote services, databases, caches, or event publishers.
-- Do not leave complex code completely uncommented. Add concise comments for non-obvious business rules, compatibility, concurrency/lifecycle guards, security boundaries, TraceHolder/MBean decisions, and public contracts; class comments and SPI interface method comments must be complete, while implementation comments should stay concise and must not restate code line by line. For SPI classes or methods, add real `@since` and focused `@see` links to related subscription types, default implementations, or reference implementations when they help implementers understand the contract; ask when the version is unclear instead of inventing it.
-- Do not satisfy the comment requirement only in the final answer or PR description. When a required comment target exists, the comment must be added to the code next to the class, method, branch, boundary, or lifecycle guard it explains.
-- For new or changed critical backend business flows, explicitly decide whether manual tracing is needed. Use the platform tracing APIs (`TraceHolder`, `MonoTracer`, `FluxTracer`) at key business stages and record stable, non-sensitive business attributes.
-- Do not add noisy per-record tracing, full payload dumps, tokens, credentials, personal data, or high-cardinality raw user input to spans. Prefer stable span names and put bounded identifiers or counts into attributes.
-- For long-lived in-memory tasks, caches, queues, buffers, retry pools, or session / connection / subscription managers, explicitly decide whether an MBean is needed for operations observability. Expose bounded statistics, health/status, and safe internal operations such as refresh, flush, compact, or retry; do not expose secrets, full payloads, unbounded collections, or destructive operations without a clear business-safe boundary.
-- When convention-related code changes are made, report the validation performed or the exact pending commands and unresolved convention risks.
-- For user-visible exceptions, prefer the local exception pattern that carries `i18nCode` or message key plus args; do not hardcode Chinese or English text in exception constructors.
-- When the framework, SDK, third-party library, or existing API does not directly satisfy the requirement, solve the root cause via official extension points, adjacent module abstractions, dependency adjustments, or by informing the user with concrete trade-offs; do not use reflection / `Unsafe` / visibility bypass / copied source / monkey patches / bytecode injection / hidden access-level changes as a silent workaround. If such an option is the only path, explain the limitation and obtain user confirmation before applying it. See [`references/root-cause-and-no-hack-rules.md`](references/root-cause-and-no-hack-rules.md).
-- Do not silence build / lint / type-check errors with broad `@SuppressWarnings`, commented-out code, ignored tests, swallowed exceptions (`catch (Exception e) {}`), or `e.printStackTrace()` instead of structured handling; fix the underlying issue or escalate to the user.
-- Do not block in reactive modules to "make it work" or invent parallel `ObjectMapper` / serializer instances to dodge serialization errors; resolve via `Module` / `Mixin` / `JsonSerializer` / `JsonDeserializer` / `@JsonTypeInfo` and reuse the module's standard configuration.
-- Do not keep compatibility code for an earlier implementation that only exists inside the same unreleased PR. Prefer the final best-practice shape and update in-PR callers, tests, fixtures, docs, and examples together; only preserve old behavior when it is released, persisted, externally depended on, or explicitly requested by the user.
-
-## Response Shape
-
-Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
-
-1. Conventions to follow
-2. Adjacent files or patterns checked
-3. I18n decision or unresolved import/i18n risks
-4. If a tool/API capability gap was hit, the root cause analysis, the chosen resolution path (official extension point / adjacent abstraction / dependency change / informing the user), and any usage of reflection / visibility bypass / copied source that was explicitly confirmed by the user
-5. General-capability decision when the change touches shared code: common root-cause fix, explicitly modeled strategy/configuration, or why the case is truly local
-6. Release-boundary decision when compatibility code is considered
-7. Readability decision for long chained calls when relevant
-8. Comment decision for complex or non-obvious code when relevant
-9. TraceHolder / tracing decision when relevant
-10. MBean / operations observability decision when relevant
-11. Verification evidence or exact pending commands
+阶段末验证受影响行为；向用户说明实际变化、关键理由、有效证据与剩余风险。维护约束时再查 [文献与适用边界](references/design-constraint-sources.md)，不加入普通任务必读链。

@@ -10,7 +10,7 @@
 
 | 层 | 应负责 | 不应负责 | 常见落点 |
 | --- | --- | --- | --- |
-| 页面 / 容器 | 路由接入、页面骨架、区域组合、方案级状态展示、把用户动作交给 composable 或 service | 直接拼 API 请求、承载复杂字段转换、把多个接口编排成巨型事件函数 | 页面 `.vue`、页面级 container |
+| 页面 / 容器 | 路由接入、页面骨架、区域组合、页面状态及命名事件；简单动作调用已有 API 封装 | 重复实现 HTTP / 鉴权、承载复杂字段转换或巨型业务编排 | 页面 `.vue`、页面级 container |
 | 展示组件 | 一个可命名的视觉 / 交互区域、局部 UI 状态、props / slots / emits 契约 | 请求、写 store、改路由、读取环境变量、隐藏业务编排 | `components/**` 下的 `.vue` |
 | Composable / Hook | 响应式状态、生命周期、watch、请求编排、竞态和刷新策略 | 模板结构、具体 DOM、通用纯计算 | `hooks/**`、`use*.ts` |
 | API | 单一后端资源或端点的请求封装、入参 / 出参类型 | 页面状态、组件引用、用户交互、跨端点业务流程 | `api/*.ts` |
@@ -25,13 +25,15 @@
 ```text
 Page / Container
   ├─> Presentational Component
-  ├─> Composable / Hook ──> Service ──> API
+  ├─> API（简单请求）
+  ├─> Composable / Hook（状态与生命周期）──> API / Service
+  ├─> Service（独立业务编排）──> API
   └─> Pure Util / Mapper
 ```
 
 - 展示组件通过语义化事件向上报告意图，例如 `save`、`remove`、`select`；不要让子组件直接知道页面 API、路由或 store 结构。
 - Composable 可以组合 service、store 和 Vue 生命周期；它的返回值要形成清晰的状态 + 命令契约。
-- API 只描述后端边界；跨多个 API 的业务动作放 service，避免在页面里用一长串 `await` 隐式编排。
+- API 只描述后端边界；独立的跨端点业务流程放 service，复杂状态与生命周期放 composable。单页保存后刷新等简短操作可留在命名事件中，不为一次转发新增层。
 - Util / mapper 保持纯函数；相同输入得到相同输出，除非函数名明确表达了时间、随机数或环境读取。
 - 页面可以组合多个层，但每一层都必须增加独立职责。只转发 props / emits、没有边界价值的中间包装层应合并。
 
@@ -43,9 +45,9 @@ Page / Container
 | --- | --- | --- | --- |
 | 纯转换 | 不请求、不改外部状态，只把输入变成输出 | util / mapper，必要时放同文件局部函数 | `buildQuery`、`normalizeForm`、`mapRecord` |
 | 派生读取 | 从现有状态计算展示值，不产生副作用 | `computed`、selector、纯函数 | `visibleStatus`、`selectOptions` |
-| 查询 | 从服务端读取数据，可能带 loading、分页、取消或重试 | API + composable / service | `loadList`、`useAssetList` |
-| 命令 | 保存、删除、启停、发布等改变状态的动作 | service / composable command | `saveAsset`、`publishRule` |
-| 编排 | 顺序 / 并行调用多个动作，处理业务前置条件和失败边界 | service 或 composable | `submitAndRefresh`、`activateWithRollback` |
+| 查询 | 从服务端读取数据，可能带 loading、分页、取消或重试 | 简单查询由页面调用已有 API；复杂状态流程用 composable | `loadList`、`useAssetList` |
+| 命令 | 保存、删除、启停、发布等改变状态的动作 | 简单动作留页面事件；独立业务流程用 service / composable | `saveAsset`、`publishRule` |
+| 编排 | 顺序 / 并行调用多个动作，处理业务前置条件和失败边界 | 简短页面步骤留命名事件；独立业务流程用 service，复杂状态用 composable | `submitAndRefresh`、`activateWithRollback` |
 | UI 事件 | 把用户操作转换为语义事件或调用已注入命令 | 展示组件的事件处理器或页面容器 | `handleSelect`、`onRetry` |
 | 校验 | 根据明确规则返回可展示的错误或结构化结果 | schema / util / service；简单字段校验可留在表单配置 | `validateConfig` |
 | 格式化 | 只负责展示格式，不决定业务状态 | util / formatter | `formatTimestamp`、`formatLabel` |
@@ -55,7 +57,7 @@ Page / Container
 - 输入和返回值使用明确 TypeScript 类型；不要把整个 `props`、组件实例或不透明 `Record<string, any>` 当作万能参数。
 - 纯函数显式返回结果；不要通过修改传入对象来制造隐藏输出，除非当前库契约明确要求原地更新。
 - 有副作用的函数在命名或所在层级上要可识别：`load`、`save`、`remove`、`sync`、`refresh` 等动词表示请求或状态变化；`build`、`map`、`normalize`、`format` 默认应保持纯净。
-- 把“组装参数”和“发起请求”分开：参数组装可在 util / service 中单测，请求由 API 层执行。
+- 复杂参数转换与请求职责分开，转换按需要放局部纯函数或 mapper，请求复用 API 封装；简单对象组装可留在调用处。
 - 把“保存后刷新列表、关闭弹窗、回传 Tab”视为编排，不要在多个按钮回调里各写一遍。
 - 函数只接收它实际需要的数据；如果一个函数需要十几个彼此无关的参数，优先拆出上下文对象、配置对象或重新划分职责，而不是继续增加参数。
 - 对异步函数明确失败策略：抛出、返回结构化结果、显示反馈还是交给调用方；不要让调用方猜测 `undefined` 的含义。
@@ -75,9 +77,9 @@ Page / Container
 | 子树共享平台上下文 | provide / inject | 深层组件需要同一上下文且不应逐层透传 | 只有父子一层传递的数据 |
 | 视图需要多个可插拔区域 | Slots / Compound composition | 区域结构稳定，内容或动作由调用方注入 | 为每个插槽再包一层无语义组件 |
 
-### 默认组合
+### 按职责组合
 
-- 页面级数据流：`Page -> useFeature() -> service -> api`。
+- 简单请求：`Page -> API`；状态 / 生命周期复杂时用 `Page -> useFeature() -> API`；独立业务编排再引入 service，各层不必同时存在。
 - 可复用展示区块：`Page -> FeaturePanel(props, emits)`，由页面或 composable 提供数据和命令。
 - 后端 / 前端模型转换：`api response -> mapper -> composable state -> component props`。
 - 只有一个页面使用且没有独立状态的局部结构，先留在页面或局部函数中；出现稳定复用证据后再抽取。
@@ -147,14 +149,14 @@ Page / Container
 - `computed` 用于派生状态，纯函数用于可独立验证的转换；不要把复杂业务流程塞进模板表达式。
 - `watch` 主要负责路由、外部输入和两个状态边界之间的同步；请求去重、取消过期响应、轮询和提交编排应集中在 composable / service。
 - 展示组件可以维护 hover、展开、临时输入等局部 UI 状态，可以 emit 语义事件；不得直接请求 API、写全局 store、改路由或读取环境配置。
-- 页面 / 容器通过 composable 或 service 执行副作用；不要把副作用藏在一个名字模糊的 `handleEverything`、`initData` 或 `doAction` 中。
+- 页面 / 容器可在命名事件中调用已有 API 封装；仅在状态、生命周期或业务编排形成独立职责时抽取 composable / service。副作用用明确命名表达。
 - 子组件不要依赖父组件的 ref、路由实例、API 实现或私有 store；如确需跨层上下文，使用已有平台上下文或明确的 provide / inject 契约。
 
 ## 自检清单
 
-- 每个新增或修改文件是否有一句明确职责说明？
+- 新增或调整的边界是否职责清晰，是否存在无价值的中间层？
 - 每个具名函数是否能归类为纯转换、派生读取、查询、命令、编排、UI 事件、校验或格式化？落点是否匹配？
-- 页面是否只做布局组合和命令分发，复杂请求 / 编排 / 转换是否已下沉到正确层？
+- 简单请求是否保持直观，复杂状态 / 编排 / 转换是否由正确 owner 承担？
 - 展示组件是否只通过 props / slots / 语义 emits 与外部交互？
 - 新组件是否具备独立 UI 语义、状态 / 生命周期或真实复用价值？
 - 是否避免了无职责包装、循环依赖和 a > b > c > d > e 式长链？

@@ -1,42 +1,23 @@
 ---
 name: jetlinks-routing
-description: 发现 JetLinks 工作区结构并选择正确模块，必要时创建新模块。适用于需要梳理当前仓库结构、定位业务模块、识别软链接模块，或在低上下文脚手架中创建新模块的场景。
+description: 发现 JetLinks 工作区、确认模块归属并按需创建模块。已知文件或符号的定位使用 code-navigation；模块间交互使用 jetlinks-boundary。
 ---
 
 # JetLinks Routing
 
-Use [`references/module-list.md`](references/module-list.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
+负责代码放在哪里，不决定跨模块如何调用。已有可信模块锚点时，只核对相关构建声明，不重新盘点工作区。
 
-## Workflow
+## 工作方式
 
-1. Inspect the root layout, parent `pom.xml`, aggregator modules, and symlinked directories. When the workspace already has a valid module / symbol index, use `$code-navigation` to narrow candidate modules, then confirm ownership against the actual build manifests.
-2. If the request creates a new backend module or large backend capability, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable module boundaries when needed.
-3. Identify the candidate business modules and explain why each one matches the request.
-4. If no existing module fits, read [`references/module-creation-rules.md`](references/module-creation-rules.md) and create the smallest compliant module structure.
-5. When creating a module that includes public contracts, starter configuration, SPI registration, or first sample code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md).
-6. Prefer extending an existing module before creating a new one.
-7. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
+1. 从根目录、聚合构建声明和软链接确认候选模块，按 [模块发现](references/module-list.md) 补必要事实。目录邻近、import 或图聚类不能证明 Maven 归属。
+2. 优先扩展现有业务模块；只有职责确无归属时，按 [模块创建](references/module-creation-rules.md) 建最小结构，不因样例缺失另起模块。
+3. 新增后端模块或能力时，使用 [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) 明确改变的契约和验收，复用已有授权。
 
-## Required Constraints
+## 关键边界
 
-- Do not hardcode module inventories into the skill output.
-- Do not treat imports or graph communities as Maven dependency / ownership facts; confirm the selected module in reactor and module build files.
-- Do not ignore symlinked modules or external subprojects linked into the workspace.
-- Do not create a new module just because the static list is unclear.
-- Keep module placement or creation changes scoped to the requested capability; do not reshuffle unrelated modules or aggregators.
-- When a workspace uses `manager` / `core` layering, place CRUD, controllers, application services, persistence, permissions, i18n, and runtime wiring in `manager`; keep `core` limited to shared domain objects, DTOs, commands, events, constants, SPI, and extension contracts. Do not create `xxx-api` by default.
-- For a new backend module or large capability, follow [backend design](../jetlinks-router/references/backend-design-test-driven-rules.md) for the relevant module contract, test goals and unresolved decisions; reuse clear user authorization.
-- Do not create public module contracts, configuration classes, SPI registration entry points, or first sample code without useful class / contract comments when they establish the module's extension boundary.
-- If module or structure changes are made, report the validation performed or the exact pending commands and placement risks.
+- 遵循当前构建与注册方式，不硬编码全量模块清单、不遗漏软链接、不顺手重排无关模块。
+- 采用 `manager / core` 分层的工作区：CRUD、控制器、持久化、权限及运行装配归 manager；共享 DTO、命令、事件、SPI 等契约归 core，不默认创建 `xxx-api`。
+- 应用依赖平台实现或扩展标准字段时，转到 [平台边界](../jetlinks-boundary/references/application-platform-rules.md)，不能从“放在一起”推导可直接依赖。
+- 新公共契约和装配入口按 [注释规则](../jetlinks-conventions/references/code-comments.md) 说明职责与扩展边界。
 
-## Response Shape
-
-Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
-
-1. Workspace structure
-2. Candidate modules
-3. Recommended code location
-4. Task-contract path, authoritative-doc sync decision, and test goals when the backend design gate applies
-5. Whether a new module is required
-6. Comment targets added, or the concrete reason no code comments were needed
-7. Validation notes or pending commands
+说明选定落点及必要理由；创建或调整结构后集中验证相关构建、注册和加载路径。

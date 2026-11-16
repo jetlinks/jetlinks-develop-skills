@@ -26,7 +26,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 1. 待确认设计先更新 active task 的需求 / 设计 artifact；不要同时创建 `docs/plans/...` 草稿。
 2. 实时步骤、checkbox、临时下一步、假设账本、失败轨迹和阶段总结进入 Trellis 的运行态 artifact，不进入 PRD 的稳定契约区，更不进入仓库 docs。
 3. 计划阶段切换时压缩当前状态：模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`；删除 completed checkbox，不把每轮完成项复制成新总结或计数。最近完成阶段由 `Checkpoint` 的 validated evidence pointer 承载，详细 digest / revisions / evidence ledger 留在 Continuity Metadata。
-4. 用户确认后，只有长期需求、契约、架构 / API / 模块设计或长期风险发生变化，才原位同步权威 docs。纯任务级实施步骤可以只留在 Trellis。
+4. 复用已有授权与已接受契约；长期需求、契约、架构 / API / 模块设计或长期风险发生变化时原位同步权威 docs，不另加形式确认。纯任务级步骤留在 Trellis。
 5. 实现失败且契约未变时，只更新 Trellis 运行态；若证据表明已接受的设计必须改变，更新 task contract，并按 [授权规则](backend-design-test-driven-rules.md) 处理实质未决选择，再同步权威 docs。
 6. 完成时由 Trellis 负责 archive / journal；JetLinks delivery 将测试证据写入 PR / CI，只把稳定结论提升到 canonical docs / spec / skill。
 

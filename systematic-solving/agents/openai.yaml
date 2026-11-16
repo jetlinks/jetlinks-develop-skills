@@ -1,4 +1,4 @@
 interface:
   display_name: "Systematic Solving"
-  short_description: "复杂任务观察校验、根因建模、停滞止损与验证闭环"
-  default_prompt: "使用 $systematic-solving 处理实质因果不确定或未决共享风险，从原目标和已接受约束选择能改变决定的最小检查。"
+  short_description: "对竞争根因和未决共享契约开展有界取证，避免反复修补与无效流程"
+  default_prompt: "使用 $systematic-solving 区分当前竞争解释，选择能决定下一步的最小证据并完成根因修复。"

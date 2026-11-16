@@ -1,41 +1,26 @@
 ---
 name: jetlinks-events
-description: 在当前 JetLinks 工作区中实现事件驱动和订阅处理流程。适用于需要新增实体生命周期监听、领域事件、主题订阅、消息处理器，或其他异步副作用逻辑的场景。
+description: 实现 JetLinks 生命周期事件、领域联动、可靠投递和 Topic 订阅。区分本地事务不变量、外部副作用与持续消息流。
 ---
 
 # JetLinks Events
 
-Use [`references/event-driven-rules.md`](references/event-driven-rules.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
+负责何时触发、交付承诺及消息生命周期；不替代 CRUD 的状态事务、boundary 的命令契约或 reactive 的执行机制。
 
-## Workflow
+## 工作方式
 
-1. Confirm whether the task is a lifecycle event, domain event, or continuous subscription flow.
-2. If this is a new backend feature, large behavior change, or event flow spanning multiple modules, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable event contracts when needed.
-3. For entity or business side effects, follow [`references/event-driven-rules.md`](references/event-driven-rules.md).
-4. For Topic, EventBus, or message-stream handlers, follow [`references/realtime-subscription-rules.md`](references/realtime-subscription-rules.md).
-   Distinguish local transaction invariants from external delivery, durable acceptance from execution success, and snapshot streams from reliable events. History/live handoff, permissions, replay, reconfiguration and resource release are part of the relevant lifecycle, not optional cleanup after implementation.
-5. Before implementing handlers, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): trigger timing, transaction boundary, idempotency, loop prevention, replay handling, batch / backpressure limits, Topic compatibility, and subscription lifecycle cleanup.
-6. Pair with `$jetlinks-reactive` or `$jetlinks-crud` when the flow also touches reactive chains or CRUD logic.
-7. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
+1. 识别一次性查询 / 命令、必须原子完成的本地联动、外部通知或持续流，不能仅因“保存后”就默认异步化。
+2. 生命周期 / 领域联动读 [事件规则](references/event-driven-rules.md)；Topic、EventBus、历史加实时或重连读 [订阅规则](references/realtime-subscription-rules.md)。
+3. 核实真实发布时机、是否等待处理、Context 和失败传播；“修改后”不等于“事务提交后”。
+4. 新增或改变后端行为时，按 [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) 验证改变的触发与交付语义。
 
-## Required Constraints
+## 关键约束
 
-- Do not turn synchronous query requirements into fake subscription flows.
-- Do not publish external side effects before the chosen transaction boundary is safe.
-- Keep handlers idempotent and avoid circular triggers.
-- Do not implement a large event or subscription change until the relevant contract and validation goals are clear under the authorization rule in [backend design](../jetlinks-router/references/backend-design-test-driven-rules.md).
-- Do not weaken asynchronous assertions just to pass tests; verify trigger conditions, emitted event or message content, idempotency, transaction timing, and failure or retry behavior that matter to real usage.
-- Do not leave event handlers, subscribers, or message processors comment-free when they rely on non-obvious trigger timing, transaction-after-commit behavior, idempotency, replay tolerance, loop prevention, Topic compatibility, batching, or lifecycle cleanup. Add concise code comments at those boundaries; skip comments for simple one-step event forwarding.
-- When event or subscription code changes are made, run relevant validation when possible; otherwise state the exact pending commands and event-chain risks.
+- 本地关系清理、状态等必须一致的不变量留在所属事务；外部副作用在安全提交边界交付。
+- 提交后回调不保证可靠送达。确有可靠性需求时复用平台持久待办 / 投递 / 消费幂等，不为每个通知创建 outbox。
+- 受理、持久受理、执行完成、消费者处理是不同成功阶段；ACK、重试、重放和恢复遵守实际契约。
+- 消息身份、顺序、循环触发、部分失败及批量边界按业务处理；不能只用时间窗丢弃“看似重复”的合法事件。
+- 持续订阅保持权限 / Topic 与查询一致，处理历史实时交接、背压、取消、重连与旧资源释放；一次性查询不伪装订阅。
+- 配置保存、发布、生效和运行实例版本分开，停用 / 重配 / 删除时处理旧资源与迟到结果，参见 [运行状态](../jetlinks-conventions/references/runtime-state-rules.md)。
 
-## Response Shape
-
-Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
-
-1. Flow type
-2. Trigger timing or subscription source
-3. Handler pattern to follow
-4. Task-contract path, authoritative-doc sync decision, and test goals when the backend design gate applies
-5. Event or message risks to verify
-6. Comment targets added, or the concrete reason no code comments were needed
-7. Verification evidence or exact pending commands
+说明实际时机、交付承诺与恢复 owner；只验证本次改变的行为，非显然边界在代码旁简注。

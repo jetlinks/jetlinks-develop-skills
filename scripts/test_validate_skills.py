@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -58,6 +59,43 @@ class ValidateSkillsTest(unittest.TestCase):
             joined = "\n".join(result["errors"])
             self.assertIn("broken local link", joined)
             self.assertIn("stale installed mirror file", joined)
+
+    def test_partial_install_requires_referenced_sibling_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source"
+            installed = Path(directory) / "installed"
+            source.mkdir()
+            installed.mkdir()
+            feature = self.create_skill(source, "feature-skill")
+            dependency = self.create_skill(source, "shared-rules")
+            (feature / "references" / "rules.md").write_text(
+                "Read [shared contract](../../shared-rules/references/rules.md).\n",
+                encoding="utf-8",
+            )
+            self.assertEqual([], VALIDATOR.validate_repository(source)["errors"])
+
+            shutil.copytree(feature, installed / feature.name)
+            errors = VALIDATOR.validate_repository(installed)["errors"]
+            self.assertTrue(any("broken local link" in error for error in errors))
+
+            shutil.copytree(dependency, installed / dependency.name)
+            self.assertEqual([], VALIDATOR.validate_repository(installed)["errors"])
+
+    def test_complete_bundle_is_valid_without_repository_configuration(self) -> None:
+        source = SCRIPT.parent.parent
+        skills = sorted(path.parent for path in source.glob("*/SKILL.md"))
+        with tempfile.TemporaryDirectory() as directory:
+            installed = Path(directory)
+            for skill in skills:
+                shutil.copytree(
+                    skill,
+                    installed / skill.name,
+                    ignore=shutil.ignore_patterns(*VALIDATOR.IGNORED_NAMES),
+                )
+            result = VALIDATOR.validate_repository(installed)
+            self.assertEqual([skill.name for skill in skills], result["skills"])
+            self.assertEqual([], result["errors"])
+            self.assertFalse((installed / ".codex").exists())
 
     def test_rejects_author_local_path_in_generic_skill(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Router"
-  short_description: "按当前动作选择最少的 JetLinks 技能入口"
-  default_prompt: "使用 $jetlinks-router 为当前任务选择最少的相关技能并推进下一动作；复用已有目标、约束和授权，实际恢复时交给 task-continuity，领域执行规则由所选技能负责。"
+  short_description: "按当前动作选择最少的 JetLinks 技能，避免重复路由与全量加载规则"
+  default_prompt: "使用 $jetlinks-router 选择当前动作的最少技能入口，已知路线则直接继续。"

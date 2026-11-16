@@ -1,4 +1,4 @@
 interface:
   display_name: "通用代码导航"
-  short_description: "跨语言按环境能力检索代码结构、调用链、依赖与变更影响"
-  default_prompt: "使用 $code-navigation 从现有精确锚点定位定义、调用关系或影响范围，按缺口逐层扩展证据。"
+  short_description: "从精确锚点查找定义、调用关系与模块归属，按证据扩大变更影响范围"
+  default_prompt: "使用 $code-navigation 从现有文件或符号定位关系与影响，只补能改变当前判断的证据。"

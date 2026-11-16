@@ -17,6 +17,8 @@
 
 Reactor 的 current 文档会随版本变化，执行前以项目锁定版本核对；Spring R2DBC 用于解释资源共享，JetLinks 的实际事务实现、传播和取消仍须从当前框架确认。项目采用共享事务连接上串行数据库操作的开发约束，不能据此声称所有数据库驱动天生无法流水执行。
 
+防止过度设计、重复校验、晦涩代码、魔法值与特调的文献解释统一见 [共享约束依据](../../jetlinks-conventions/references/design-constraint-sources.md)；本文件保留平台事实与评审案例，不将一般原则升级为无例外口号。
+
 ## 平台实现依据
 
 声明式扩展核对过 `jetlinks-components` 的 `codex/entity-extension` 开发分支（提交 `5fee7da6bd077fa7130585879d752712c8ea376b`，并有后续在途修改）。[PR #1707](https://github.com/jetlinks-v2/jetlinks-components/pull/1707) 是能力追踪入口，不能替代目标版本已发布的证明。

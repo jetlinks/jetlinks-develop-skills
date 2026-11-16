@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Reactive"
-  short_description: "JetLinks 响应式链路、事务串行与有界并发实践"
-  default_prompt: "使用 $jetlinks-reactive 保持非阻塞和订阅语义，精简无意义包装，按事务连接边界串行操作数据库，并合理设置事务外并发与背压。"
+  short_description: "按订阅与事务连接边界组合 Mono / Flux，控制并发、背压和资源释放"
+  default_prompt: "使用 $jetlinks-reactive 保持订阅与非阻塞语义，串行操作共享事务连接并合理限制事务外并发。"

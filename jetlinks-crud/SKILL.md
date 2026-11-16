@@ -1,60 +1,36 @@
 ---
 name: jetlinks-crud
-description: 在 JetLinks 脚手架中实现标准或高级 CRUD 开发。适用于需要新增或修改实体、服务、控制器、查询流程、批量更新，或处理与 CRUD 相关副作用，同时遵循当前模块现有风格的场景。
+description: 实现 JetLinks 实体、查询、写入、状态动作及导入导出。复用当前 CRUD 抽象，按需处理校验、批量与数据权限。
 ---
 
 # JetLinks CRUD
 
-Use [`references/common-crud-rules.md`](references/common-crud-rules.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
+负责数据操作与状态不变量；权限规则归 AssetsHolder，事务执行归 reactive，外部联动归 events / boundary。
 
-## Workflow
+## 工作方式
 
-1. Confirm the target module's execution model and CRUD base abstractions.
-2. If this is a new backend feature, CRUD change that alters a public contract, ownership, persistence, permission, or batch behavior, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable CRUD contracts when needed.
-3. Follow the smallest existing Entity, Service, and Controller pattern that matches the task.
-   For fields extending a platform standard entity, follow the [versioned extension contract](../jetlinks-boundary/references/application-platform-rules.md#标准实体字段扩展) instead of depending on or inheriting its manager Entity.
-4. If the task includes `createQuery()`, `createUpdate()`, `createDelete()`, `QueryParamEntity`, sorting, nested conditions, pagination, AssetsHolder query injection, QueryHelper, complex SQL, native SQL, or multi-query result composition, read [`references/query-dsl-rules.md`](references/query-dsl-rules.md).
-5. If the task includes complex query, batch processing, or CRUD side effects, read [`references/advanced-crud-rules.md`](references/advanced-crud-rules.md).
-   For state transitions or replayable actions, apply [state and duplicate-request rules](references/common-crud-rules.md#状态流转与重复请求); for import / export and partial failure, use the advanced rules rather than assuming every batch is atomic or safely replayable.
-6. If the task includes custom `termType`, QueryParam condition mapping, related-table filters, or `SubTableTermFragmentBuilder`-style exists queries, also read [`references/dynamic-term-rules.md`](references/dynamic-term-rules.md).
-7. Pair with `$jetlinks-assets-permission` whenever CRUD query, detail, update, delete, batch operation, export, or custom endpoint needs data permission control through AssetsHolder.
-8. Before implementing, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): public Entity / DTO / Controller / Service contracts, custom endpoints, non-obvious validation, AssetsHolder boundaries, compatibility, batch limits, lifecycle guards, and complex QueryHelper / SQL / DSL decisions.
-9. Pair with `$jetlinks-conventions` or `$jetlinks-reactive` when imports, i18n, comments, or reactive style need extra care.
-10. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
+1. 核验目标模块的响应式 / 阻塞模型、Entity / Service / Controller 基类及相邻实现，按 [基础 CRUD](references/common-crud-rules.md) 选择最小完整变化。
+2. 新增或改变后端行为时，按 [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) 明确受影响契约与证据；不为已明确需求另建审批。
+3. 按当前操作读取细则，不整套加载：
 
-## Required Constraints
+| 操作 | 细则 |
+| --- | --- |
+| QueryParam、条件 DSL、排序、分页、QueryHelper 或 SQL | [查询 DSL](references/query-dsl-rules.md) |
+| 关联、汇总、批量、副作用、导入导出与部分失败 | [高级 CRUD](references/advanced-crud-rules.md) |
+| 自定义 termType、条件映射、关联表 exists | [动态条件](references/dynamic-term-rules.md) |
+| 审批、认领、发布 / 撤销等可重放动作 | [状态与重复请求](references/common-crud-rules.md#状态流转与重复请求) |
+| 标准实体新增业务字段 | [版本化字段扩展](../jetlinks-boundary/references/application-platform-rules.md#标准实体字段扩展) |
+| 新增或改变数据权限边界 | [AssetsHolder](../jetlinks-assets-permission/SKILL.md) |
 
-- Do not generate generic CRUD boilerplate that duplicates existing base classes.
-- Do not add custom endpoints when the existing query abstraction already covers the use case.
-- Do not hand-roll SQL or private filter DTOs when `createQuery()` / `QueryParamEntity` can express the condition, sorting, pagination, or nested logic.
-- Do not concatenate dynamic SQL or manually assemble paged / parent-child query results when `QueryHelper`, `transformPageResult`, or `combineOneToMany` fits the task.
-- Do not compress complex CRUD DSL into one unreadable chain. When query construction, permission injection, sorting, pagination, result composition, and side effects mix together, split them into named parameters, query builders, or helper methods.
-- Do not write database-dialect-specific SQL unless the user explicitly limits the target database or the module already has that constraint; prefer standard SQL and record dialect risk in docs and PR when unavoidable.
-- Do not treat SQL as complete just because it returns correct rows on tiny samples. When a change alters query shape, expected scale, index use, pagination depth, concurrency, batch size, or resource risk, require proportionate pressure, plan, or equivalent performance evidence; SQL keywords alone do not trigger a performance checklist.
-- Do not perform row-by-row save / delete when `createUpdate()` / `createDelete()` can express the batch operation; use `setNull(...)` for real null assignment.
-- Prefer moving heavy side effects out of the main CRUD flow.
-- When Apache Commons utilities are already available in the target module or adjacent CRUD code, prefer them for object, collection, map, and array checks. For string comparison/search/prefix/suffix/plain replace operations, follow `$jetlinks-conventions` and use `Strings.CS` / `Strings.CI` when the dependency provides `Strings`; do not fall back to deprecated `StringUtils` variants. Non-deprecated null-safe predicates such as `StringUtils.isEmpty` / `isBlank` may be used when they match the module's Commons Lang style.
-- Do not implement a large CRUD feature until the relevant contract and validation goals are clear under the authorization rule in [backend design](../jetlinks-router/references/backend-design-test-driven-rules.md).
-- Treat a new runtime guard as a behavior change. Validate untrusted input at the DTO / framework entry, authoritative AssetsHolder permission at its owning boundary, state or persistence invariants in the service / transaction that owns them, and dangerous empty-condition delete / unbounded query / bulk operations at the operation owner. Do not repeat an established constraint across Controller, Service, Repository, and helpers.
-- Trust framework validation, types, and upstream postconditions inside their boundary. Do not add null, not-found, state, permission, or exception-wrapping branches merely for defensive programming, hypothetical callers, or to create an exception test; do not require a per-guard proof artifact when omitting them.
-- For any CRUD query, detail, update, delete, batch operation, export, or custom endpoint, analyze whether AssetsHolder data permission control is required. Route implementation details to `$jetlinks-assets-permission`. If asset type, related asset field, permission action, binding relation, or admin / tenant / platform exception semantics are unclear, ask the user before implementation.
-- Do not weaken tests to satisfy the CRUD gate. Select only realistic business results, persistence effects, permissions, validation, and regressions that were added or changed; tests cannot create new production validation semantics.
-- Do not leave generated CRUD code comment-free when it adds public classes, custom endpoints, permission boundaries, complex query composition, compatibility, batch limits, or non-obvious validation. Add concise code comments at those points; skip comments only for plain fields, standard inherited CRUD, direct DTO mapping, or obvious one-line delegation.
-- When CRUD code changes are made, run relevant validation when possible; otherwise state the exact pending commands and remaining CRUD risks.
-- For validation, not-found, and conflict errors visible to users, prefer the module's i18n-aware exception pattern over hardcoded exception messages.
+## 关键约束
 
-## Response Shape
+- 先复用基类、CRUD DSL、QueryParam、QueryHelper 和既有批量能力，不重复造端点、筛选 DTO、逐行写入或手工分页装配；真实置空使用 `setNull(...)`。
+- 输入格式与范围归 DTO / 框架，权限归权威入口，状态 / 持久化不变量归服务事务，危险空条件操作归操作 owner。保留独立安全边界，不在同链各层重复校验，也不为异常测试新增生产 guard。
+- 权限条件应在分页、count、汇总之前生效；查询、详情、动作、批量和导出都要识别其 owner，不能只保护普通列表。
+- 批量先确定整批原子、分批提交或逐项结果；失败后逐条重放必须有原子性或幂等保障。
+- 必须一致的本地联动留在事务内；外部交付按 [事件规则](../jetlinks-events/SKILL.md) 选择时机与恢复方式。
+- 事务共享连接串行操作，事务外并发按 [reactive](../jetlinks-reactive/SKILL.md) 限制；不要用并发掩盖 N+1。
+- 优先可移植 SQL；查询形态、规模、索引、分页或批量风险变化时才补相称性能证据。
+- 复杂 DSL 按业务阶段命名；注释、工具类和 i18n 沿用 [编码规范](../jetlinks-conventions/SKILL.md)，不另起风格。
 
-Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
-
-1. CRUD scope
-2. Existing abstractions to reuse
-3. Task-contract path, authoritative-doc sync decision, and test goals when the backend design gate applies
-4. Whether advanced CRUD rules are needed
-5. Whether Query DSL rules are needed
-6. Whether QueryHelper or batch update/delete DSL is needed
-7. CRUD DSL readability decision when chains become complex
-8. Database portability and performance evidence when SQL is involved
-9. Comment targets added, or the concrete reason no code comments were needed
-10. Verification evidence or exact pending commands
-11. Remaining CRUD risks
+阶段结束集中验证实际改变的数据结果、权限和状态语义；交代真实未覆盖风险。

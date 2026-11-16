@@ -26,7 +26,7 @@
 1. 新页面、主交互或业务体验设计：`web-development-rules.md`
 2. 选择或新增组件时确认相应组件事实源和外部参考边界：`component-source-rules.md`；涉及共享基础组件时，从当前 workspace 的 `packages/components/src/components.md` 按需打开单组件文档
 3. 涉及 core 公共能力时，按 `core-capability-docs.md` 读取总索引和对应分类 README，再核验真实导出与生产用法
-4. 页面结构或交互路径有多种可能：用 `page-pattern-decision-rules.md` 分型并记录方案档案
+4. 页面结构或交互路径有多种可能：用 `page-pattern-decision-rules.md` 明确第一任务与关键取舍，复用已有方案
 5. 需要统一卡片、列表、详情、图标、动态编辑等组件：`component-reuse-patterns.md`
 6. 页面结构仍不知道该做成什么：`page-pattern-decision-rules.md`
 7. 不确定某个区块、统计卡或图表该不该存在：`block-admission-rules.md`

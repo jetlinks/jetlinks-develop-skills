@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Boundary"
-  short_description: "JetLinks 应用平台边界、字段扩展与命令调用规范"
-  default_prompt: "使用 $jetlinks-boundary 核对应用依赖与字段扩展的版本边界，通过公开契约和平台命令实现跨模块 / 跨服务交互。"
+  short_description: "核验应用平台依赖、版本化字段扩展及 JetLinks 跨服务命令契约"
+  default_prompt: "使用 $jetlinks-boundary 核对应用依赖、字段扩展版本和公开命令契约，按正确边界实现。"
