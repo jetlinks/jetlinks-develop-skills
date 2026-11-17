@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Web"
-  short_description: "JetLinks Vue 页面、连续任务交互、可视化配置与组件复用"
-  default_prompt: "使用 $jetlinks-web 完成当前前端需求：按业务内容组织读写一体、重点层级、互补分区和就地反馈，适当搭配语义图标与卡片，避免全量字段表单、重复摘要与分散操作；遵循已接受原型和当前导出，局部修改直接实施，在连贯阶段结束后验证。"
+  short_description: "按业务语义设计 JetLinks 读写一体交互，复用平台组件并处理前端状态"
+  default_prompt: "使用 $jetlinks-web 围绕当前任务实现前端交互；复用真实平台组件，缺陷回组件 owner 修复并提交 PR。"

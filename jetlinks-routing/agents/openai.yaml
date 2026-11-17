@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Routing"
-  short_description: "JetLinks 工作区发现、模块落点与新模块创建规范"
-  default_prompt: "使用 $jetlinks-routing 发现当前 JetLinks 工作区结构，并选择或创建正确的业务模块落点。"
+  short_description: "确认 JetLinks 模块归属与新建落点，遵循实际构建声明和职责边界"
+  default_prompt: "使用 $jetlinks-routing 从实际构建与模块职责选择代码落点，仅在确无归属时创建模块。"

@@ -11,12 +11,12 @@
 
 - Search for an enum or registry that maps wire type codes to JetLinks `DeviceMessage` implementations.
 - If the repository uses enum ordinal values on the wire, preserve numeric stability. Prefer append-only changes unless the code uses explicit codes instead of ordinal values.
-- Update both read and write paths when adding a new packet type.
+- Update the read and write paths that the new packet type actually supports; direction-specific types need not have a symmetric codec.
 
 ## Data type handling
 
 - Search for a `DataType`-style abstraction before writing raw `ByteBuf` parsing by hand.
-- Keep null, object, array, and dynamic type handling symmetric between encode and decode.
+- Preserve null, object, array, and dynamic type semantics in each supported direction; require encode/decode symmetry only where the wire contract defines it.
 - Verify string, binary, and collection length semantics separately from outer frame length.
 
 ## Request and reply correlation
@@ -27,6 +27,6 @@
 
 ## Validation strategy
 
-- Add round-trip tests for every modified message family: encode then decode should preserve semantic fields.
-- Keep at least one hex or byte-level example when the repository already documents packet samples.
+- Verify modified message families against known wire bytes and expected semantic fields from the protocol or real packet samples. Round-trip tests are useful for symmetric codecs, but cannot replace independent byte-level expectations: encoder and decoder can share the same mistake.
+- For asymmetric or one-way protocols, test each supported direction against its own packet contract instead of inventing the other direction.
 - Add negative checks when changing framing or dynamic type rules, because malformed packet handling is easy to break silently.

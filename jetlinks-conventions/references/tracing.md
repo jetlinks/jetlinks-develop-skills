@@ -68,12 +68,12 @@ return notifier
         builder -> builder.setAttribute("templateId", templateId)));
 ```
 
-上下文传播：
+上下文传播：已有 WebClient tracing filter 时直接复用。确需在 filter 中手动写入时，沿返回链使用写入后的载体，避免提前构造并发送请求：
 
 ```java
 return TraceHolder
-    .writeContextTo(requestBuilder, HttpServerHeaderTraceWriter.INSTANCE)
-    .then(callDownstream(requestBuilder));
+    .writeContextTo(ClientRequest.from(request), ClientRequest.Builder::header)
+    .flatMap(builder -> next.exchange(builder.build()));
 ```
 
 ```java

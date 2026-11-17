@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks CRUD"
-  short_description: "JetLinks CRUD、复杂查询、批量副作用与权限路由"
-  default_prompt: "使用 $jetlinks-crud 按当前模块约定实现最小完整的 CRUD、查询与批量副作用闭环。"
+  short_description: "实现 JetLinks 查询写入、状态和批量，收敛校验到正确责任边界"
+  default_prompt: "使用 $jetlinks-crud 实现当前数据行为，复用框架与校验 owner，阶段末验证实际变化。"

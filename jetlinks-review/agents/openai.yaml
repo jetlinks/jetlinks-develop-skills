@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Review"
+  short_description: "沿完整业务链路审查正确性与维护成本，以证据和反例避免误报或特调"
+  default_prompt: "使用 $jetlinks-review 沿当前业务链路取证，区分缺陷与合理反例，按实际风险引用开发规则。"

@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Protocol"
-  short_description: "JetLinks 协议接入、编解码、路由与报文联调规范"
-  default_prompt: "使用 $jetlinks-protocol 分析或实现协议支持、传输编解码、报文路由和联调测试。"
+  short_description: "核验 JetLinks 设备协议传输、认证、编码解码与请求应答的真实契约"
+  default_prompt: "使用 $jetlinks-protocol 依据真实文档、报文和代码实现或排查受影响的协议路径。"

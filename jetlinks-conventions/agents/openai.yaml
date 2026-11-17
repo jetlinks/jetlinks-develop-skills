@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Conventions"
-  short_description: "JetLinks 编码规范、根因红线与可观测性约束"
-  default_prompt: "使用 $jetlinks-conventions 按当前工作区规范实现代码，并从共同根因修复通用能力缺口。"
+  short_description: "约束 JetLinks 职责语义、过度设计、魔法策略、代码可读性和场景特调"
+  default_prompt: "使用 $jetlinks-conventions 按当前事实和职责实现，避免过度设计与特调；通用组件缺陷回 owner 修复并提交 PR。"

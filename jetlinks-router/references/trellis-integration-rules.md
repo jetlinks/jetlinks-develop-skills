@@ -12,7 +12,7 @@
 
 - Trellis task / PRD：当前任务的目标、范围、非目标、验收标准和待确认方案。
 - Trellis task 的 `prd.md` / `design.md` / `implement.md`：分别承载需求契约、技术设计和有界执行方案；文件是否存在以及命名以本地 workflow 为准。它们可以被审查和归档，但不是逐轮运行态。
-- Trellis `.runtime/sessions/` 或本地等价 runtime：官方当前版本用于按 session 隔离 active-task pointer；可以扩展保存 Recovery Capsule、Continuity Metadata 与 Source Snapshot locator，但不要假设 task pointer 本身已经包含复合源码指纹或最新证据。
+- Trellis 本地 workflow 声明的 runtime：按实际实现识别 active-task pointer 与 session 隔离方式；需要恢复能力时可承载 Recovery Capsule、Continuity Metadata 与 Source Snapshot locator，但不要假设 task pointer 本身已经包含复合源码指纹或最新证据。
 - Trellis task log / implement / check runtime：当前阶段、执行上下文、步骤、假设、失败与恢复状态；具体文件名以本地 workflow 为准。智能体滚动维护的当前计划、Recovery Capsule、Continuity Metadata 与 Source Snapshot 必须放不受 Git 管理的 runtime / checkpoint；若本地同名 artifact 受跟踪，则按 [制品归属](document-placement-rules.md) 选择已有安全载体；没有时保持有界 active context。
 - Trellis research：区分假设所需的来源、关键事实和调研结论。
 - Trellis workspace journal / finish / archive：官方提供跨会话工作日志与生命周期记录，由 Trellis 流程维护；journal 是审计 / 交接记录，不作为每次恢复的首读状态，也不能替代唯一 `Next`。
@@ -26,7 +26,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 1. 待确认设计先更新 active task 的需求 / 设计 artifact；不要同时创建 `docs/plans/...` 草稿。
 2. 实时步骤、checkbox、临时下一步、假设账本、失败轨迹和阶段总结进入 Trellis 的运行态 artifact，不进入 PRD 的稳定契约区，更不进入仓库 docs。
 3. 计划阶段切换时压缩当前状态：模型主视图只保留 `Contract / Checkpoint / DecisionState / Resume`；删除 completed checkbox，不把每轮完成项复制成新总结或计数。最近完成阶段由 `Checkpoint` 的 validated evidence pointer 承载，详细 digest / revisions / evidence ledger 留在 Continuity Metadata。
-4. 用户确认后，只有长期需求、契约、架构 / API / 模块设计或长期风险发生变化，才原位同步权威 docs。纯任务级实施步骤可以只留在 Trellis。
+4. 复用已有授权与已接受契约；长期需求、契约、架构 / API / 模块设计或长期风险发生变化时原位同步权威 docs，不另加形式确认。纯任务级步骤留在 Trellis。
 5. 实现失败且契约未变时，只更新 Trellis 运行态；若证据表明已接受的设计必须改变，更新 task contract，并按 [授权规则](backend-design-test-driven-rules.md) 处理实质未决选择，再同步权威 docs。
 6. 完成时由 Trellis 负责 archive / journal；JetLinks delivery 将测试证据写入 PR / CI，只把稳定结论提升到 canonical docs / spec / skill。
 
@@ -46,9 +46,9 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 
 ## 官方 Trellis 与 Codex Hooks 组合
 
-按官方 Trellis `0.6.14`（官方仓库截至 2026-08-11）的文档与实现，Trellis 已提供：task artifacts（`task.json`、PRD / design / implement、research、context manifests）、按 session 隔离的 active-task runtime、workspace journal、从 `workflow.md` 注入状态 breadcrumb，以及多平台 hook / pull 适配。这些能力适合承载任务身份、契约和 locator，但官方 active-task / session context 默认只提供 Git 状态摘要，不等价于本技能要求的 tracked / untracked / nested 内容指纹，也没有内建 `READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 语义。该版本的 Codex `hooks.json` 当前只注册 `UserPromptSubmit` 与 `SubagentStart`；虽然仓库含 `session-start.py`，但没有开箱注册 `PreCompact`、`PostCompact` 或 `SessionStart`，因此下面的压缩恢复门禁属于明确的可选增强，不能写成 Trellis 现成功能。
+以目标项目安装的 Trellis 版本、workflow、脚本与实际 hook 注册为准，核验任务制品、active-task 状态、journal 和上下文注入分别提供什么。Git 状态摘要不等价于 tracked / untracked / nested 内容指纹；脚本存在也不证明已接入当前宿主。`READY` / `SNAPSHOT_REQUIRED` / `RESUME_AUDIT` 是本技能的恢复协议，除非本地适配已有明确实现，不能描述为 Trellis 内建能力。
 
-在支持 OpenAI Codex Hooks 的项目中可以增加可选适配；安装或修改 hooks 前先按官方信任模型审查配置：
+只有现有恢复机制存在实际缺口、且任务授权包含适配时才增加 hooks；先核验当前 Codex runtime 支持的事件、载荷、退出语义和信任配置，不照搬旧版本清单。可映射的职责为：
 
 - `PreCompact`：覆盖保存 Recovery Capsule、Continuity Metadata 与 Git Source Snapshot；失败时显式保持 `SNAPSHOT_REQUIRED`。
 - `PostCompact` 或 `SessionStart(source=compact)`：只注入 `Contract / Checkpoint / DecisionState / Resume`、source / revision match summary、matching-audit count 与必要 locator，并进入 `RESUME_AUDIT`；不要注入完整 metadata ledger、journal、长 diff、完整 rules / system map 或原始日志。
@@ -57,7 +57,7 @@ focused skill 不主动创建、切换、完成或归档 Trellis task，不写 f
 - `PreToolUse`：在目标是 `apply_patch` 或可识别的生产写命令且状态不为 `READY` 时阻断；专用 / 托管工具可能绕过本地 hooks，因此技能语义门禁仍是主约束。
 - `Stop`：检查唯一 Next、未映射验收项和 capsule freshness，不自动归档任务或制造 commit。
 
-Hook 输出必须有严格大小上限。官方文档说明过大的输出可能溢写到磁盘并降低上下文质量，因此自动化只注入恢复索引与 locator。没有 hooks 的平台继续通过 `$task-continuity` 语义协议和 Trellis 现有 workflow-state / session-start 机制恢复，不降级为完整重读。
+Hook 输出保持有界，只注入恢复索引与 locator，避免依赖宿主截断或溢写行为。没有相应 hooks 的平台继续通过 `$task-continuity` 和项目现有恢复入口处理，不降级为完整重读。
 
 官方依据：[`Trellis README / docs`](https://docs.trytrellis.app/zh)、[`Trellis 官方仓库`](https://github.com/mindfold-ai/Trellis)、[`OpenAI Codex Hooks`](https://learn.chatgpt.com/docs/hooks)。
 
@@ -71,10 +71,4 @@ Hook 输出必须有严格大小上限。官方文档说明过大的输出可能
 
 ## 调度输出
 
-Trellis 场景的 router 分析只需给出：
-
-1. 当前 phase / active task（能确认时）
-2. JetLinks focused skills
-3. 任务契约与运行态 artifact 归属
-4. 是否存在需要用户确认并提升到权威 docs 的稳定设计变化
-5. 完成后交还的 Trellis 生命周期步骤
+按当前决策说明 active task、相关技能及制品归属即可；只有存在实质未决选择或生命周期交接时再说明它。已有授权下的稳定设计变化直接同步权威文档，不再次请求形式确认，也不逐次输出固定五项。

@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Delivery"
-  short_description: "JetLinks 阶段提交、证据复用与单一 PR 交付门禁"
-  default_prompt: "使用 $jetlinks-delivery 复用仍有效的阶段验证证据，并在任务完成后统一准备一次 PR 交付。"
+  short_description: "按授权完成 JetLinks 提交与 PR，复用有效证据并说明真实交付风险"
+  default_prompt: "使用 $jetlinks-delivery 按已有授权完成提交或 PR，复用有效证据并保持指定的 draft 或 ready 状态。"

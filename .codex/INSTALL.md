@@ -29,7 +29,8 @@ New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
 cmd /c mklink /J "$env:USERPROFILE\.agents\skills\jetlinks-develop-skills" "$env:USERPROFILE\.codex\jetlinks-develop-skills"
 ```
 
-Restart Codex after installation so it can discover the skills.
+Codex normally discovers added or changed skills automatically. Check the skill
+selector or use the skill in a new turn; restart only if it has not appeared.
 
 ## Migrating From Older Setups
 
@@ -42,13 +43,17 @@ Update the repository:
 cd ~/.codex/jetlinks-develop-skills && git pull
 ```
 
-Recreate the skills symlink using the commands above. Native discovery should
-point `~/.agents/skills/jetlinks-develop-skills` at the repository root.
+Inspect the existing destination before changing it. If it is already a link to
+this clone, keep it. If it is a managed installation or contains local edits,
+preserve that layout and customization; do not overwrite it with `ln -s`.
+The repository-root symlink above is one supported installation layout.
 
-Remove any older bootstrap instructions or duplicate copied skill directories
-that are no longer needed.
+Remove only confirmed obsolete copies or bootstrap instructions belonging to
+this package, after preserving any local customization. Do not delete unrelated
+skills or global instructions. Duplicate same-name skills are not merged, so
+check which source the current client actually loads.
 
-Restart Codex.
+Check discovery after the update; restart only if the changed skills are absent.
 
 ## Verify
 
@@ -62,7 +67,9 @@ You should see a symlink, or a junction on Windows, pointing to:
 ~/.codex/jetlinks-develop-skills
 ```
 
-This proves skill discovery only. For the optional subagent adapter, also make
+This verifies the link layout, not discovery. Confirm the skill appears in the
+current client's selector or is loaded when invoked. For the optional subagent
+adapter, also make
 the exact Codex runtime that hosts the session fully parse its configuration
 and confirm that multi-Agent support is effective. For a CLI that provides the
 command, use:

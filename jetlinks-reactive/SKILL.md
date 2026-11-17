@@ -1,51 +1,27 @@
 ---
 name: jetlinks-reactive
-description: 在当前 JetLinks 工作区中应用响应式与非阻塞实现实践。适用于需要处理 Mono 或 Flux 链路、避免阻塞调用、批量化响应式 CRUD 副作用，或判断响应式处理器如何与事件、订阅和远程调用协作的场景。
+description: 处理 JetLinks Mono / Flux 的订阅语义、非阻塞边界、事务串行、有界并发与背压。纯同步计算无需响应式包装。
 ---
 
 # JetLinks Reactive
 
-Use [`references/reactive-practice.md`](references/reactive-practice.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
+负责执行、需求信号与异步资源机制；业务状态归 CRUD，事件投递语义归 events，资源的业务归属归 conventions。
 
-## Workflow
+## 工作方式
 
-1. Inspect adjacent code to confirm whether the target module is reactive or blocking.
-2. If this is a new backend feature or large reactive behavior change, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable reactive contracts when needed.
-3. If the module is reactive, keep `Mono` or `Flux` end-to-end and avoid imperative fallbacks.
-4. If blocking I/O is unavoidable, isolate it explicitly and only use the scheduler pattern already accepted by the codebase.
-5. Before editing non-trivial reactive code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): async boundaries, backpressure or collection limits, cancellation / retry / timeout behavior, lifecycle cleanup, tracing context propagation, compatibility, and extracted business stages whose purpose is not obvious from the method name.
-6. Combine this skill with `$jetlinks-crud`, `$jetlinks-boundary`, or `$jetlinks-events` when the task spans those scenarios.
+1. 核实当前模块是响应式还是阻塞式，不为风格统一转换编程模型。
+2. 沿真实 Publisher / 异步 I/O 找到订阅、事务 / 连接、取消和资源 owner，按 [响应式实践](references/reactive-practice.md) 读取相关章节。
+3. 新增或改变后端行为时，按 [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) 验证受影响信号和业务结果。
 
-## Required Constraints
+## 关键约束
 
-- Do not call `block()` inside reactive business flows unless the current module already does so for the same boundary and there is no safer local alternative.
-- Do not introduce nested `subscribe()` for core business control flow.
-- Do not wrap blocking code in reactive types and claim the flow is non-blocking.
-- Do not use `CompletableFuture.get(...)`, `Thread.sleep`, or busy-wait loops to coordinate with a reactive result; use `flatMap` / `zip` / `then` / `concatMap` / `Sinks` / events / commands instead.
-- Do not bypass reactive context with global mutable `static` state or `ThreadLocal` to fake non-blocking propagation.
-- Treat `Publisher` / `Subscriber` / `Subscription` demand, cancellation, and terminal signals as the official reactive boundary. A chain starts at an existing `Publisher` or the first real async I/O boundary, not at a local object.
-- Operators must compose clearly named functions. Do not write procedural scripts inside a chain; each `map` / `filter` / `flatMap` / `zip` / `then` should express one semantic step.
-- Keep operator chains minimal: avoid `Mono.just(...).map(...)`, adjacent `.map(...).map(...)` for one synchronous business step, `.flatMap(Mono::just)`, identity `map`, redundant `then(Mono.just(...))`, or adjacent `.filter().filter(...)` when the value can be computed before wrapping, synchronous steps can be composed into a named function, `thenReturn(...)` is clearer, or predicates can be combined / extracted.
-- Split long Reactor chains by business stage. If a chain mixes validation, permission, command execution, persistence, event publication, and result conversion, keep the chain but move stages into named methods such as `validateAndSendCommand(...)` or `saveLogAndReturn(...)`.
-- Do not start a chain with `Mono.just(request)` only to transform a local value before the first async boundary; compute the argument directly and call the reactive API, such as `repository.save(request.toEntity())`.
-- For critical reactive business stages, use `MonoTracer` / `FluxTracer` or the existing domain tracer to create manual spans and attributes; route detailed TraceHolder rules to [`../jetlinks-conventions/references/tracing.md`](../jetlinks-conventions/references/tracing.md).
-- Do not wrap pure synchronous helpers as `Mono` / `Flux`. Data conversion, field calculation, predicate checks, and other non-I/O logic should remain plain methods and be called from `map`, `filter`, or before entering the chain.
-- Do not call `collectList()` on unbounded or potentially large streams; only collect when the source is clearly bounded by page, limit, batch, protocol size, or validated input size. Prefer pagination, bounded `buffer` / `window`, streaming, or existing query-composition helpers.
-- Keep lambdas as glue code. If a lambda contains validation plus query plus mutation plus side effect, nested branching, loops, `try/catch`, or multiple DB / remote calls, extract a named method and test that method through the reactive chain.
-- When the reactive API or library does not satisfy the requirement (signature mismatch, missing extension point, serialization error inside the chain), follow [`../jetlinks-conventions/references/root-cause-and-no-hack-rules.md`](../jetlinks-conventions/references/root-cause-and-no-hack-rules.md): solve at the root via official extension points / adjacent abstractions / dependency choice, or inform the user with concrete trade-offs; do not use reflection / visibility hacks / copied source / silent `catch` to make the chain compile.
-- Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
-- Do not implement a large reactive change until the relevant contract and validation goals are clear under the authorization rule in [backend design](../jetlinks-router/references/backend-design-test-driven-rules.md).
-- Do not make reactive tests pass by sleeping, swallowing errors, ignoring dropped signals, or weakening assertions; verify emitted values, completion or error signals, ordering, concurrency, retry, timeout, and side effects that match real usage.
-- Do not leave complex reactive chains or extracted reactive stages comment-free when they encode non-obvious async boundaries, batching / backpressure limits, retry / timeout policy, lifecycle cleanup, compatibility, or tracing context propagation. Add concise comments in the code; skip comments for direct `map` / `flatMap` glue with self-explanatory method names.
-- When reactive code changes are made, run relevant validation when possible; otherwise state the exact pending commands and residual blocking risks.
+- 响应式业务链不 `block()`、嵌套 `subscribe()`、`Future.get()` 或 sleep 等待。不可避免的阻塞 I/O 在明确适配边界用项目认可的 scheduler 隔离；包装成 Mono 不等于非阻塞。
+- 保留 demand、取消、终止、Context 与订阅期语义；不能用全局可变状态或 ThreadLocal 替代 Context。
+- 纯转换、计算和谓词用普通函数，移除无意义 `just().map()`、identity map、`flatMap(Mono::just)` 等包装；真实需要的 `defer / fromSupplier` 不属于冗余。
+- 操作符表达语义步骤，多阶段流程抽成命名方法；不用操作符数量或链长单独判错。
+- 同事务共享连接的数据库操作串行，必要时先消费完外层结果；`flatMapSequential` 只保证输出顺序，不串行执行。详见 [事务与并发](references/reactive-practice.md#事务与数据库并发)。
+- 事务外并发读先排除 N+1，按独立性、顺序与资源预算选择 concurrency、prefetch、批次；不复制固定大数，也不把所有流强制串行。
+- `collectList()` 必须有真实规模边界；持续流按背压和取消释放处理，重试 / 超时不掩盖部分副作用。
+- 用信号、确定性同步及必要的实际连接验证结果、顺序、失败与清理，不靠随机 sleep、吞错或弱化断言过测。
 
-## Response Shape
-
-Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
-
-1. Current module execution model
-2. Reactive risks or blocking risks
-3. Official reactive boundary, recommended chain, operator semantics, chain readability, tracing decision, and batching / collection boundary
-4. Task-contract path, authoritative-doc sync decision, and test goals when the backend design gate applies
-5. Comment targets added, or the concrete reason no code comments were needed
-6. Verification evidence or exact pending commands
+只报告本次链路决策与证据；追踪、公共契约注释等分别使用 [conventions](../jetlinks-conventions/SKILL.md) 的对应细则。

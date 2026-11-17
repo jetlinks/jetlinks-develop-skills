@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Events"
-  short_description: "JetLinks 事件驱动、主题订阅与异步副作用实现规范"
-  default_prompt: "使用 $jetlinks-events 按当前工作区约定实现事件、订阅处理和异步副作用闭环。"
+  short_description: "区分 JetLinks 本地事务不变量、消息交付承诺与持续订阅的生命周期"
+  default_prompt: "使用 $jetlinks-events 按一致性、交付承诺和生命周期实现联动，不将所有保存后逻辑异步化。"

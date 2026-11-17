@@ -1,74 +1,27 @@
-# JetLinks Web Component Source Rules
+# JetLinks 前端能力事实源
 
-本文件用于确认前端组件、hooks、utils 和交互样例的来源优先级，避免混淆共享基础组件、项目级业务组件、业务局部组件和外部参考。
+确认组件、hooks、utils、store 与样例是否适用于目标项目时读取。已有可信导入与源码锚点就直接核验，不重复遍历文档目录。
 
-## 两层组件事实源
+## 先确认实际解析目标
 
-### 1. `@jetlinks-web/components`：共享基础组件层
+- 从目标项目的锁文件、安装包、workspace 链接及构建别名确认版本与路径；仓库最新源码不等于应用实际消费版本。
+- 包根导入核对 `package.json` 的 `exports / main / module` 及其入口再导出；全局组件核对插件安装 / 自动注册，自动导入核对 resolver。源码目录、具名导出和全局注册名不能互相替代。
+- 深层路径仅使用目标版本明确支持的公开入口；发布文件存在不等于稳定 API，相邻生产用法也不能证明它适合新版本。
 
-1. 先定位当前 workspace 的 `packages/components/src/components.md`。
-   - 它是 AI 的轻量导航入口：按业务场景找到候选组件，再只打开候选目录中的 `组件名.md`。
-   - 不一次性加载全部组件文档，不把文档目录名直接当作根导出名。
-2. 再核验 `packages/components/src/components.ts`。
-   - 只有这里的导出才能证明组件可从 `@jetlinks-web/components` 根入口具名导入。
-   - 目录存在、组件有文档或自身有 `install`，都不能证明根入口或整包插件可达。
-3. 需要确认 Props、emits、slots、默认值或内部边界时，再读对应组件源码。
-4. 核验目标项目实际安装的 `@jetlinks-web/components` 版本和相邻生产导入；源码工作区与目标依赖版本不一致时，以目标项目实际可用契约为准。
-5. 深层 `@jetlinks-web/components/es/...` 导入必须同时有目标版本构建产物和相邻生产代码证据，不根据源码目录自行拼接路径。
+## 按层定位
 
-### 2. `@jetlinks-web-core/components`：项目级组件层
+| 层 | 导航与事实源 |
+| --- | --- |
+| `@jetlinks-web/components` 基础层 | 若有源码，用 `packages/components/src/components.md` 找候选，核对 `components.ts` 及包入口；只有安装包时直接核对实际发布入口与类型 |
+| `@jetlinks-web-core/components` 项目层 | 从目标 UI 工作区的 `jetlinks-web-core/src/components/index.ts` 核验导出 / 注册，再看候选源码 |
+| Core hooks / utils / store | 按所需能力核验分类入口、别名解析、候选源码及调用方；README 缺失不代表能力缺失 |
+| Core 页面与业务页面 | 核验真实路由、API、权限、数据来源和返回关系；页面文档只提供定位线索 |
 
-1. 若存在，先读取 `jetlinks-web-core/src/README.md` 和 `jetlinks-web-core/src/components/README.md`，按场景定位 1～3 个候选组件；不要一次性打开全部组件 README。
-2. 再核验当前 workspace 的 `jetlinks-web-core/src/components/index.ts`。
-   - 这是项目级业务组件、业务壳、共享组合和适配组件的导出事实源。
-3. 再读候选 `jetlinks-web-core/src/components/*`。
-   - 用于核验 Props、emits、slots、权限、i18n、路由、注册机制和真实能力边界。
-4. 查看 core 自包含交互场景和当前任务已有调用。
-   - 用于确认组件组合、状态与反馈；不将可选业务模块设为参考前提。
+已有索引时按需查 [能力文档](core-capability-docs.md)，不要求先读总索引、分类、单项、所有源码和相邻页面的固定序列。只补会改变当前选型的事实。
 
-### 3. Core 其他能力层
+## 选择与借鉴
 
-- hooks：先读 `jetlinks-web-core/src/hooks/README.md`（若存在），再核验 `src/hooks/index.ts`、候选 Hook 源码和相邻生产用法。
-- utils：先读 `jetlinks-web-core/src/utils/README.md`（若存在），再核验 `src/utils/index.ts`、候选工具源码和调用方；区分纯函数与请求、路由、存储等副作用。
-- store：先读 `jetlinks-web-core/src/store/README.md`（若存在），再核验 `src/store/index.ts`、目标 Store 源码和相邻页面；区分根入口导出与深层路径。
-- core 页面：先读 `jetlinks-web-core/src/views/README.md`（若存在），再核验真实路由入口、API、权限、Store/Hook 和页面源码。
-
-### 4. 两层选择原则
-
-- `@jetlinks-web/components` 适合跨项目共享的输入、展示、表格、搜索、图标、布局、权限按钮等基础能力。
-- `@jetlinks-web-core/components` 适合 JetLinks 项目级业务组件、共享业务壳，以及带权限、i18n、路由、注册和跨组件组合约定的封装。
-- 两层都能满足需求时，优先使用当前项目已稳定使用的 `@jetlinks-web-core` 封装，不绕过项目级契约。
-- 项目级没有对应封装时，直接复用 `@jetlinks-web/components`；不要为换名称或转发 Props 再造一层无职责包装。
-
-### 5. 用户明确指定的外部参考
-
-- `jetlinks-project-ui-cli` 只在用户明确要求参考时查看。
-- 它不能作为默认依赖、默认导入来源或当前项目组件存在性的证据。
-
-## 新版样例提取规则
-
-- 交互示例统一从 [Core 场景](example-locations.md) 进入，不按业务模块名称列可选参考。
-- 只借鉴业务相似的页面结构、筛选方式、详情承载、编辑节奏和状态反馈。
-- 不复制业务字段、指标、接口路径、权限码、局部组件实现或样例数据。
-- 不把另一个业务页面的功能介绍、统计卡、流程步骤直接搬到当前业务。
-- 外部优秀设计只补充交互思路，不覆盖 JetLinks 当前组件体系和 Ant Design / Ant Design Vue 基线。
-
-## 硬约束
-
-- 不要在技能默认流程中要求读取或安装 `jetlinks-project-ui-cli`。
-- 不要假设外部组件库中的组件在目标 workspace 存在。
-- 不要把 `packages/components/src` 下“存在目录/文档”误判为 `@jetlinks-web/components` 根入口已公开；必须核验 `components.ts`。
-- 不要在没有目标版本与相邻生产代码证据时新增 `@jetlinks-web/components/es/...` 深层导入。
-- 不要在业务模块中重复手写 `@jetlinks-web/components` 或 `@jetlinks-web-core/components` 已提供的能力。
-- 不要因为某个业务模块里有一个局部组件，就把它复制到另一个业务模块；先判断应复用共享包、项目级组件，还是沉淀为稳定公共能力。
-- 如果没有复用现有能力，必须说明已核验的映射文档、导出入口、相邻页面和不满足原因。
-
-## 自检清单
-
-- 是否已区分 `@jetlinks-web/components` 共享基础组件层与 `@jetlinks-web-core/components` 项目级组件层。
-- 是否从 `packages/components/src/components.md` 按需定位文档，并用 `components.ts` 核验根导出。
-- 是否核验目标项目的实际依赖版本与相邻生产用法。
-- 是否按任务类型读取了 `jetlinks-web-core` 的总索引和分类索引，并只打开了相关候选说明。
-- 是否避免把深层源码路径当作稳定公共 API。
-- 是否避免把 `jetlinks-project-ui-cli` 作为默认依赖或导入来源。
-- 是否只借鉴了相似业务中的结构和交互节奏，而不是复制字段、接口或指标。
+- 基础层负责跨项目控件，项目层负责平台壳、权限 / 路由和稳定组合；两者都适用时沿用项目已有封装。项目层没有对应职责时可直接使用基础层，不为转发 props 再包一层。
+- 不重复手写已有控件，不复制其他业务模块私有组件；跨模块能力先确认公共契约或注册扩展。
+- 样例只借适合当前任务的信息层级、动作组织和反馈，不复制字段、指标、API、权限码或数据。外部设计不能证明组件在本平台可用。
+- 无法复用时简述实际契约缺口即可，不要求逐项提交检索清单。区分正常配置、误用、版本缺口与通用缺陷；确认缺陷按 [owner 修复规则](../../jetlinks-conventions/references/root-cause-and-no-hack-rules.md#通用组件缺陷的闭环) 处理。

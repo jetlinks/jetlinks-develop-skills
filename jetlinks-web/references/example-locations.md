@@ -1,50 +1,63 @@
 # JetLinks Web Example Locations
 
-交互参考统一从 `jetlinks-web-core` 的自包含场景进入。当前用户指定的原型和已接受路径仍是本次改造依据；示例只补充实现模式，不覆盖业务契约。
+本文件用于快速定位可参考的真实实现，避免凭记忆实现前端能力。
 
-## 场景入口
+## 示例查找原则
 
-定位目标前端工作区的 `jetlinks-web-core/src/views/interaction-examples/README.md`，只打开当前场景：
+- 先找目标模块相邻页面，再找跨模块的公共实现。
+- 先看最近维护、仍在使用的代码，不优先历史废弃目录。
+- 发现多个实现时，优先跟随当前目标模块的写法。
 
-| 场景 | Core 内文件 | 核对重点 |
-| --- | --- | --- |
-| 四类企业场景入口 | `SemanticWorkspace.vue`、`semantic-scenarios.md` | 可运行台账、业务联动、规则 / 流程、项目设置；按当前 runtime-ui 真实组件组合，设计说明标明各场景能力范围 |
-| 左分区与右列表 | `SceneRecordList.vue`、`useSemanticExamples.ts` | `EqualHeightColumns`、`QuickFilterSidebar`、`ConditionFilter`、`j-pro-table` 与 `j-badge-status`；共用筛选条件，保留分页，详情返回恢复定位，窄屏分区抽屉 |
-| 关联处置与对象详情 | `AssetSceneDetail.vue`、`IncidentSceneDetail.vue` | 顶部工具栏承载身份，真实 `ResponsiveGrid`、`Editable`、List / Statistic 与时间线；资料、事实、关系依业务顺序阅读，处置动作与过程相邻，跨对象返回 |
-| 规则、流程与设置 | `RuleSceneDetail.vue`、`SettingsScene.vue` | 草稿与生效版本、样本过期、流程定义与执行实例；设置分组草稿与整组应用，图文渠道选项改变内容，新建采样默认值接续 |
-| 创建与接续 | `FormExample.vue`、`usePointWorkspace.ts` | 直接输入名称、图标多选决定实际采集内容、常用间隔与自定义；整组校验，创建后进入同一对象 |
-| 对象详情 | `PointWorkspace.vue`、`DetailExample.vue`、`ContentNote.vue` | 采集设置与信号规则同页，字段与语句参数原位编辑；同处核对已应用读数，保留只读与局部错误 |
-| 连续配置与规则 | `ConfigurationExample.vue` | 换算、条件、样本验证、应用的顺序；按对象和信号保留草稿、图文选项、还原、过期 / 失败恢复 |
-| 左右分区与自适应 | 场景内 `style.css`、`ConfigurationExample.vue` 与 core `PanelResizeHandle/` | 按实际容器重排，分界线键盘操作，窄屏任务顺序；重排不重建草稿 |
-| 状态与执行边界 | `usePointWorkspace.ts`、`useInteractionExamples.ts`、`model.ts` | 对象身份与已应用数据同源、草稿隔离、创建草稿保留；请求序号与结果签名防止错归属 |
+## 常见查找入口（按工作区事实核验）
 
-开发路由为 `/interaction-examples`，独立预览入口为 `/src/views/interaction-examples/preview.html`。场景使用 core 与其声明依赖，数据为当前会话本地样例。它们证明交互与组合方式，不证明真实 API、权限或生产执行器已接通。
+- 页面与流程参考：`modules/*-ui/views/**`
+- 模块 API 参考：`modules/*-ui/api/**`
+- 模块 hooks/store 参考：`modules/*-ui/hooks/**`、`modules/*-ui/store/**`
+- 公共组件参考：`jetlinks-web-core/src/components/**`
+- 公共组件导航：`jetlinks-web-core/src/components/README.md`
+- 公共 hooks 参考：`jetlinks-web-core/src/hooks/**`
+- 公共 hooks 导航：`jetlinks-web-core/src/hooks/README.md`
+- 公共 utils 参考：`jetlinks-web-core/src/utils/**`
+- 公共 utils 导航：`jetlinks-web-core/src/utils/README.md`
+- 公共 store 参考与导航：`jetlinks-web-core/src/store/**`、`jetlinks-web-core/src/store/README.md`
+- Core 页面入口与导航：`jetlinks-web-core/src/views/**`、`jetlinks-web-core/src/views/README.md`
+- 模块入口与注册参考：`modules/*-ui/index.ts`、`modules/*-ui/register.ts`
+- 模块注册中心参考：`jetlinks-web-core/src/utils/module-registry.ts`
 
-`PreviewRoot.vue` 只负责独立入口的主题 Provider、语言与外层留白；嵌入平台沿实际应用主题和壳层。独立入口不加载账号 / 项目运行时偏好和完整导航，其截图不能代替目标平台视觉验收，迁移时按 [宿主契约](shared-interaction-contracts.md#原型进入平台统一宿主契约) 核对。
+## 当前交互设计的核对锚点
 
-## 能力入口
+以下是源码定位候选，核验实际导出、路由、数据与目标版本后使用，不按文档中的组件名猜 API：
 
-- core 总索引：`jetlinks-web-core/src/README.md`
-- 组件：`src/components/README.md` → `src/components/index.ts` → 候选源码
-- hooks、utils、store：对应分类 README（若有）与 `index.ts`
-- 表达式：`src/components/Expression/index.ts` 及其编辑、反显、试算契约
-- 公共选项与编辑：`src/components/SelectOption/`、`src/components/Editable/`
-- 页面索引：`src/views/README.md`
+| 任务 | 工作区内候选与可借鉴内容 |
+| --- | --- |
+| 指标模板 | core `src/components/Metric/template/TemplateDesigner.vue` 与 rule-engine UI `views/MetricTemplate/index.vue`：输入 / 计算 / 输出、选中项设置和样本结果；不能复制其完整图形结构到简单配置 |
+| 属性预处理 | device UI `views/device/components/PropertyRules/`：业务语句、共享 Expression 编辑 / 查看与阶段试算；输入范围沿真实预处理契约 |
+| 台账、处置、规则、设置与监测点 | core `src/views/interaction-examples/` 及 `semantic-scenarios.md`：真实 Vue 组件与本地任务组合；示例数据 / 操作不证明生产服务已接通 |
+| 分组维护与公共控件 | core `src/components/InlineEditForm/`、`PlatformSettings/`、`Expression/`、`SelectOption/` 与 `EqualHeightColumns/`：读取实际契约，不复制演示文案或推定所有旧版本支持 |
 
-共享基础包与目标版本的核验仍按 [组件事实源](component-source-rules.md)。能力目录存在不等于根入口具名导出，示例内部相对导入也不能当成业务调用的公共路径。
+表单设计器、数采原型若只有独立预览，先核对其定义和当前接入，再提炼内容 / 编辑 / 结果的关系；不能把原型的新接口当生产公共能力。复用结论以 [事实源](component-source-rules.md) 为准，发现完整路径后停止扩搜。
 
-## 当前业务与跨模块边界
+## 跨模块能力调用约束
 
-实现时核对当前任务的真实接口、路由、权限、i18n 和公开入口；这属于目标业务事实，不把其他模块的页面当成必读参考。
+- 模块与模块之间需要复用 `api`、`hooks`、`components`、`utils` 等能力时，优先通过模块注册中心协作，不要直接跨模块深层 `import` 对方实现。
+- 注册中心源码候选为 `jetlinks-web-core/src/utils/module-registry.ts`；常见公开别名是 `@jetlinks-web-core/utils/module-registry`，实际路径核对目标构建别名。
+- 提供方先在 `modules/*-ui/register.ts` 或 `modules/*-ui/index.ts` 中统一注册资源，再由消费方通过 `moduleRegistry.getResource(moduleId, resourceType)`、`moduleRegistry.getResourceItem(moduleId, resourceType, resourceName)` 获取。
+- 需要找真实示例时，优先查看模块入口里的 `moduleRegistry.register(name, registerSetting)`，再查看消费侧通过 `moduleRegistry.getResource(...)` 读取资源的页面或 hooks。
+- 运行时模块资源沿已有注册中心协作；稳定共享类型、纯工具或 Core 公共契约可直接从公开入口导入，不为每个共享函数新增运行时注册。禁止直接导入其他业务模块私有实现。
 
-确需跨模块协作时核验当前工作区已提供的稳定导出或注册契约，例如 `src/utils/module-registry.ts`。只消费已声明的资源，保持公共入口和私有实现的边界。
-
-## 定向检索
+## 推荐检索命令
 
 ```bash
-rg --files jetlinks-web-core/src/views/interaction-examples
-rg -n "SelectOption|Editable|PanelResizeHandle" jetlinks-web-core/src/components/index.ts
-rg -n "MathExpressionEditor|MathExpressionView|ExpressionTrial" jetlinks-web-core/src/components/Expression/index.ts
+rg -n "ProSearch|j-pro-table|EditDialog|BatchImport" modules jetlinks-web-core
+rg -n "useTabSaveSuccess|usePlatformContext|useRegistryOptions" modules jetlinks-web-core
+rg -n "handleMenus|handleAuthMenu|paramsEncodeQuery|onlyMessage" modules jetlinks-web-core
+rg -n "moduleRegistry.register|moduleRegistry.getResource|moduleRegistry.getResourceItem" modules jetlinks-web-core
+rg --files modules | rg "views/.*/index.vue|api/|hooks/|store|register.ts|index.ts"
 ```
 
-目标版本尚无这些场景时说明版本差异，并按当前 core 的真实契约实施；不假定示例已安装。
+## 自检清单
+
+- 是否至少参考了一个目标模块相邻实现。
+- 是否核验了复用能力在当前工作区真实存在。
+- 如果是跨模块调用，是否先核验了 `module-registry` 中已有注册与读取模式，而不是直接跨模块引用 `api/hooks` 实现。
+- 是否避免了脱离现有风格的“平地起楼”实现。
