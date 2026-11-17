@@ -20,6 +20,7 @@
 | 通用条件搜索 | ConditionFilter 及条件 / 路由编解码；字段、远程选项、回显见 [专用规则](condition-filter-rules.md) |
 | 详情编辑与动作 | InputEditable、Editable、FormItemEditable、EditDialog、JlDrawerShell、StickyActionBar；保存、取消、校验与返回 |
 | 分类 / 状态 / 资源选择 | MetaChip、ChipGroup、AppTag、MarketplaceResourcePicker、CardSelect；图标语义、选项与确认 |
+| 可配置公式与查看 | core Expression 的 MathExpressionEditor、MathExpressionView；复用 MathLive 封装，宿主声明引用 / 函数目录，保存平台结构化表达式；执行与指标选型见 [计算复用](../../jetlinks-boundary/references/platform-capability-reuse-rules.md#计算先选结果能力再选公式表达) |
 | 运行时扩展 | RegistryComponent、RemoteComponent；注册、code、插槽与组件加载契约 |
 
 组件矩阵与整页组合只在确需设计时查 [场景组件](component-reuse-patterns.md)。不要手写库中已有的按钮、输入、菜单、选择器和弹层；普通 div / section 等布局语义不属于重复造控件。卡片选择根节点沿组件实际选择 / 事件契约，不为视觉包裹破坏交互。

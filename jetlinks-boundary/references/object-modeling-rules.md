@@ -38,6 +38,8 @@ ontology 在上层发现和消费 relation 的对象、关系、属性与动作�
 
 关系仍沿现有 relation SPI 声明与实现，不能把 `@ObjectSupport` 当任意关系注册注解。已有对象缺少必要扩展点时，在 relation owner 补通用契约并交付，不转向 ontology SPI 绕过边界，也不注册第二个同类型 Provider。
 
+对象属性、只读查询或事件用作指标来源，以及业务对象关联指标 / 按归属汇总时，按 [统一指标复用](platform-capability-reuse-rules.md#自定义业务来源与多级汇总) 选择接入；语义声明不能代替历史证据、授权或新建一套业务计算引擎。
+
 定义来源与事实 owner 分别核实：业务关系走原 Provider / 动作，托管关联走 relation 存储和正式授权入口；反向导航表示同一事实。固定声明、动态定义的冲突及读写路由以目标版本为准，仅设置 `instanceSource=managed` 不能证明全部导航、查询和写入入口都支持该组合。
 
 ## 能力与验证边界
