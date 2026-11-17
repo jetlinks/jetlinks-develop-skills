@@ -7,7 +7,7 @@
 - 组件围绕稳定能力和不变量组织，按变化原因划边界。Controller 负责协议与入口，应用 Service 编排用例，领域能力拥有业务规则，仓储负责持久化；公共组件不理解应用专属对象、菜单、租户或部署场景。前端职责按 [web 代码组织](../../jetlinks-web/references/code-organization-rules.md) 判断。
 - `core` / 公共契约不能依赖 `manager` / 运行时实现。低层解析、算法、协议或通用 UI 不反向依赖上层页面 / 编排类型；共享类型归语义 owner。不能只移动文件而保留循环依赖。
 - “组件中已有一个开关关闭 Controller”不能证明管理职责属于该组件。公开 Web 管理入口、持久化、装配和可复用执行能力按职责放置，避免公共运行组件被迫加载管理端。
-- 业务绑定、通用对象关系和本体组合有不同 owner。通过现有 Provider / SPI 暴露权威事实，不复制关系注册中心、不在业务表与通用关系表重复写同一事实；AI 推断 / 提及与已确认关系保持不同语义。属性、托管关系和业务对象的实现选择归 [对象建模](../../jetlinks-boundary/references/object-modeling-rules.md)。
+- 业务绑定、通用关系和本体组合有不同 owner。业务通过 relation / core 的公开契约及注解暴露事实与能力，不依赖 ontology；本体在上层消费。不复制关系注册中心、不双写同一事实；AI 推断 / 提及与已确认关系保持不同语义。实现选择归 [对象建模](../../jetlinks-boundary/references/object-modeling-rules.md)。
 - 应用对平台实现的依赖与字段扩展遵循 [平台边界](../../jetlinks-boundary/references/application-platform-rules.md)，同部署不能放宽它。
 
 ## 抽象与复杂度

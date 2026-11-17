@@ -10,7 +10,7 @@ JetLinks 开发技能包。每个技能目录直接位于仓库根目录，包�
 | --- | --- | --- |
 | [jetlinks-router](jetlinks-router/SKILL.md) | 选择最少入口 | 领域执行与审批 |
 | [jetlinks-routing](jetlinks-routing/SKILL.md) | 工作区、模块归属和创建 | 跨服务交互方式 |
-| [jetlinks-boundary](jetlinks-boundary/SKILL.md) | 平台依赖、字段与本体关系建模、公开契约与命令 | 权限和消息交付 |
+| [jetlinks-boundary](jetlinks-boundary/SKILL.md) | 平台依赖、字段与对象关系建模、语义声明及命令 | 权限和消息交付 |
 | [jetlinks-crud](jetlinks-crud/SKILL.md) | 查询、写入、状态动作、批量及校验 owner | 权限框架与执行机制 |
 | [jetlinks-assets-permission](jetlinks-assets-permission/SKILL.md) | AssetsHolder 数据权限 | 普通业务关系建模 |
 | [jetlinks-reactive](jetlinks-reactive/SKILL.md) | 订阅、事务连接、并发与背压 | 业务状态及投递承诺 |
