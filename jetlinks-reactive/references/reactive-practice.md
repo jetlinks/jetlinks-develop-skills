@@ -103,7 +103,7 @@
 
 ### 控制链路长度
 
-- Reactor 链不可避免，但长链必须按业务阶段拆小方法，让主链像流程目录。
+- 多阶段链路难以追踪时按业务意图提取完整步骤；直观的局部组合可以保留，不为缩短链长增加转发方法。
 - 当链路同时包含已由业务契约要求且由当前边界拥有的校验、权限、命令发送、持久化、日志、事件或结果转换时，按真实业务阶段拆成命名步骤，例如 `checkTransitionAndSend(...)`、`saveXxxAndReturn(...)`、`publishXxxEvent(...)`。不要因方法名模板主动新增 `validateAndXxx(...)` 或重复上游 / 框架 guard。
 - 嵌套造成阶段、副作用或错误边界难以追踪时拆分；动作数量不单独决定是否抽方法。
 - 拆出的响应式方法仍返回 `Mono` / `Flux`，让超时、重试、错误传播和测试仍能组合。
@@ -141,70 +141,15 @@ return repository.findById(id)
     .map(this::toView);
 ```
 
-异步边界用 `flatMap`，纯业务规则保持普通函数：
+链路中先做纯转换，再组合已有持久化能力；空结果与事件时机沿当前用例契约，不由示例新增：
 
 ```java
 return repository.findById(id)
-    .switchIfEmpty(notFound(id))
-    .map(entity -> prepareUpdate(entity, request))
-    .flatMap(repository::save)
-    .delayUntil(this::publishUpdatedEvent);
-
-private DeviceEntity prepareUpdate(DeviceEntity entity, UpdateRequest request) {
-    return applyUpdate(entity, request);
-}
+    .map(entity -> applyUpdate(entity, request))
+    .flatMap(repository::save);
 ```
 
-可复用的链路片段用函数表达，不复制过程式 lambda：
-
-```java
-private Function<Flux<DeviceEntity>, Flux<DeviceView>> visibleDeviceViews() {
-    return flux -> flux
-        .filter(this::isVisible)
-        .map(this::toView);
-}
-
-return repository.createQuery()
-    .fetch()
-    .transform(visibleDeviceViews());
-```
-
-长 Reactor 链按业务阶段拆分：
-
-```java
-// Bad
-return deviceService.findById(deviceId)
-    .flatMap(device -> validate(device)
-        .then(sendCommand(device, command)))
-    .flatMap(result -> saveLog(result).thenReturn(result));
-
-// Good
-return deviceService.findById(deviceId)
-    .flatMap(device -> validateAndSendCommand(device, command))
-    .flatMap(this::saveLogAndReturn);
-
-private Mono<CommandResult> validateAndSendCommand(Device device, Command command) {
-    return validate(device)
-        .then(sendCommand(device, command));
-}
-
-private Mono<CommandResult> saveLogAndReturn(CommandResult result) {
-    return saveLog(result)
-        .thenReturn(result);
-}
-```
-
-响应式关键阶段埋点：
-
-```java
-return sendCommand(device, command)
-    .as(MonoTracer.create(
-        "/device/command/send",
-        builder -> {
-            builder.setAttribute("deviceId", device.getDeviceId());
-            builder.setAttribute("commandId", command.getCommandId());
-        }));
-```
+只有片段确实复用或形成独立业务阶段时才提取组合函数；授权、状态校验和日志不因示例名称而被额外加入。追踪 API 示例由 [埋点规则](../../jetlinks-conventions/references/tracing.md#api-选择) 维护。
 
 ### 错误传播
 
