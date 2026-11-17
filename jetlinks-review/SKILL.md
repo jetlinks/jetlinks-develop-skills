@@ -20,7 +20,7 @@ description: 沿真实业务链路审查 JetLinks 代码、PR、方案或任务�
 
 | 场景 | 开发规则 owner |
 | --- | --- |
-| 建模、职责、依赖与字段扩展 | [职责语义](../jetlinks-conventions/references/responsibility-and-generality-rules.md)、[平台边界](../jetlinks-boundary/references/application-platform-rules.md)；受控实体查 [资产实体契约](../jetlinks-assets-permission/references/assets-holder-rules.md#资产实体契约) |
+| 建模、职责、依赖与字段扩展 | [职责语义](../jetlinks-conventions/references/responsibility-and-generality-rules.md)、[平台边界](../jetlinks-boundary/references/application-platform-rules.md)；对象关系查 [建模选择](../jetlinks-boundary/references/object-modeling-rules.md)，受控实体查 [资产实体契约](../jetlinks-assets-permission/references/assets-holder-rules.md#资产实体契约) |
 | 查询、树、关联、统计与历史 | [查询与规模](../jetlinks-crud/references/advanced-crud-rules.md)、[权限](../jetlinks-assets-permission/SKILL.md) |
 | 写入、删除、导入导出、批量与部分失败 | [CRUD](../jetlinks-crud/SKILL.md) |
 | 审批、支付、认领、发布等状态动作 | [状态与重复请求](../jetlinks-crud/references/common-crud-rules.md#状态流转与重复请求) |
