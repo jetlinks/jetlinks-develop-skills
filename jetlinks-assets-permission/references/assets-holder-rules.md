@@ -7,6 +7,7 @@
 实现前先在当前工作区查找：
 
 - `AssetType` / `EnumAssetType`：资产类型定义，常见如 `DeviceAssetType`、`NetworkAssetType`、`MediaAssetType`。
+- 实体 `@Asset` 的有效元数据及 `ExtendableEntity` 继承链，不能只检查 Controller。
 - `CrudAssetPermission` 或自定义 `AssetPermission`：读、写、删除、共享或业务自定义动作。
 - `@AssetsController`：接口级资产权限注解。
 - `AssetsHolderCrudController`：实体自身就是资产时的 CRUD 控制器。
@@ -14,6 +15,13 @@
 - `AssetsHolder.injectQueryParam` / `injectConditional`：自定义查询或聚合查询的数据权限条件注入。
 - `AssetsHolder.assertPermission` / `filterAssets`：详情、更新、删除、自定义动作、消息或聚合前后的编程式校验。
 - `AssetSupplier`、`AssetBindProvider`、`AssetsAccessSupport`、`AssetsHolderCommandSupport`：新资产类型、绑定或命令边界相关扩展。
+
+## 资产实体契约
+
+- 本项目中需要资产数据权限控制的实体必须具备 `org.jetlinks.pro.assets.annotation.Asset` 的有效元数据，并继承 `org.hswebframework.web.api.crud.entity.ExtendableEntity<K>`；直接声明或平台支持的继承 / 组合声明均须解析出正确资产映射，已有基类满足时直接复用，不为此重复标注或另造实体层。
+- `@Asset(type = ...)` 使用真实 AssetType 的类型标识；`idProperty` 默认 `id`，按关联资产授权时核验正确字段与控制器 / 命令映射，不能把每张关联明细都注册成新资产。有效的继承 / 组合注解按当前平台解析契约核对，不能只搜索直接注解文本。
+- 相邻旧实体缺少声明不能成为省略契约的依据；修改已有实体时核对当前元数据、主键与持久化映射，不顺手迁移无关实体。DTO、查询条件和纯值对象不因携带资产 ID 就继承持久化实体基类。
+- `@Asset` 和基类建立实体契约，不能替代独立入口的 AssetsHolder 查询注入、操作授权或资产绑定；仍按下文选择唯一权限 owner。不以新增 tenantId 等字段补替该契约。
 
 ## 场景选择
 
@@ -56,6 +64,10 @@
 
 不要在 SQL、QueryParam 或业务服务里手写租户、机构、部门、创建人过滤来替代 AssetsHolder。
 
+普通业务 Entity、DTO、命令和初始化数据不得通过新增 `tenantId`、固定机构 / 用户标识等字段承载部署隔离或另建权限模型；沿平台 holder / dimension / asset 契约解析上下文和授权，不把调用方传入的租户 ID 当授权依据。权限基础设施自身可以实现维度契约，真实业务中的组织、负责人、客户关系也可按领域建模，但不能借业务字段绕过统一数据权限。既有字段先核实持久化与外部依赖，再决定迁移，不在审查中自动删字段。
+
+空 holder、平台 / 全局身份与匿名身份的行为由目标版本平台契约决定，不能自行写成“空 holder 一律放行”或“一律拒绝”；仍须保留入口要求的身份、功能权限与具体资产动作校验，不从一个空值推导完整授权结论。
+
 ### 详情、更新、删除、自定义动作
 
 对单个或批量 ID 的操作，优先使用：
@@ -75,7 +87,9 @@
 - `BlockingAssetsCrudCommandHandler`
 - `AssetsHolderCommandSupport`
 
-跨边界调用时，不要绕过命令服务内部的 AssetsHolder 校验，也不要在普通内部调用方复制提供方的权威检查。只有调用方本身是独立暴露的安全边界，且主体、资产或动作语义不同，才在该边界另行校验。大型变更的任务契约只写本次发生变化的 owner 和传播关系，不维护每层权限矩阵。
+每个独立可达的受保护入口都须经由适用的授权 owner；主体、资产、动作与另一个入口相同，不能成为省略授权的理由。入口可复用统一框架或委托命令提供方，但须确认当前主体、目标和动作完整传递，且该路径实际经过权威检查。不能因另一条路径曾做过检查就放行当前请求，也不在已受完整保护的内部调用链复制检查。
+
+跨边界调用不能绕过命令服务内部的 AssetsHolder 控制；接收方按自身入口契约处理。大型变更只记录本次发生变化的 owner 和传播关系，不维护每层权限矩阵。
 
 ### 订阅、消息、Topic 或统计
 
@@ -105,7 +119,7 @@
 - 唯一 owner：由通用 Controller、关联 Controller、命令提供方、自定义入口或订阅边界中的谁负责；其他层不重复校验。
 - 操作控制：本次变化的详情、更新、删除、批量或自定义动作如何处理；未变化的通用 CRUD 不逐项展开。
 - 绑定关系：新增、保存、删除时是否需要自动绑定 / 解绑，是否已有 `AssetBindProvider`。
-- 不确定项：资产归属、关联字段、管理员例外、跨租户或平台上下文不明确时，先询问用户。
+- 不确定项：先用目标版本与现有契约解决事实问题；仍未确定且会改变访问范围的业务归属 / 例外才询问，不能自行放宽或收紧权限。
 
 ## 测试要求
 

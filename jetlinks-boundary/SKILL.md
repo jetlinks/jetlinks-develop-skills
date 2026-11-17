@@ -1,41 +1,25 @@
 ---
 name: jetlinks-boundary
-description: 在当前 JetLinks 工作区中选择并实现跨边界交互方式。适用于需要在直接依赖、命令服务、代理或其他跨模块访问模式之间做决策和落地的场景，尤其是响应式模块或低上下文脚手架中的边界选择。
+description: 选择并复用 JetLinks 平台能力，处理告警、计算、通知等业务接入、依赖边界、字段 / 对象建模与跨服务命令。模块落点由 jetlinks-routing 处理。
 ---
 
 # JetLinks Boundary
 
-Use [`references/module-reference.md`](references/module-reference.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
+负责平台能力选型、依赖方向、公开契约和跨边界交互方式；权限判定归 AssetsHolder，消息交付归 events。
 
-## Workflow
+## 工作方式
 
-1. Identify the capability boundary that the task needs to cross.
-2. If this is a new backend feature, large cross-boundary behavior change, or boundary decision that affects data ownership, permissions, transactions, or external messages, first follow [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the task contract and relevant test goals, apply its authorization rule, and synchronize accepted durable boundary changes when needed.
-3. Confirm whether the current workspace already has command services, proxies, support IDs, or concrete command classes.
-4. Read [`references/cross-service-call-rules.md`](references/cross-service-call-rules.md) before implementing providers or consumers.
-5. Before implementing boundary code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): public command contracts, service / command IDs, permission context, retry or fallback, remote / local boundary choice, payload compatibility, and provider-side side effects.
-6. Keep the chosen pattern aligned with the module's execution model, existing naming scheme, and local command invocation style.
-7. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
+1. 业务要增加告警、公式 / 指标计算、通知等同类功能时，先按 [平台能力复用](references/platform-capability-reuse-rules.md) 判断配置、组合、SPI 扩展或独立业务语义，不先创建平行实现。确认 owner、目标版本、部署边界和公开契约；构建依赖、提供方和消费者是事实源。
+2. 应用依赖平台或扩展标准实体时，读 [应用与平台规则](references/application-platform-rules.md)；负责人、归属等对象建模读 [属性与对象关系选择](references/object-modeling-rules.md)；交互方式尚不明确时查 [边界选择](references/module-reference.md)。
+3. 实现命令提供方、消费者或代理时，读 [命令调用](references/cross-service-call-rules.md)。核实 service / support / command ID、载荷、Context、结果与失败语义，不凭方法名猜契约。
+4. 新增或改变后端契约时，按 [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) 选择受影响的行为证据。
 
-## Required Constraints
+## 不可遗漏
 
-- Do not invent command IDs, service IDs, support IDs, or proxy contracts.
-- Do not directly inject another boundary's internal implementation class.
-- When local command classes already exist, prefer explicit command objects with `commandSupport.execute(...)` over shortcut calls such as `executeToMono(...)`.
-- In reactive modules, keep the cross-boundary call non-blocking.
-- Do not implement a large boundary change until the relevant contract and validation goals are clear under the authorization rule in [backend design](../jetlinks-router/references/backend-design-test-driven-rules.md).
-- Do not fake boundary tests by mocking away the contract being selected; verify request payloads, permission context, success and failure semantics, and fallback behavior that matter to the caller.
-- Do not leave public command DTOs, command handlers, providers, proxies, or boundary fallbacks comment-free when they define a cross-module contract, permission propagation, payload compatibility, retry / fallback behavior, or side effects. Add concise code comments and complete public contract comments where callers or implementers depend on them.
-- When boundary code changes are made, run relevant validation when possible; otherwise state the exact pending commands and cross-boundary risks.
+- 应用禁止直接依赖 `device-manager`、`authentication-manager` 等平台标准实现模块；同进程、optional / provided scope 或转导出实现类型均不构成例外。
+- 跨服务业务调用使用平台命令，不能以实现类注入、直连对方数据库或旁路 HTTP 绕开契约。同一业务边界内的本地公开 API / SPI 不必伪装为远程调用。
+- 对象、关系和语义由业务通过 relation / core 契约及注解声明，业务不依赖任何 ontology 模块；本体在上层消费。先区分属性、关系和独立业务对象，再按版本及事实 owner 选择实现，不能都归为新增字段。
+- 已有显式命令类时，复用命令对象与 `commandSupport.execute(...)`；保持响应式边界非阻塞。
+- 传递可信身份 / 权限 / trace Context；超时不等于未执行，本地事务不能回滚远端副作用。权限实现按 [AssetsHolder](../jetlinks-assets-permission/SKILL.md)。
 
-## Response Shape
-
-Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
-
-1. Boundary to cross
-2. Existing mechanisms found in the workspace
-3. Recommended interaction pattern
-4. Task-contract path, authoritative-doc sync decision, and test goals when the backend design gate applies
-5. Rejected patterns and reasons
-6. Comment targets added, or the concrete reason no code comments were needed
-7. Verification evidence or exact pending commands
+只解释实际选择及契约风险；验证真实载荷、权限传播、结果与必要的失败恢复，不 mock 掉本次正在选择的边界。

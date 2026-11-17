@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Boundary"
-  short_description: "JetLinks 跨模块边界选择、命令契约与调用实现规范"
-  default_prompt: "使用 $jetlinks-boundary 在直接依赖、命令服务、代理或事件之间选择并实现正确的跨模块边界。"
+  short_description: "核验并复用平台告警、计算、通知等能力，明确扩展点、业务职责与合法依赖"
+  default_prompt: "使用 $jetlinks-boundary 先核验可复用的平台能力，再按业务职责、目标版本与公开契约选择配置、组合或扩展，遵守依赖和命令边界。"

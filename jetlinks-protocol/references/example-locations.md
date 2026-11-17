@@ -18,14 +18,9 @@
 ## Protocol docs and packet examples
 
 - Look for root `README.md`, `binary-protocol.md`, and `src/main/resources/document-*.md`.
-- Treat these files as the first source of truth for packet structure, auth flow, and client examples, then verify against code when they diverge.
+- Use these files to locate the intended packet contract, then compare with the target device/version and code. A code/document mismatch needs resolution; the existing implementation alone does not establish the correct wire protocol.
 
 ## Tests
 
 - Search for `*Binary*Test`, `*Topic*Test`, and codec-specific tests before adding new coverage.
 - Prefer extending an existing round-trip or route test instead of adding isolated demo code.
-
-## Sample repository pattern
-
-- In the provided JetLinks protocol sample, the useful anchors are the support provider, transport-specific codec classes, binary message registry, packet docs, and round-trip tests.
-- Use that sample as a pattern library, not as a fixed API contract for every repository.

@@ -52,7 +52,7 @@
 示例：
 
 ```properties
-error.entity.not_found=对象不存在
+error.entity.not_found=对象 {0} 不存在
 message.operation.success=操作成功
 validation.name.required=名称不能为空
 ```
@@ -92,9 +92,9 @@ String message = LocaleUtils.resolveMessage(
 
 用户可见异常：
 
-- 异常类型和构造器名称以目标仓库现状为准，但参数形态优先表达为 `i18nCode`（或本地等价字段）+ 默认文案 + 参数。
-- 默认文案用于资源缺失时兜底，不要只传硬编码 message。
-- 先找相邻异常、错误返回包装器、错误码枚举的本地写法，再跟随。
+- 先核验目标版本的异常继承链与构造器，保留 `i18nCode` 和真实格式化参数，由统一错误边界按请求语言解析。
+- 当前 HSWeb `I18nSupportException(String code, Object... args)` 不接收独立 fallback；额外插入默认文案会改变参数位置。`BusinessException` 的业务 `code` 字段也不能当作默认文案槽位。
+- 资源缺失策略沿框架支持的重载与错误返回契约处理，不要求所有 API 都额外接收默认文案。
 
 避免写法：
 
@@ -114,19 +114,17 @@ String message = LocaleUtils.resolveMessage(
 
 对 `Mono.error(...)` 里的用户可见异常，同样优先传递带 `i18nCode` 的异常实例；不要先把 message 写死成字符串。
 
-兼容旧异常模型时，常见写法：
+当前 HSWeb `NotFoundException` 经 `BusinessException` 继承 `I18nSupportException`，在用例确实要求 not-found 错误时可直接传 code / args：
 
 ```java
-return LocaleUtils.resolveMessageReactive("error.entity.not_found", entityId)
-    .flatMap(errorMsg -> Mono.error(new NotFoundException(errorMsg)));
+return Mono.error(new NotFoundException("error.entity.not_found", entityId));
 ```
 
-如果目标模块没有使用 `resolveMessageReactive(...)`，而是通过其他上下文方式处理
-语言环境，优先跟随本地实现。
+不要先翻译再传给支持 code 的异常，避免丢失请求语言语义。只有旧边界确实仅接收文本时才提前解析；`LocaleUtils.resolveMessageReactive(String code, Object... args)` 从订阅上下文取语言，第二个参数不是 fallback。需要显式 fallback 时，核验并使用支持它的重载，例如在 `currentReactive()` 取得 Locale 后调用相应同步解析重载。
 
 ## 枚举国际化
 
-如果枚举实现了 `I18nEnumDict`，key 命名应使用：
+如果枚举实现了 `I18nEnumDict` 且未覆盖 `getI18nCode()`，默认 key 使用：
 
 ```text
 {完整包名}.{枚举类名}.{枚举值名称}
@@ -147,11 +145,11 @@ org.jetlinks.example.device.DeviceState.OFFLINE=离线
 
 ## 最佳实践
 
-- 始终在代码里提供默认值。
+- 仅在 API 明确支持时传默认文案，格式化参数须与资源占位符对应。
 - 只国际化用户可见内容。
 - 保持中英文 key 集合一致。
 - 保持同一术语在不同模块中的翻译一致。
-- 用户可见异常优先保留 `i18nCode` + 默认文案 + 参数。
+- 用户可见异常优先保留 `i18nCode` 与真实参数，不预先翻译为固定语言。
 - 参考相邻模块的 key 风格、目录结构和资源编码。
 - 在提交前检查是否漏掉了英文或中文对应项。
 
@@ -174,7 +172,7 @@ org.jetlinks.example.device.DeviceState.OFFLINE=离线
 LocaleUtils.resolveMessage("message.operation.success", "操作成功")
 ```
 
-只有当目标代码确实已经使用显式 `Locale` 重载时，才跟随现有模式。
+需要指定语言或传递请求上下文时，按目标重载显式传 Locale；是否有相邻样例不决定 API 能否使用。响应式链路不要用线程语言代替订阅上下文。
 
 ### 如何验证新增 i18n 是否正确
 

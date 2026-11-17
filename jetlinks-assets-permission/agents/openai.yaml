@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Assets Permission"
-  short_description: "JetLinks AssetsHolder 资产权限分析与统一实现约束"
-  default_prompt: "使用 $jetlinks-assets-permission 分析当前 CRUD 或自定义接口的资产权限边界，并复用统一 AssetsHolder 体系实现。"
+  short_description: "通过 AssetsHolder 统一数据权限，核对主体、资产、动作及独立边界"
+  default_prompt: "使用 $jetlinks-assets-permission 核对受控实体的 @Asset 与 ExtendableEntity 契约及权限 owner，复用平台能力，避免同链重复校验。"

@@ -1,43 +1,26 @@
 ---
 name: jetlinks-assets-permission
-description: 通过 JetLinks AssetsHolder 实现资产数据权限。适用于 CRUD、自定义查询、关联资产、命令、订阅、聚合或批量操作的权限边界，以及 AssetType、AssetsController、权限注入与过滤方式的选择。
+description: 通过 JetLinks AssetsHolder 实现数据权限，核对资产实体声明、动作、关联映射及查询、命令、订阅等独立入口的授权 owner。
 ---
 
 # JetLinks Assets Permission
 
-Use [`references/assets-holder-rules.md`](references/assets-holder-rules.md) for the current scenario. Read the relevant section when its rule is needed; reuse already verified rules and anchors while they remain valid.
+负责数据授权契约；业务关系字段、功能权限和资产数据权限各有用途，不能相互替代。
 
-## Workflow
+## 工作方式
 
-1. Classify the asset-permission scenario: owned CRUD asset, correlated asset, custom endpoint, aggregate query, command boundary, binding or unbinding, subscription or message filtering.
-2. Inspect adjacent code for `AssetType` enums, `@AssetsController`, `AssetsHolderCrudController`, `CorrelatesAssetsHolderCrudController`, `CrudAssetPermission`, `AssetsHolder.injectQueryParam`, `AssetsHolder.assertPermission`, command handlers, and local tests.
-3. If this is part of a large backend feature, pair with [`../jetlinks-router/references/backend-design-test-driven-rules.md`](../jetlinks-router/references/backend-design-test-driven-rules.md): reuse or record the changed asset type / permission boundary and selected behavior evidence; apply its authorization rule without asking again for an already approved boundary.
-4. Choose the unified AssetsHolder integration pattern that matches the local codebase; do not create ad hoc tenant, user, department, organization, or creator filters.
-5. Before implementing asset permission code, identify comment targets from [`../jetlinks-conventions/references/code-comments.md`](../jetlinks-conventions/references/code-comments.md): asset ownership, correlated asset mapping, `ignore = true` equivalent checks, admin / platform exceptions, batch mixed-permission behavior, custom query injection, command or subscription permission propagation.
-6. Pair with `$jetlinks-crud`, `$jetlinks-boundary`, `$jetlinks-events`, or `$jetlinks-reactive` when the asset permission decision belongs to those flows.
-7. Use [systematic-solving Admission](../systematic-solving/SKILL.md#admission) to decide whether this problem needs structured investigation. It owns hypotheses, evidence and stagnation control; this skill owns the domain implementation. A known cross-layer change or approved retry / mock is not itself an admission signal.
+1. 从实体的 @Asset、ExtendableEntity 继承关系开始，核验 AssetType、CrudAssetPermission、绑定关系、控制器基类及命令 / 订阅的权限入口。
+2. 按 [AssetsHolder 规则](references/assets-holder-rules.md) 选择自有资产、关联资产、查询注入、动作校验或消息过滤。记录本次改变的主体、资产、动作与唯一 owner 即可，不展开全层矩阵。
+3. 先查目标版本契约和现有用法；只有仍未确定、会改变访问范围的业务归属或例外语义才询问用户，不能自行全放行或全拒绝。
 
-## Required Constraints
+## 关键约束
 
-- Always prefer the JetLinks `AssetsHolder` asset permission system for data permission control.
-- Do not hand-roll data permission filters in CRUD code unless you are implementing or extending an AssetsHolder provider, dimension provider, term builder, asset supplier, or binding provider.
-- Do not use `@AssetsController(ignore = true)` on a protected endpoint unless the method performs equivalent `AssetsHolder.injectQueryParam`, `AssetsHolder.assertPermission`, or `AssetsHolder.filterAssets` handling.
-- Do not assume the asset type string. Find or add the module's `AssetType` / `EnumAssetType` definition and follow adjacent naming.
-- CRUD permissions should normally use `CrudAssetPermission.read`, `save`, `delete`, or `share`; custom permissions require an `AssetPermission` definition and local examples.
-- For related assets, verify whether the permission should apply to the entity itself or a referenced asset, then use the correlated-controller or query-injection pattern.
-- Treat AssetsHolder as the authoritative owner: when `AssetsHolderCrudController`, `CorrelatesAssetsHolderCrudController`, a command provider, or another established boundary already checks the same action, do not repeat `assertPermission` in Service or callers. A caller checks again only when it is itself an independently exposed security boundary with a distinct subject or action.
-- If asset ownership, related asset mapping, permission action, or admin / tenant / platform exception semantics are unclear, ask the user before implementation.
-- When this change adds or changes an asset-permission boundary, verify the changed owner with the smallest realistic allow / deny pair. Expand to related fields, batch behavior, or distinct actions only when those semantics differ; do not retest unchanged AssetsHolder framework behavior or bypass the core holder behavior with meaningless mocks.
-- Do not leave custom asset permission code comment-free when it encodes non-obvious ownership, correlated asset mapping, `@AssetsController(ignore = true)` replacement checks, admin / platform exceptions, batch mixed-permission behavior, custom query injection, or permission propagation through commands / subscriptions. Add concise comments next to those boundaries.
+- 受资产数据权限控制的实体必须具备有效的 `@Asset` 元数据并继承平台 `ExtendableEntity<K>`；已有继承 / 组合声明及基类满足契约时直接复用。资产类型、ID 字段及关联映射按 [实体契约](references/assets-holder-rules.md#资产实体契约) 核验，DTO 不因传递资产 ID 而套用实体继承。
+- 使用平台 holder / dimension / asset 契约，禁止手写租户、机构、部门或创建人过滤替代统一权限。
+- 普通业务 Entity / DTO / 命令不以新增 `tenantId` 等部署隔离字段另建权限模型。真实领域关系及权限 Provider 内部实现需按其职责区分。
+- 每个独立可达的受保护入口都须经由适用的授权 owner，即使与其他入口的主体、资产、动作相同。优先复用 `AssetsHolderCrudController` / `CorrelatesAssetsHolderCrudController`、命令提供方等统一控制；该路径已获完整保证时，内部调用方和 Service 不复制检查。
+- `@AssetsController(ignore = true)` 的受保护端点必须有等价的查询注入、动作校验或资产过滤。
+- 查询、分页、统计、批量、导出、命令和订阅不能绕开权限；空 holder 的行为按平台契约判断，不从一个空值推导全部授权。
+- 本次边界变化验证最小真实 allow / deny，关联、批量和不同动作仅按变化补充；不重测未改框架全套行为，不将 holder mock 为永远通过。
 
-## Response Shape
-
-Report only the decisions, changes and evidence relevant to this request. The following are optional reporting topics, not a form to complete for every task.
-
-1. Asset permission scenario
-2. Existing AssetsHolder patterns found
-3. Asset type and permission action
-4. Recommended integration pattern
-5. Unclear ownership or scope questions, if any
-6. Comment targets added, or the concrete reason no code comments were needed
-7. Verification evidence or exact pending commands
+说明实际权限 owner、集成方式和未解决语义；非显然映射与例外在代码旁说明。

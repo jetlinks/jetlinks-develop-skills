@@ -1,52 +1,41 @@
 ---
 name: jetlinks-web
-description: 在 JetLinks Vue3 前端实现或改造页面、交互、组件、状态与类型。适用于列表 / 详情 / 弹窗、条件筛选、EnumDict 渲染、路由菜单、Tab 回传、平台上下文和运行时扩展；根据当前工作区导出复用共享基础组件与项目级能力。
+description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与状态。局部修改直接沿现有契约，新页面按业务任务组织并复用平台组件。
 ---
 
 # JetLinks Web
 
-从本次实际变化选择路径。已定位的一处字段、prop、文案或样式调整，可以直接沿相邻实现修改；不必重新设计页面、扫描全部复用层或为未改逻辑补说明。
+负责前端任务闭环、信息表达、组件职责及状态。已定位的文案、prop 或样式调整直接修改，不为局部工作重做页面设计。
 
-## Workflow
+## 工作方式
 
-1. 保留用户已明确的目标、限制和交互选择，确认当前模块及相关代码锚点。只补当前修改需要的组件导出、接口、i18n 或状态事实。
-2. 新页面、页面壳层、信息架构或主筛选 / 主列表 / 主详情承载发生变化时，读 [页面分型](references/page-pattern-decision-rules.md)，根据真实用户任务形成方案档案。已知事实支持一个方案且用户要求实施时采用并继续；只有影响契约或主要操作路径的关键未决选择才询问。
-3. 新增组件 / hook / util 或改变职责边界时，读 [能力复用](references/capability-reuse-rules.md) 与 [代码组织](references/code-organization-rules.md)。从相关锚点和相邻实现查起，找到可信能力即停止扩搜；复用不合适时说明实际缺口，按职责拆分，不按行数拆分。
-4. 只加载下表中当前动作需要的 references。实现最小完整变化，保留 Vue 3 SFC + `script setup lang="ts"` 及相邻代码约定。
-5. 在连贯阶段结束后，按改变的可观察行为、类型与交互风险集中验证。复用有效证据，报告真实未覆盖风险；不以固定检查清单制造无关构建、注释或抽象。
+1. 核验当前模块、相邻实现及本次所需组件 / 接口事实，保留用户已明确的目标与交互选择。
+2. 新页面、信息架构或主操作路径变化时，读 [页面分型](references/page-pattern-decision-rules.md) 和 [页面设计](references/web-development-rules.md)，按业务语义组织内容与动作。已有合理方案和实施授权就继续，只有改变主要操作路径的实质未决选择才询问。
+3. 新增能力时从相关锚点按 [能力复用](references/capability-reuse-rules.md) 选型，找到可信组件即停止扩搜；只有职责或抽象发生变化时再查 [代码组织](references/code-organization-rules.md)。
+4. 沿用 Vue 3 SFC、`script setup lang="ts"`、组件库和样式 token；阶段末按实际改变的交互、类型与状态风险集中验证。
 
-## Conditional References
+跨页面共享契约、前后端状态链路或公共能力替换发生实质变化时，集成收尾按 [任务整体审查](../jetlinks-review/references/review-method.md#任务整体审查) 核对累计结果与受影响消费者；局部文案、prop 或样式调整沿当前范围验证。
 
-| 当前任务 | 读取 |
+## 按需细则
+
+| 当前动作 | 读取 |
 | --- | --- |
-| 新页面、主交互或业务体验设计 | [页面分型](references/page-pattern-decision-rules.md)、[页面设计规则](references/web-development-rules.md)；选择组件时再查 [场景矩阵](references/component-reuse-patterns.md) |
-| 选择 / 新增组件，核对包导出 | [组件事实源](references/component-source-rules.md)；涉及 core 时按 [能力文档](references/core-capability-docs.md) 定位相关分类 |
-| 新增抽象、复用不明确或职责变化 | [能力复用](references/capability-reuse-rules.md)、[代码组织](references/code-organization-rules.md) |
-| 通用搜索、token 条件、远程选项、路由编解码 | [ConditionFilter](references/condition-filter-rules.md) |
-| EnumDict / I18nEnumDict 或 `{ value, text }` 字段 | [枚举渲染](references/enum-rendering-rules.md) |
-| 类型、复杂注释、样式 token 或质量风险 | [质量与类型](references/quality-and-type-rules.md) |
-| 状态 / 生命周期 / 路由归属变化 | [状态管理](references/state-management-rules.md) |
-| 详情轻量编辑、反向引用、侧栏、PageHead 或浮动操作 | [场景组件与整页约定](references/component-reuse-patterns.md) |
-| 新目录或模块落点 | [目录结构](references/directory-structure-rules.md) |
-| 仪表盘运行组件 / 配置 / 注册接线 | [Dashboard](references/dashboard-component-rules.md) |
-| 添加指标、图表或其他信息区块 | [区块准入](references/block-admission-rules.md) |
-| 借鉴其他页面或寻找真实例子 | [业务参考](references/business-ui-example-rules.md)、[示例定位](references/example-locations.md) |
+| 核实组件 API / 导出 | [组件事实源](references/component-source-rules.md)；core 能力不明再查 [分类文档](references/core-capability-docs.md) |
+| 详情、原位编辑、分区、侧栏、列表及整页组合 | [场景组件](references/component-reuse-patterns.md) |
+| 通用条件搜索、远程选项与路由编解码 | [ConditionFilter](references/condition-filter-rules.md) |
+| 后端 EnumDict / I18nEnumDict | [枚举渲染](references/enum-rendering-rules.md) |
+| 状态归属、重叠请求或生命周期 | [状态管理](references/state-management-rules.md) |
+| 业务页面增加告警、公式 / 指标计算或通知配置 | [平台能力复用](../jetlinks-boundary/references/platform-capability-reuse-rules.md)：先核验配置 / 管理契约与公开组件，不另造整套平台管理功能 |
+| 类型、注释、视觉 token 或质量风险 | [质量规则](references/quality-and-type-rules.md) |
+| 新目录 / 模块，或仪表盘注册 | [目录落点](references/directory-structure-rules.md) 或 [Dashboard](references/dashboard-component-rules.md) |
+| 统计 / 图表区块，或借鉴外部案例 | [区块准入](references/block-admission-rules.md) 或 [案例边界](references/business-ui-example-rules.md)；找真实样例再读 [定位](references/example-locations.md) |
 
-更多细分入口见 [索引](references/index.md)，按需查阅，不将它作为必读链。
+## 关键边界
 
-## Domain Constraints
+- `@jetlinks-web/components` 是基础层，`@jetlinks-web-core/components` 是项目层；实际导出证明可用性，一层文档不能证明另一层。优先既有 props、slots、schema 和项目封装，不复制控件或深导入其他业务模块私有实现。
+- 按对象、状态、关系和动作分区，读写围绕同一任务组织；不默认全量表单、散落弹窗或无关概览卡。左右分区、卡片、icon 与自适应服务业务重点，不为填满页面装饰。
+- 展示组件不暗含 API、全局状态写入或业务编排；按职责拆分，不按行数 / 文件数强拆。通用组件缺陷须 [回 owner 修复并提交 PR](../jetlinks-conventions/references/root-cause-and-no-hack-rules.md#通用组件缺陷的闭环)，不能用业务包装或页面特调绕过。
+- 通用搜索复用现有 ConditionFilter 及编码链；枚举展示用 `text`，提交与比较用 `value`。i18n、权限、路由与设计 token 沿用平台机制。
+- 原型说明、TODO、开发过程和无关内部标识不进入成品 UI；图表和数字有真实来源及用户用途。
 
-- 组件 API 以当前工作区实际导出为准。`@jetlinks-web/components` 是跨项目基础层，`@jetlinks-web-core/components` 是项目层；验证使用到的层，不能用其中一层的文档证明另一层可用。共享层从 `packages/components/src/components.md` 定位，并用 `components.ts` 核验根导出；项目层核验 `jetlinks-web-core/src/components/index.ts`。已验证且未失效的导出可复用。
-- 现有组件的 props、slots、config、schema 能覆盖需求时优先配置；已有稳定业务、权限、i18n 或路由约定的项目封装优先。不要复制基础控件、深导入其他业务模块私有代码或为缩短文件建立空包装。
-- 页面 / container、展示组件、composable、service / API、util 按职责分工。展示组件不直接请求 API、写全局状态或暗含业务编排；本次不改变的相邻逻辑不因文件被触碰而强制重构。
-- 通用搜索优先当前工作区的 ConditionFilter 及其路由编解码链。字段先用通用编辑类型与 transform hooks 表达；ProSearch 的适用边界见其 [规则](references/condition-filter-rules.md)，相邻页面用了它不等于新页面默认。
-- 后端枚举对象显示 `text`，提交、筛选、比较和状态色使用 `value`；不直接渲染对象或复制后端文案映射。
-- 使用 Ant Design / Ant Design Vue、现有组件和样式 token；需求未改变视觉体系时沿用它。布局由真实业务任务决定；指标 / 图表必须有业务用途和数据来源，原型标注、TODO 和开发过程说明不进入成品 UI。
-- 文案与 i18n 沿用当前工作区机制。面向实际用户写内容：开发集成者需要的 API 路径、Topic 或命令 ID 可以准确展示；无关内部标识和设计说明不展示。对已有明确语义的局部文案修改，不重问整页角色。
-- 新增或实质修改的公共函数、业务规则、状态联动、兼容、并发和生命周期逻辑按 [质量规则](references/quality-and-type-rules.md) 补简洁注释；明显代码不逐行复述，未改逻辑不触发逐文件“无需注释”说明。
-
-复杂问题是否需要系统求解，统一使用 [systematic-solving Admission](../systematic-solving/SKILL.md#admission)，不以跨 API / route / state 层或出现 retry / mock 词汇自行升级。命名、i18n、追踪等需要跨端规范时再加入 [conventions](../jetlinks-conventions/SKILL.md)；提交或 PR 请求加入 [delivery](../jetlinks-delivery/SKILL.md)。
-
-## Response
-
-说明实际变化、关键决策和验证结果；只报告当前任务涉及的方案、复用缺口、条件搜索、枚举或剩余风险。局部修改可以用一两句话交付，无需复述未触发的路径。
+说明实际变化、关键决定与验证；局部修改可一两句交付。更细入口见 [索引](references/index.md)，无需依次阅读。

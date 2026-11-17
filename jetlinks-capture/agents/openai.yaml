@@ -1,4 +1,4 @@
 interface:
   display_name: "JetLinks Capture"
-  short_description: "JetLinks 稳定知识判断与权威来源收敛工作流"
-  default_prompt: "使用 $jetlinks-capture 判断任务结论是否值得沉淀，并优先原位更新已有权威来源。"
+  short_description: "维护 JetLinks 稳定知识的权威归属，避免任务流水与重复总结"
+  default_prompt: "使用 $jetlinks-capture 将本次稳定结论原位更新到正确来源，沿用已有授权。"

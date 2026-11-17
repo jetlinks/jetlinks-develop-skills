@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Orchestration"
-  short_description: "Orchestrate and verify bounded multi-agent work"
-  default_prompt: "Use $agent-orchestration to choose a useful route, preserve the accepted goal and constraints, and coordinate bounded assignments through current acceptance and integration."
+  short_description: "选择有实际收益且获允许的有界委派，核对写集、结果与集成证据"
+  default_prompt: "使用 $agent-orchestration 判断当前任务是否值得委派，并在宿主允许时完成有界派发、验收与集成。"

@@ -152,7 +152,7 @@ Derive the minimum tier from the highest active requirement: `mechanical + local
 | Large mechanical implementation with frozen contract, deterministic oracle and exact exclusive write set | `BOUNDED_WORKER` | Economy executor is allowed only after the admission gate below |
 | Disjoint implementation with stable contract and direct tests but normal code judgment | `BOUNDED_WORKER` | Balanced worker; one write owner |
 | Ambiguous requirements, unknown root cause, shared API / schema / migration | `SINGLE_OWNER` plus optional scouts | Strong primary keeps decision and repair ownership |
-| Security, permissions, concurrency, destructive or hard-to-reverse change | Strong primary plus `INDEPENDENT_REVIEW` | High-capability, evidence-focused review |
+| Security, permissions, concurrency, destructive or hard-to-reverse change | Strong primary; conditional `INDEPENDENT_REVIEW` | Add an authorized, evidence-focused reviewer only for named material risk that remains after integration |
 | One failed bounded attempt or moved failure signature | Fresh escalation or reframe | Do not repeat the same economical route |
 
 Do not equate role with model size. A strong model may execute a critical slice; an economical model may plan a trivial deterministic batch. Route on uncertainty, impact and verification cost.

@@ -27,10 +27,10 @@
 ## 跨模块能力调用约束
 
 - 模块与模块之间需要复用 `api`、`hooks`、`components`、`utils` 等能力时，优先通过模块注册中心协作，不要直接跨模块深层 `import` 对方实现。
-- 注册中心实现位于 `@jetlinks-web-core/src/utils/module-registry.ts`，当前工作区对应文件为 `jetlinks-web-core/src/utils/module-registry.ts`；业务代码通常通过 `@jetlinks-web-core/utils/module-registry` 引入 `moduleRegistry`。
+- 注册中心源码候选为 `jetlinks-web-core/src/utils/module-registry.ts`；常见公开别名是 `@jetlinks-web-core/utils/module-registry`，实际路径核对目标构建别名。
 - 提供方先在 `modules/*-ui/register.ts` 或 `modules/*-ui/index.ts` 中统一注册资源，再由消费方通过 `moduleRegistry.getResource(moduleId, resourceType)`、`moduleRegistry.getResourceItem(moduleId, resourceType, resourceName)` 获取。
 - 需要找真实示例时，优先查看模块入口里的 `moduleRegistry.register(name, registerSetting)`，再查看消费侧通过 `moduleRegistry.getResource(...)` 读取资源的页面或 hooks。
-- 只有模块内私有实现才保留本地直接引用；一旦形成跨模块复用关系，就应收敛到注册中心，避免硬编码模块路径和循环依赖。
+- 运行时模块资源沿已有注册中心协作；稳定共享类型、纯工具或 Core 公共契约可直接从公开入口导入，不为每个共享函数新增运行时注册。禁止直接导入其他业务模块私有实现。
 
 ## 推荐检索命令
 
