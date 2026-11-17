@@ -11,6 +11,8 @@ description: 应用 JetLinks 共享开发规则：职责与语义、通用策略
 
 先核验相邻代码与当前依赖，只读取会改变本次决策的细则。已有事实和规则仍有效时复用，不因触碰文件扩展为无关清理。
 
+公共设计或策略仅有样例 / 解法建议支撑时，按 [扩大依据的时机](../systematic-solving/references/systematic-solving-rules.md#扩大依据的时机) 定点核对规范与成熟实践；不等反复修补后才查证，也不为普通局部修改启动调研。
+
 | 当前问题 | 规则 owner |
 | --- | --- |
 | 职责、抽象、语义命名、魔法值、配置、场景特调与初始化 | [职责与通用性](references/responsibility-and-generality-rules.md) |

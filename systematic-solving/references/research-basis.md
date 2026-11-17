@@ -18,6 +18,14 @@
 
 这些来源能支持“观察必须服务明确决策、失败先分类、方案与实施分阶段、轨迹需要检查停止行为”，但没有证明固定 Scout 数量或某类产品选择应由技术证据决定。因此，本技能把“两项默认预算”和 `SemanticFork` 字段视为需要跨领域轨迹评测的工程协议；`evidence_can_decide` 仍由当前任务的不变量与授权边界判断，不能用文献替用户选择。
 
+### 近期建议与方案依据
+
+- [GOV.UK：Learning about users and their needs](https://www.gov.uk/service-manual/user-research/start-by-learning-user-needs) 要求需求基于研究证据，聚焦用户问题而非预设手段，例如需要提醒不等于必须发邮件。这支持区分目标与候选解法，不能用它否定用户明确选择或把每项局部需求都变成用户研究项目。
+- [Towards Understanding Sycophancy in Language Models](https://arxiv.org/abs/2310.13548) 在其模型和文本任务中观察到迎合用户观点而牺牲真实性的现象。这为“用户技术判断仍须核验”提供风险依据；它未评测本仓库技能或当前模型的代码修复，不证明应反对用户，也不证明新增提示必然有效。
+- [Anthropic：Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) 主张按需检索和保留最小高信号上下文。这支持定点补充缺失依据并回收无关历史，不支持默认加载整篇文献、固定长度阈值或为了隔离上下文一律增加 Agent。
+
+上述官方指南、原始研究与工程文章于 2026-11-17 核对；来源不因新旧或数量自动获得适用性。[扩大依据规则](systematic-solving-rules.md#扩大依据的时机) 由本包结合这些原则制定，不是论文直接给出的场景清单或强制流程。
+
 ## 3. 真实代码任务与结构检索
 
 - [SWE-bench](https://arxiv.org/abs/2310.06770) 表明真实 issue 通常需要协调多个函数、类和文件并与执行环境交互，复杂任务不能只盯失败文件。

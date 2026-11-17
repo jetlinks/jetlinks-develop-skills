@@ -42,4 +42,6 @@
 
 ## 设计依据的边界
 
-维护交互规范时，核对 [WAI-ARIA Combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) 的焦点、确认与取消行为，以及 [WCAG 2.2 标签与说明](https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions.html) 的必要输入信息。它们约束可用性，不规定业务页面必须采用侧栏、卡片或某种布局；信息分区由用户任务与业务语义决定，视觉和交互细节沿用目标平台真实组件及 token。
+主任务或信息架构未定、局部调整不能改善任务完成时，按 [扩大依据](../../systematic-solving/references/systematic-solving-rules.md#扩大依据的时机) 对照任务研究和成熟设计模式，避免围绕最新截图反复调样式。已有明确合法的局部布局 / icon 偏好直接实施，不借调研重开已接受方案。
+
+设计或审查相关输入交互时，可核对 [WAI-ARIA Combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) 的焦点、确认与取消行为，以及 [WCAG 2.2 标签与说明](https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions.html) 的必要输入信息。它们约束可用性，不规定业务页面必须采用侧栏、卡片或某种布局；信息分区由用户任务与业务语义决定，视觉和交互细节沿用目标平台真实组件及 token。

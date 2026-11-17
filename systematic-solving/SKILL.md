@@ -16,7 +16,7 @@ Layer counts and technology keywords are not admission signals. An already-decid
 ## Work from evidence
 
 1. Name the unresolved decision, known facts, affected invariant and acceptance signal. Separate a factual uncertainty from a material product choice.
-2. Build the smallest producer–boundary–consumer map. Select a bounded observation that distinguishes candidates; use [code-navigation](../code-navigation/SKILL.md) only if the path is unknown.
+2. Build the smallest producer–boundary–consumer map. Select a bounded observation that distinguishes candidates; use [code-navigation](../code-navigation/SKILL.md) only if the path is unknown. When a consequential choice rests on one example or an unverified proposed fix, use [broader evidence](references/systematic-solving-rules.md#扩大依据的时机) without replacing explicit user choices with generic best practice.
 3. An observation that misses the boundary or cannot distinguish candidates does not justify a solution-changing patch. Repair the observation, choose a better discriminator or identify the blocker.
 4. Stop when evidence decides or one user choice remains. Ask only for that material choice; do not implement dependent contracts while it is open. Continue independent authorized work.
 5. Classify failures as production defect, stale consumer / oracle, invalid fixture, mechanical assembly or unresolved cause. Fix the owner and compare results with the prediction before another patch.
