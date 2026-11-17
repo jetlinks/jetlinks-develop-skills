@@ -25,6 +25,7 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 | 通用条件搜索、远程选项与路由编解码 | [ConditionFilter](references/condition-filter-rules.md) |
 | 后端 EnumDict / I18nEnumDict | [枚举渲染](references/enum-rendering-rules.md) |
 | 状态归属、重叠请求或生命周期 | [状态管理](references/state-management-rules.md) |
+| 业务页面增加告警、计算或通知配置 | [平台能力复用](../jetlinks-boundary/references/platform-capability-reuse-rules.md)：先核验配置 / 管理契约与公开组件，不另造整套平台管理功能 |
 | 类型、注释、视觉 token 或质量风险 | [质量规则](references/quality-and-type-rules.md) |
 | 新目录 / 模块，或仪表盘注册 | [目录落点](references/directory-structure-rules.md) 或 [Dashboard](references/dashboard-component-rules.md) |
 | 统计 / 图表区块，或借鉴外部案例 | [区块准入](references/block-admission-rules.md) 或 [案例边界](references/business-ui-example-rules.md)；找真实样例再读 [定位](references/example-locations.md) |

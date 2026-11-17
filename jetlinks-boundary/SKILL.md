@@ -1,15 +1,15 @@
 ---
 name: jetlinks-boundary
-description: 选择并实现 JetLinks 应用与平台的依赖边界、字段扩展、对象关系与语义声明及跨服务命令。模块落点由 jetlinks-routing 处理。
+description: 选择并复用 JetLinks 平台能力，处理告警、计算、通知等业务接入、依赖边界、字段 / 对象建模与跨服务命令。模块落点由 jetlinks-routing 处理。
 ---
 
 # JetLinks Boundary
 
-负责依赖方向、公开契约和跨边界交互方式；权限判定归 AssetsHolder，消息交付归 events。
+负责平台能力选型、依赖方向、公开契约和跨边界交互方式；权限判定归 AssetsHolder，消息交付归 events。
 
 ## 工作方式
 
-1. 确认能力 owner、目标版本、部署边界和已公开的 core / API / command / SPI；构建依赖、提供方和消费者是事实源。
+1. 业务要增加告警、计算、通知等同类功能时，先按 [平台能力复用](references/platform-capability-reuse-rules.md) 判断配置、组合、SPI 扩展或独立业务语义，不先创建平行实现。确认 owner、目标版本、部署边界和公开契约；构建依赖、提供方和消费者是事实源。
 2. 应用依赖平台或扩展标准实体时，读 [应用与平台规则](references/application-platform-rules.md)；负责人、归属等对象建模读 [属性与对象关系选择](references/object-modeling-rules.md)；交互方式尚不明确时查 [边界选择](references/module-reference.md)。
 3. 实现命令提供方、消费者或代理时，读 [命令调用](references/cross-service-call-rules.md)。核实 service / support / command ID、载荷、Context、结果与失败语义，不凭方法名猜契约。
 4. 新增或改变后端契约时，按 [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) 选择受影响的行为证据。

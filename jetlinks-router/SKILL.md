@@ -13,6 +13,7 @@ description: 为入口不明确的 JetLinks 任务选择最少的相关技能。
 | --- | --- |
 | 找定义、调用链、依赖证据或变更影响 | [code-navigation](../code-navigation/SKILL.md)：检索与证据 |
 | 判断模块归属、发现工作区或创建模块 | [jetlinks-routing](../jetlinks-routing/SKILL.md)：代码落点 |
+| 业务新增告警、计算、通知等平台同类功能 | [平台能力复用](../jetlinks-boundary/references/platform-capability-reuse-rules.md)：先选已有能力与业务边界，普通内存计算无需平台引擎 |
 | 应用依赖平台、字段与对象关系建模、语义声明、跨服务命令 | [jetlinks-boundary](../jetlinks-boundary/SKILL.md)：交互契约 |
 | 实体、查询、写入、批量或状态动作 | [jetlinks-crud](../jetlinks-crud/SKILL.md)：数据行为 |
 | 资产实体声明、AssetsHolder、关联资产或独立入口授权 | [jetlinks-assets-permission](../jetlinks-assets-permission/SKILL.md)：数据权限 |

@@ -19,6 +19,7 @@ description: 实现 JetLinks 实体、查询、写入、状态动作及导入导
 | 关联、汇总、批量、副作用、导入导出与部分失败 | [高级 CRUD](references/advanced-crud-rules.md) |
 | 自定义 termType、条件映射、关联表 exists | [动态条件](references/dynamic-term-rules.md) |
 | 审批、认领、发布 / 撤销等可重放动作 | [状态与重复请求](references/common-crud-rules.md#状态流转与重复请求) |
+| 准备自建告警、通知、计算配置 / 记录及管理功能 | [平台能力复用](../jetlinks-boundary/references/platform-capability-reuse-rules.md)：先判断通用能力归属，不默认生成新 CRUD |
 | 标准实体新增业务字段 | [版本化字段扩展](../jetlinks-boundary/references/application-platform-rules.md#标准实体字段扩展) |
 | 负责人、归属、对象关联或任职事实的建模 | [属性与对象关系选择](../jetlinks-boundary/references/object-modeling-rules.md) |
 | 新增或改变数据权限边界 | [AssetsHolder](../jetlinks-assets-permission/SKILL.md) |

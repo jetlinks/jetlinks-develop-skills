@@ -11,6 +11,7 @@
 | 已知实体字段按既有契约贯通 DTO 与 Controller | CRUD | 新增权限边界才加 assets-permission；跨层本身不触发复杂求解 |
 | 查询结果受资产权限控制 | CRUD + assets-permission | 自定义跨边界调用出现时加 boundary |
 | 应用引入平台依赖、扩展标准实体字段或建模对象关系 | boundary 的应用 / 平台规则及对象建模细则 | CRUD、数据权限与迁移按实际动作补充；不等待审查再检查依赖 |
+| 业务需要告警、公式 / 指标计算、通知等已有平台能力 | boundary 的平台能力复用规则 | 先判断配置、组合与 SPI；只在确有数据、交付或运行机制变化时补 CRUD / events / reactive，普通函数不强制引入平台引擎 |
 | 审查代码 / PR / 方案的业务结果、安全、状态 / 资源生命周期与复杂度 | review | 沿实际链路读取开发规则 owner；审查不自动授权修复，也不局限于固定问题类型 |
 | 生命周期变动产生领域副作用 | events | Mono / Flux 链路需要处理时加 reactive |
 | 协议报文已有明确样例和目标字段 | protocol | 竞争根因或语义未决时由 systematic-solving 判定准入 |

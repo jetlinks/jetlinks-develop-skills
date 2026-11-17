@@ -9,7 +9,7 @@ description: 实现 JetLinks 生命周期事件、领域联动、可靠投递和
 
 ## 工作方式
 
-1. 识别一次性查询 / 命令、必须原子完成的本地联动、外部通知或持续流，不能仅因“保存后”就默认异步化。
+1. 识别一次性查询 / 命令、必须原子完成的本地联动、外部通知或持续流，不能仅因“保存后”就默认异步化。告警 / 通知先按 [平台能力复用](../jetlinks-boundary/references/platform-capability-reuse-rules.md#告警与通知) 选择已有契约，不自建平行投递体系。
 2. 生命周期 / 领域联动读 [事件规则](references/event-driven-rules.md)；Topic、EventBus、历史加实时或重连读 [订阅规则](references/realtime-subscription-rules.md)。
 3. 核实真实发布时机、是否等待处理、Context 和失败传播；“修改后”不等于“事务提交后”。
 4. 新增或改变后端行为时，按 [设计与验证](../jetlinks-router/references/backend-design-test-driven-rules.md) 验证改变的触发与交付语义。
