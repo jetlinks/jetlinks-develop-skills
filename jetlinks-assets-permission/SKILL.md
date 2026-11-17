@@ -15,7 +15,7 @@ description: 通过 JetLinks AssetsHolder 实现数据权限，核对资产实�
 
 ## 关键约束
 
-- 受资产数据权限控制的实体必须声明 `@Asset` 并继承平台 `ExtendableEntity<K>`；已有基类已满足继承时直接复用。资产类型、ID 字段及关联映射按 [实体契约](references/assets-holder-rules.md#资产实体契约) 核验，DTO 不因传递资产 ID 而套用实体继承。
+- 受资产数据权限控制的实体必须具备有效的 `@Asset` 元数据并继承平台 `ExtendableEntity<K>`；已有继承 / 组合声明及基类满足契约时直接复用。资产类型、ID 字段及关联映射按 [实体契约](references/assets-holder-rules.md#资产实体契约) 核验，DTO 不因传递资产 ID 而套用实体继承。
 - 使用平台 holder / dimension / asset 契约，禁止手写租户、机构、部门或创建人过滤替代统一权限。
 - 普通业务 Entity / DTO / 命令不以新增 `tenantId` 等部署隔离字段另建权限模型。真实领域关系及权限 Provider 内部实现需按其职责区分。
 - 每个独立可达的受保护入口都须经由适用的授权 owner，即使与其他入口的主体、资产、动作相同。优先复用 `AssetsHolderCrudController` / `CorrelatesAssetsHolderCrudController`、命令提供方等统一控制；该路径已获完整保证时，内部调用方和 Service 不复制检查。

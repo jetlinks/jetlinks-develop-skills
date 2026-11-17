@@ -17,7 +17,7 @@ description: 应用 JetLinks 共享开发规则：职责与语义、通用策略
 | --- | --- |
 | 职责、抽象、语义命名、魔法值、配置、场景特调与初始化 | [职责与通用性](references/responsibility-and-generality-rules.md) |
 | 缓存、派生状态、热路径、运行资源、历史 / 审计 | [运行状态](references/runtime-state-rules.md)；订阅取消等执行机制由 reactive 处理 |
-| 工具类、导入家族、链式调用与 Java Stream 可读性 | [编码约定](references/code-conventions.md)；具体包 / 注解不清时查 [导入参考](references/annotations-and-imports-reference.md) |
+| 注解继承 / 组合、工具封装、导入家族与链式调用可读性 | [编码约定](references/code-conventions.md)；具体包 / 注解不清时查 [导入参考](references/annotations-and-imports-reference.md) |
 | 公共类 / SPI 契约、非显然规则、兼容与并发注释 | [代码注释](references/code-comments.md) |
 | 是否使用 i18n | [i18n 适用边界](references/i18n.md)；需要资源和 API 写法再读 [具体用法](references/i18n-usage.md) |
 | 关键业务 span 与 Context 传播 | [追踪](references/tracing.md) |

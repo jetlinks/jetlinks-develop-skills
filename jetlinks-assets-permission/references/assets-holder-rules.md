@@ -18,7 +18,7 @@
 
 ## 资产实体契约
 
-- 本项目中需要资产数据权限控制的实体必须声明 `org.jetlinks.pro.assets.annotation.Asset`，并继承 `org.hswebframework.web.api.crud.entity.ExtendableEntity<K>`；通过现有基类已满足继承关系时直接复用，不为此另造实体层。
+- 本项目中需要资产数据权限控制的实体必须具备 `org.jetlinks.pro.assets.annotation.Asset` 的有效元数据，并继承 `org.hswebframework.web.api.crud.entity.ExtendableEntity<K>`；直接声明或平台支持的继承 / 组合声明均须解析出正确资产映射，已有基类满足时直接复用，不为此重复标注或另造实体层。
 - `@Asset(type = ...)` 使用真实 AssetType 的类型标识；`idProperty` 默认 `id`，按关联资产授权时核验正确字段与控制器 / 命令映射，不能把每张关联明细都注册成新资产。有效的继承 / 组合注解按当前平台解析契约核对，不能只搜索直接注解文本。
 - 相邻旧实体缺少声明不能成为省略契约的依据；修改已有实体时核对当前元数据、主键与持久化映射，不顺手迁移无关实体。DTO、查询条件和纯值对象不因携带资产 ID 就继承持久化实体基类。
 - `@Asset` 和基类建立实体契约，不能替代独立入口的 AssetsHolder 查询注入、操作授权或资产绑定；仍按下文选择唯一权限 owner。不以新增 tenantId 等字段补替该契约。
