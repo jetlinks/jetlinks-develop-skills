@@ -15,10 +15,10 @@
    - 能用标准 `termType + value` 表达，就不要额外发明控制器私有查询参数。
    - 能挂到现有 `createQuery` / QueryParam / TermBuilder 链路，就不要单独绕过查询抽象。
 
-2. 条件语义写进 `termType`，业务值写进 `value`
-   - “是什么关系”放在 `termType`。
-   - “筛什么值”放在 `value`。
-   - 逻辑取反优先使用 `termType$not` 或现有 options 机制，不要自造一层布尔开关字段。
+2. `termType` 表达可复用查询操作，`value` 遵循该操作的值结构
+   - 优先复用已有 builder，不为每种关系、字段值或页面文案新增 `termType`。
+   - 标量、集合或结构化对象由 builder 契约决定；关系 ID、方向和目标身份可以属于 `value`。
+   - 逻辑取反使用目标 builder 支持的标准机制；关系方向不是逻辑取反，不能因存在 `reverse` 就改写为 `$not`。
 
 3. 关联查询优先抽象成可复用条件构造器
    - 如果查询本质是“主表是否满足某个关联表条件”，优先封装为通用 TermBuilder。
@@ -36,7 +36,7 @@
 - 新增一个稳定、可复用的查询语义
 
 要求：
-- 名称优先表达“关系 / 数据来源”，不要表达某个单页临时文案。
+- 只有现有 builder 不能表达真实的新查询操作时才新增；名称表达稳定操作或数据来源，不表达单页文案或某个关系值。
 - 如果条件本质是对子表或中间表做 exists 过滤，优先使用表语义或关系语义命名。
 - 不要为了一个页面的“接入状态”“所属项目”等展示文案，重复造多个相互重叠的 `termType`。
 
@@ -48,7 +48,7 @@
 要求：
 - 优先使用 `SubTableTermFragmentBuilder` 这类“主表 -> 子表 exists”抽象。
 - 如果子表默认关联列不是 `id`，再覆写对应列名；如果主子表通过主键自然关联，则不要额外绕出一层手写 join。
-- 对“有任意关联记录”这类场景，允许传空对象 `{}` 作为 value，语义上表示“仅判断 exists”。
+- 仅在目标 builder 明确支持时，用空对象 `{}` 表达“仅判断 exists”；不能省略其要求的关系、身份或子条件。
 
 ### 三、value 中的动态子条件
 
@@ -56,12 +56,14 @@
 - 同一个关联条件需要支持继续按子表字段筛选
 
 要求：
-- `value` 优先传 map，并使用标准 QueryParam key 语义，例如：
+- 目标 builder 使用 QueryParam 子条件解析时，`value` 可传 map，并使用其支持的标准 key，例如：
   - `projectId$in`
   - `creatorId$eq`
   - `status$not`
 - 不要为同一件事重复定义“字段名数组写法”“布尔兼容写法”“业务别名写法”多套协议，除非已存在不可去除的历史兼容负担。
 - 能被 `convertTerms` 或现有 term 解析能力消费的 key，就不要自己手写 switch 解析。
+
+平台关系条件另有结构化值契约：当前 `RelationMemberTermBuilder` 的 `relation-member` 通过 `RelationMemberTerm` 接收 `subjectType`、`subjectId`、`relatedType`、`relationId`、`reverse`，不能替换成任意子条件 map。该能力仅用于显式声明支持的同库单跳过滤，不代表任意跨服务关系都能进入 SQL；使用前核验目标制品是否包含此能力。
 
 ### 四、前后端职责分层
 

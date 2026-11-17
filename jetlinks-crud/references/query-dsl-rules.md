@@ -168,7 +168,7 @@ return service
     .execute();
 ```
 
-- `set(field, value)` 用于明确赋值；相邻代码已有实体值方法引用写法时，也可跟随 `set(entity::getField)`。
+- `set(field, value)` 用于明确赋值；目标版本支持实体值方法引用重载时，也可用 `set(entity::getField)`，按真实签名选择，不以相邻样例是否存在为准。
 - `setNull(field)` 用于清空字段，不要用魔法空字符串或特殊占位值替代 `null`。
 - `when(condition, update -> update.set(...) / update.setNull(...))` 用于可选字段，避免为每个字段分支复制整段更新链路。
 - `where(field, value)`、`where().in(...)`、`and(...)` 用于限定更新范围；批量更新必须能解释业务边界。
@@ -212,7 +212,7 @@ return QueryHelper.transformPageResult(
 
 - 复杂 SQL、原生 SQL、跨表查询、动态列、聚合或查询分析优先找当前模块的 `QueryHelper` / `DefaultQueryHelper` 模式。
 - `QueryHelper` 能承接 `QueryParamEntity`、排序、分页和映射时，不要手写字符串拼接的动态 SQL。
-- 原生 SQL 只能在 DSL / QueryHelper 明显无法表达且目标模块已有成熟模式时使用；参数必须结构化传入，禁止按条件拼接多套 SQL 变体。
+- DSL / QueryHelper 无法准确表达时，可沿目标版本支持的原生 SQL 入口实现；相邻模式提供线索，没有样例本身不禁止必要能力。值必须参数化，动态标识符使用受控映射，不拼接不可信输入或重复维护多套 SQL 变体。
 - 原生 SQL 默认使用标准 SQL 和通用函数；不要写 `limit` 方言、专有 JSON / array / window 语法、特定锁语句或专用 hint，除非用户明确要求限定某个数据库，或目标模块已有明确数据库限定。
 - 确需使用特定数据库方言时，在已有契约或 PR 中说明支持范围与真实兼容风险；不额外强制设计文档或回退机制。
 - 需要分析原生 SQL 结构时，优先走 `DefaultQueryHelper(operator).analysis(sql)` 或目标模块已有封装。

@@ -37,10 +37,10 @@
 
 - Reactive Streams 定义的是异步流处理与非阻塞背压协议，核心角色是 `Publisher`、`Subscriber`、`Subscription`、`Processor`。
 - `Publisher` 只能在订阅后按 `Subscription.request(n)` 需求发送数据；`onError` / `onComplete` 是终止信号；`cancel` 表示下游不再需要数据。
-- Reactor 的 `Mono` / `Flux` 是 `Publisher` 实现；操作符本质上是把一个 `Publisher` 组合成另一个 `Publisher` 的函数描述，实际执行发生在订阅后。
+- Reactor 的 `Mono` / `Flux` 是 `Publisher` 实现；操作符组合不证明所有工作都延后执行。`Mono.just(load())` 在组装时已调用 `load()`；热源也可先生产。需要每次订阅才执行的工作用 `defer` / `fromSupplier` 等正确建模。
 - `publishOn` / `subscribeOn` 是显式线程调度边界；`boundedElastic` 只用于无法避免的遗留阻塞调用隔离，不作为普通异步化手段。
 
-官方来源：[Reactive Streams JVM](https://github.com/reactive-streams/reactive-streams-jvm)、[Reactor Reference Guide](https://docs.spring.io/projectreactor/reactor-core/docs/current/reference/html/)。
+官方来源：[Reactive Streams JVM](https://github.com/reactive-streams/reactive-streams-jvm)、[Reactor Hot vs Cold](https://projectreactor.io/docs/core/release/reference/advancedFeatures/reactor-hotCold.html)。具体 API 以项目锁定版本为准。
 
 落到 JetLinks 代码里：
 

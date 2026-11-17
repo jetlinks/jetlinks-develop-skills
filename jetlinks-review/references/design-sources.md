@@ -7,9 +7,11 @@
 | Martin Fowler：[Bounded Context](https://martinfowler.com/bliki/BoundedContext.html) | 不同上下文有自己的模型与语言，应明确边界和相互关系 | 每张表一个服务、所有调用远程化、仅改包名就完成解耦 |
 | Martin Fowler：[Replace Magic Literal](https://refactoring.com/catalog/replaceMagicLiteral.html) | 有业务含义的字面量用符号名称表达，便于理解与维护 | 所有数字抽常量、命名常量后数值策略自然合理 |
 | OWASP：[Input Validation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html) | 区分语法和语义校验，正确处理信任边界；标识合法不等于有权访问 | 每一层重新校验所有字段、前端校验可替代服务端授权 |
+| OWASP：[Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) | 每个请求都须受适用的授权控制，优先统一框架；另一条入口的检查不能覆盖当前请求 | 每个内部方法都新增检查，或相同主体 / 资产 / 动作的独立入口可跳过授权 |
 | AWS Builders' Library：[Making retries safe with idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/) | 请求身份、重复请求和不同意图需要明确语义；超时后重试必须考虑副作用已执行 | 给所有查询增加回执表、用对象 ID 去重全部后续动作、同键不同载荷静默成功 |
 | Microservices.io：[Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html) | 本地写入和外部消息之间存在可靠性交接；relay 也可能重复发送，消费者仍需相应幂等 | 所有事件都必须增加 outbox、提交后回调就等于可靠交付、自动获得全局 exactly-once |
 | [Reactive Streams JVM 规范](https://github.com/reactive-streams/reactive-streams-jvm) | 按需求发出、取消和终止信号；非阻塞背压属于协议契约 | 包成 Mono 就不阻塞、纯内存函数都要返回 Publisher |
+| Reactor：[Hot vs Cold](https://projectreactor.io/docs/core/release/reference/advancedFeatures/reactor-hotCold.html) | 区分组装、生产与订阅；`just` 已捕获值，需要订阅期重算时用 `defer` 等 | 返回 Publisher 就证明所有副作用延迟、所有热源都应强改为冷源 |
 | Reactor：[Flux Javadoc](https://docs.spring.io/projectreactor/reactor-core/docs/current/api/reactor/core/publisher/Flux.html) 的 `flatMap` / `flatMapSequential` / `concatMap` | 并发订阅、按序输出和串行执行不同；concurrency 与 prefetch 控制不同窗口 | 按序输出就没有并发、固定并发值适合所有池和负载 |
 | Spring：[Programmatic Transaction Management](https://docs.spring.io/spring-framework/reference/data-access/transaction/programmatic.html) | TransactionalOperator 的事务范围与取消；Spring 5.3 起取消会触发回滚，多值结果需完整消费 | 任意事务框架都自动提供相同取消语义、本地事务覆盖远端命令 |
 | Spring：[R2DBC](https://docs.spring.io/spring-framework/reference/data-access/r2dbc.html) 的 R2dbcTransactionManager | 事务连接绑定 subscriber Context，可由多条组合链共享 | 多个 Mono 意味着多个连接、切换线程后事务自动独立 |
