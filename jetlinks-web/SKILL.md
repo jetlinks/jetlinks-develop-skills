@@ -21,7 +21,7 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 | 当前动作 | 读取 |
 | --- | --- |
 | 核实组件 API / 导出 | [组件事实源](references/component-source-rules.md)；core 能力不明再查 [分类文档](references/core-capability-docs.md) |
-| 菜单 / 详情语义未明，或列表、概览内容平铺 | [业务语义与信息重心](references/semantic-ui-design-rules.md) |
+| 菜单 / 分区语义未明，内容平铺或顶部说明挤占主区 | [业务语义、信息重心与密度](references/semantic-ui-design-rules.md) |
 | 控件选型、尺寸、密度或搭配不协调 | [选择与搭配](references/component-reuse-patterns.md#组件选择与搭配) |
 | 按钮语义、轻量下拉、选择与选项内容 | [动作与选择](references/action-and-selection-rules.md) |
 | 详情、原位编辑、分区、侧栏、列表及整页组合 | [场景组件](references/component-reuse-patterns.md) |

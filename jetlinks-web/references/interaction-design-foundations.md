@@ -11,7 +11,7 @@
 | Ant Design [Proximity](https://ant.design/docs/spec/proximity/) / [Layout](https://ant.design/docs/spec/layout/) | 组内靠近、组间分开，使用共同对齐线、尺度和可伸缩空间 | 固定列数、硬抄外部间距，或靠补卡片 / 大标题填空 |
 | Ant Design [Alignment](https://ant.design/docs/spec/alignment/) / [Repetition](https://ant.design/docs/spec/repetition/) | 同类内容保持可比较的对齐和稳定表达，重复的尺度与样式帮助识别结构 | 所有控件、文字和容器同尺寸，或拿某一组件库尺寸覆盖平台 token |
 | Ant Design [Data Display](https://ant.design/docs/spec/data-display/) / NN/g [Visual Hierarchy](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/) | 按重要性、操作频率和关联程度安排呈现，用位置、尺度、对比与分组体现信息层级 | 所有字段等权平铺，或强制固定首屏数量、视觉扫描路径和同形卡片 |
-| NN/g [Usability Heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/) / [Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/) | 状态可见、用户语言、识别优于回忆，低频细节按需出现，错误可恢复 | 主动作 / 必需字段藏进多级弹窗，或把点击越少当唯一标准 |
+| NN/g [Usability Heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/) / [Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/) | 减少无关信息对注意力的竞争；状态可见、用户语言、识别优于回忆，低频细节按需出现，错误可恢复 | 一律删除顶部说明、隐藏必要风险 / 标签，把主动作 / 必需字段藏进多级弹窗，或把点击越少当唯一标准 |
 | NN/g [Recognition and Recall](https://www.nngroup.com/articles/recognition-and-recall/) | 在当前操作处提供能识别的名称、内容与上下文，减轻记忆负担 | 所有信息常驻，或只用没有明确含义的图标替代文字 |
 | NN/g [Icon Usability](https://www.nngroup.com/articles/icon-usability/) | 图标依赖经验，必要文字承担明确含义 | 所有选项加图标，或用 tooltip 替代标签 |
 | Ant Design [Button](https://ant.design/components/button/) / [Dropdown](https://ant.design/components/dropdown/) | 用强调程度区分动作优先级，低频动作可收进菜单；名称和相邻上下文表明影响范围 | 每个操作都是主按钮、所有操作只剩图标，或按按钮名字固定样式 |

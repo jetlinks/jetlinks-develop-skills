@@ -6,7 +6,7 @@
 | --- | --- |
 | 页面任务与整体交互 | [页面设计](web-development-rules.md)、[页面分型](page-pattern-decision-rules.md) |
 | 菜单、业务含义与内容分区 | [业务语义](semantic-ui-design-rules.md) |
-| 列表、详情与概览的信息重心 | [信息重心](semantic-ui-design-rules.md#按任务建立信息重心) |
+| 列表、详情与概览的信息重心，顶部说明与密度 | [信息重心](semantic-ui-design-rules.md#按任务建立信息重心)、[信息密度](semantic-ui-design-rules.md#信息密度与顶部内容) |
 | 控件状态、尺寸、密度与组合协调 | [选择与搭配](component-reuse-patterns.md#组件选择与搭配) |
 | 按钮层级、轻量下拉与选项表达 | [动作与选择](action-and-selection-rules.md) |
 | 设计器、持续编辑与试验应用 | [连续交互](task-interaction-rules.md) |
