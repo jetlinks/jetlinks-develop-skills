@@ -1,0 +1,4 @@
+interface:
+  display_name: "JetLinks Web Style"
+  short_description: "JetLinks 前端旧名称兼容入口，按当前任务统一转交 jetlinks-web"
+  default_prompt: "使用 $jetlinks-web-style 的兼容入口，按 $jetlinks-web 当前任务路径完成设计、实现或交互评审。"
