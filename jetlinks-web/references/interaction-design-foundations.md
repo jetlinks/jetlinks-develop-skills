@@ -20,6 +20,7 @@
 | APG [Disclosure](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/) / [Window Splitter](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/) | 折叠与尺寸调节各有状态、被控区域和键盘语义；入口与内容关系可理解 | 折叠图标必须在搜索前、统一插槽顺序、所有详情都要侧栏，或示例尺寸成为通用断点 |
 | WCAG [Consistent Identification](https://www.w3.org/WAI/WCAG22/Understanding/consistent-identification.html) | 相同功能保持一致的识别表达，名称仍反映上下文含义 | 同类字段一律失焦保存，或所有页面采用相同布局与提交语义 |
 | Carbon [Forms](https://www.carbondesignsystem.com/building-blocks/core/patterns/forms) / [Data table](https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines) | 表单适合录入，原位编辑适合上下文维护；字段帮助与错误可理解，列表集合动作、已选动作和单行动作各有对象范围 | 为去表单而隐藏首次输入，或照抄固定按钮数、表头带和批量工具栏外观 |
+| GOV.UK [Form structure](https://www.gov.uk/service-manual/design/form-structure) | 分步可降低理解负担，按用户任务及研究决定合并；高频内部工作也可能适合连续处理 | 只有业务强依赖才可分步，或所有企业录入都一页一问 |
 | Carbon [Text input](https://www.carbondesignsystem.com/building-blocks/core/components/text-input/guidelines) | 字段宽度与所需内容相称，按共同网格对齐；控件尺寸和文字层级作为组合核对 | 所有字段拉满剩余空间，或为了紧凑任意缩小控件和点击区域 |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/) 与 APG [Combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) / [Listbox](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/) | 保持可读、焦点、键盘、可理解名称与选择语义 | 自称已经完整符合 WCAG，或只换视觉不处理真实宿主交互 |
 | [INP](https://web.dev/articles/inp) | 观察交互到下一次绘制，区分本地反馈、远程等待与最终完成 | 将现场第 75 百分位不高于 200ms 的良好阈值当接口 SLA 或一次点击验收 |
@@ -31,6 +32,7 @@
 ## 轻量外观仍需可用
 
 - 必要标签与帮助不能只剩 placeholder / hover；标签与可访问名称核对真实可操作节点，不能只看 Vue 已传入 prop。弱化用层级、字重和间距，普通文本按 WCAG 1.4.3 AA 保持至少 4.5:1，大文本至少 3:1，信息层级可以不同，但不通过低于适用对比要求的灰字表达次级内容。
+- 识别控件 / 状态或理解内容所必需的非文本视觉信息按 [WCAG 1.4.11 AA](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html) 核对，与相邻颜色至少 3:1，并适用非活动控件等条款例外；装饰边框、背景及分割线不一律套此阈值。
 - 焦点可见且不被自建固定区完全遮挡（2.4.7 / 2.4.11）；仅图标操作有真实可访问名称，随文字的装饰图标避免重复播报；指针目标按 2.5.8 AA 的 24×24 CSS px 或条款例外核对，图标绘制尺寸不等于点击范围。
 - 拖动之外保留适用的单指针替代，并支持键盘；常用操作不能只在鼠标 hover 时出现。复用控件既有语义，不逐业务手写另一套键盘状态机。
 - 按 [Reflow 1.4.10](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html) 检查窄宽度 / 放大后的内容和动作；二维数据表等按条款例外处理，横滚限定在需要比较的区域，不让整个页面溢出。

@@ -32,9 +32,11 @@
 | 可独立提交的单项维护 | 原位查看 / 编辑及就近反馈，不默认完整弹窗 | InputEditable、Editable、FormItemEditable 等；不从字段名推定必须单独保存 |
 | 语义关联的一组配置 | 分区局部编辑，保存 / 取消就近 | InlineEditForm 等编辑能力；ContentPanel 等承载分区，KvGrid 用于适用的事实阅读，不替代编辑与提交契约 |
 | 首次密集录入、批量修改或多字段整体提交 / 校验 | 完整编辑区、抽屉或独立页面，保留本次提交范围 | EditDialog、JlDrawerShell、现有配置编辑器 |
-| 确有阶段依赖的开通 / 发布 | 分步流及阶段结果 | 平台已有步骤 / 向导能力 |
+| 有阶段依赖，或分步能降低理解与复核负担的任务 | 按 [页面分型](page-pattern-decision-rules.md) 选择分步或连续分区，保留草稿、返回与提交范围 | 平台已有步骤 / 向导能力 |
 
 保存、取消、失焦、Enter / Esc、焦点恢复与失败回显按目标组件及字段类型契约，不为每个页面再写一套编辑器。原位编辑不等于所有变更立即生效，保留草稿和提交语义。
+
+弹窗、抽屉或独立页按背景是否需要继续操作、参考内容和工作空间选择；复杂内容超出弹层可用空间时可转独立页（[Carbon Modal](https://www.carbondesignsystem.com/building-blocks/core/components/modal/guidelines)）。不能从抽屉外观推定模态；真正模态时沿公共组件核验背景不可交互及焦点进入、限制和关闭后恢复（[APG Dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)），不逐页另造焦点管理。
 
 核验失败原因由组件还是宿主呈现，控件错误态本身不等于已解释原因；组件不承载业务错误文案时沿已有请求反馈承接，并保持对象归属，避免重复提示。正常装配公开反馈契约不属于绕过缺陷；组件违约或公共能力缺口仍回 owner 处理。
 
