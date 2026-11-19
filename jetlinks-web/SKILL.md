@@ -21,7 +21,7 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 | 当前动作 | 读取 |
 | --- | --- |
 | 核实组件 API / 导出 | [组件事实源](references/component-source-rules.md)；core 能力不明再查 [分类文档](references/core-capability-docs.md) |
-| 菜单 / 分区语义未明，内容平铺或顶部说明挤占主区 | [业务语义、信息重心与密度](references/semantic-ui-design-rules.md) |
+| 菜单 / 分区语义未明，内容平铺或说明感过强 | [业务语义、界面表达与密度](references/semantic-ui-design-rules.md) |
 | 控件选型、尺寸、密度或搭配不协调 | [选择与搭配](references/component-reuse-patterns.md#组件选择与搭配) |
 | 按钮语义、轻量下拉、选择与选项内容 | [动作与选择](references/action-and-selection-rules.md) |
 | 详情、原位编辑、分区、侧栏、列表及整页组合 | [场景组件](references/component-reuse-patterns.md) |
@@ -37,7 +37,7 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 ## 关键边界
 
 - `@jetlinks-web/components` 是基础层，`@jetlinks-web-core/components` 是项目层；实际导出证明可用性，一层文档不能证明另一层。优先既有 props、slots、schema 和项目封装，不复制控件或深导入其他业务模块私有实现。
-- 按业务任务组织导航与信息重心，既有组件及 token 提供视觉基线。阅读、录入与业务动作分清；信息页选择优先轻量表达，保留必要名称、选择能力和提交语义。
+- 按业务任务组织导航与信息重心，既有组件及 token 提供视觉基线。用业务内容、布局、标签和交互状态表达含义，说明只补必要差异与后果；阅读、录入与业务动作分清，信息页选择优先轻量表达，保留必要名称、选择能力和提交语义。
 - 展示组件不暗含 API、全局状态写入或业务编排；按职责拆分，不按行数 / 文件数强拆。通用组件缺陷须 [回 owner 修复并提交 PR](../jetlinks-conventions/references/root-cause-and-no-hack-rules.md#通用组件缺陷的闭环)，不能用业务包装或页面特调绕过。
 - 通用搜索复用现有 ConditionFilter 及编码链；枚举展示用 `text`，提交与比较用 `value`。i18n、权限、路由与设计 token 沿用平台机制。
 - 原型说明、TODO、开发过程和无关内部标识不进入成品 UI；图表和数字有真实来源及用户用途。
