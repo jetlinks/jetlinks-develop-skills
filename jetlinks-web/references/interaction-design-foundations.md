@@ -17,12 +17,16 @@
 | Ant Design [Button](https://ant.design/components/button/) / [Dropdown](https://ant.design/components/dropdown/) | 用强调程度区分动作优先级，低频动作可收进菜单；名称和相邻上下文表明影响范围 | 每个操作都是主按钮、所有操作只剩图标，或按按钮名字固定样式 |
 | Carbon [Dropdown](https://carbondesignsystem.com/components/dropdown/usage/) | inline 模式可在内容中降低选择器的表单感，当前值与名称仍可理解；检索需求影响选型 | 禁止所有 Select、删标签与焦点，或认为轻量动作菜单自动具备搜索 / 多选能力 |
 | APG [Menu Button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/) / [Button](https://www.w3.org/WAI/ARIA/apg/patterns/button/) | 展开入口、执行动作与链接语义有别，沿正确宿主保留键盘、展开与焦点行为 | 只换外观就统一强加 menu 角色，或给业务页再造键盘状态机 |
+| APG [Disclosure](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/) / [Window Splitter](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/) | 折叠与尺寸调节各有状态、被控区域和键盘语义；入口与内容关系可理解 | 折叠图标必须在搜索前、统一插槽顺序、所有详情都要侧栏，或示例尺寸成为通用断点 |
+| WCAG [Consistent Identification](https://www.w3.org/WAI/WCAG22/Understanding/consistent-identification.html) | 相同功能保持一致的识别表达，名称仍反映上下文含义 | 同类字段一律失焦保存，或所有页面采用相同布局与提交语义 |
 | Carbon [Forms](https://www.carbondesignsystem.com/building-blocks/core/patterns/forms) / [Data table](https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines) | 表单适合录入，原位编辑适合上下文维护；字段帮助与错误可理解，列表集合动作、已选动作和单行动作各有对象范围 | 为去表单而隐藏首次输入，或照抄固定按钮数、表头带和批量工具栏外观 |
 | Carbon [Text input](https://www.carbondesignsystem.com/building-blocks/core/components/text-input/guidelines) | 字段宽度与所需内容相称，按共同网格对齐；控件尺寸和文字层级作为组合核对 | 所有字段拉满剩余空间，或为了紧凑任意缩小控件和点击区域 |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/) 与 APG [Combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/) / [Listbox](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/) | 保持可读、焦点、键盘、可理解名称与选择语义 | 自称已经完整符合 WCAG，或只换视觉不处理真实宿主交互 |
 | [INP](https://web.dev/articles/inp) | 观察交互到下一次绘制，区分本地反馈、远程等待与最终完成 | 将现场第 75 百分位不高于 200ms 的良好阈值当接口 SLA 或一次点击验收 |
 
-业务语义、提交边界与页面组合是结合平台契约的工程判断，不冒充文献逐字结论。设计系统的视觉例子不能证明目标组件可用；平台源码和已接受交互决定具体接入方式。新增依据只补会改变选择的部分，不要求普通任务阅读全文或查完所有案例。
+通用规则保留任务目标、选型条件和可验证结果；具体字段、布局、参数及入口位置不从单个案例提升为通用要求。业务语义、提交边界与页面组合是结合平台契约的工程判断，不冒充文献逐字结论。
+
+平台组件文档拥有版本、API 和具体组合，业务案例只作按需定位或迁移验证；设计系统的视觉例子不能证明目标组件可用。新增依据只补会改变选择的部分，不要求普通任务阅读全文或查完所有案例。
 
 ## 轻量外观仍需可用
 

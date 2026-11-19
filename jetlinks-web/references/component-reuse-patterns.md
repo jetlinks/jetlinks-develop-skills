@@ -52,12 +52,14 @@
 | --- | --- |
 | 页壳与头部 | FullPage、ContentPanel；特殊头部位置用 PageChrome |
 | 详情摘要与返回 | DetailHeader、DetailMetaItem、PageBack；返回与摘要的组合核对当前 PageChrome 契约 |
-| 范围导航 / 列表 | 平台侧栏 / 树，EqualHeightColumns、j-pro-table、VirtualScroll、摘要卡片 |
+| 范围导航 / 列表 | 平台侧栏 / 树，j-pro-table、VirtualScroll、摘要卡片 |
+| 分区布局、折叠与调宽 | EqualHeightColumns、PanelResizeHandle 等；核验目标版本的职责与公开组合 |
 | 条件筛选与快捷联动 | ConditionFilter 及字段、选项、回显与编码契约 |
 | 对象摘要 / 事实分区 | EntityCard、CardBox、SectionCard、KvGrid、TabsCard |
 | 状态 / 分类 / 图标选项 | MetaChip、ChipGroup、AppTag、平台 icon 与选择器 |
 | 下拉 / 菜单候选内容 | SelectOption；宿主保留搜索、选择和键盘语义 |
-| 资源选择 | MarketplaceResourcePicker、CardSelect |
+| 对象选择 | 平台对象 / 树选择器、CardSelect；按规模、层级、检索和单 / 多选能力核验 |
+| 市场资源浏览 / 选择 | MarketplaceResourcePicker；核验市场资源、分类、标签及详情语义是否适用 |
 | 抽屉与固定操作 | JlDrawerShell、StickyActionBar |
 
 先组合已有组件，不造同形控件。确认公共组件缺陷时，在 [组件 owner 修复并提交 PR](../../jetlinks-conventions/references/root-cause-and-no-hack-rules.md#通用组件缺陷的闭环)，不能用业务页 wrapper 或深层覆盖绕过。
@@ -66,8 +68,8 @@
 
 - 明确宿主与内容各自提供的页头、导航、面板、内边距、高度和滚动；独立预览的演示工具不复制进成品。复用同一组件不证明已接入相同主题，浮层也须处于正确 Provider、样式处理及 token 环境。
 - 按整个内容页先确定共同对齐线、主辅比例、导航与伸缩主区，再安排组内 / 组间间距。长文本限制阅读行长，表格按比较任务利用宽度；顶部层级与说明按 [信息密度](semantic-ui-design-rules.md#信息密度与顶部内容) 取舍，不靠放大标题、padding 或重复卡片填空。
-- 左栏语义随业务变化，同一可折叠分区保留一个明确主入口；有搜索时可与其置于同一工具栏，无搜索时沿分区标题。位置由可发现性与现有组件契约决定，不能以 hover 独占入口或在多个位置重复按钮。
-- 当前 `EqualHeightColumns` 的 `right-header` 可承载已有搜索 / 列表工具栏，由组件在其前提供唯一折叠入口；无此工具栏时可核验 `left-header`。目标版本支持后直接接入，不另画折叠按钮；调整宽度才用真实分界线能力（如 `PanelResizeHandle`），折叠按钮不伪装为拖动柄。
+- 分区入口与受控内容的关系应清楚、可发现且可恢复；沿当前任务与组件契约组织，不规定必须位于某一侧、搜索之前或某个坐标。同一分区保留一个明确主入口，不以 hover 独占入口或重复堆放按钮。
+- 折叠与调宽沿已核验的公共能力组合，具体插槽、入口优先级、宽度及默认值归目标组件文档。折叠不冒充拖动；隐藏区域退出键盘顺序和辅助技术访问，仅在焦点将被隐藏时恢复到合适入口，不抢走其他区域焦点。
 - 根据实际容器而非仅窗口断点重排，包含平台侧栏与面板展开后的宽度变化；保留草稿、选择和阅读顺序，固定动作区不能遮住错误或键盘焦点。拖动尺寸有适用的键盘及单指针替代。
 - 受约束工作区由宿主提供高度，列内滚动保持主动作可达，表格横滚限定在表内；长阅读页可自然流动，不给所有组件套固定视口高度、强制等高或独立滚动。仅固定任务需要持续访问的上下文或动作，不把介绍、摘要、导航和工具栏全部吸顶，挤占实际工作区。
 
