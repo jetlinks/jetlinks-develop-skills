@@ -19,9 +19,9 @@
 | 详情、原位编辑、列表与分区 | [场景组件](component-reuse-patterns.md) |
 | 统计、图表或新增摘要区 | [区块准入](block-admission-rules.md) |
 | 借鉴其他页面 | [案例边界](business-ui-example-rules.md)、[真实样例定位](example-locations.md) |
-| 通用条件搜索与回显 | [ConditionFilter](condition-filter-rules.md) |
+| 组合条件、固定筛选选型与回显 | [筛选规则](condition-filter-rules.md) |
 | 后端枚举呈现 | [枚举渲染](enum-rendering-rules.md) |
 | 仪表盘扩展与注册 | [Dashboard](dashboard-component-rules.md) |
 | 目录落点 | [目录结构](directory-structure-rules.md) |
 | 状态归属、竞态和清理 | [状态管理](state-management-rules.md) |
-| 类型、样式和验证 | [质量规则](quality-and-type-rules.md) |
+| 录入字段、校验、类型、样式和验证 | [质量规则](quality-and-type-rules.md) |

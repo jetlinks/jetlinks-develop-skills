@@ -11,7 +11,7 @@
 
 ## 重点能力
 
-- 条件搜索复用 ConditionFilter 及编解码链，见 [筛选规则](condition-filter-rules.md)。
+- 组合条件搜索优先复用 ConditionFilter 及编解码链；固定筛选与旧页改动按 [筛选选型](condition-filter-rules.md#选型与条件-owner) 判断。
 - 公式编辑 / 查看核验 core Expression 的 MathExpressionEditor、MathExpressionView 等公共入口，复用 MathLive 与结构化表达式；指标、试算和执行职责见 [计算复用](../../jetlinks-boundary/references/platform-capability-reuse-rules.md#计算先选结果能力再选公式表达)。
 - 运行时扩展核验 RegistryComponent、RemoteComponent 与 moduleRegistry 的实际注册 / 加载契约；稳定共享类型、纯工具可用其公共静态入口，不一律运行时注册。
 - 告警、计算和通知的业务接入复用 [平台能力](../../jetlinks-boundary/references/platform-capability-reuse-rules.md)，不从页面另造整套管理系统。
