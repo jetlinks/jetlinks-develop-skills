@@ -18,6 +18,7 @@
 - 整页比例、侧栏、原位 / 分区编辑及自适应按 [场景组件](component-reuse-patterns.md)；同层尺寸与密度协调不等于所有控件等大。
 - 按钮、信息页轻量选择与实际值录入按 [动作与选择](action-and-selection-rules.md) 区分；业务含义优先由 [界面组织与行为](semantic-ui-design-rules.md#界面表达与辅助说明) 表达，必要说明就近出现，不把页面做成功能讲解。
 - 正式页面使用真实平台组件；独立预览不能证明完整宿主、权限或生产数据已接通。借鉴其他页面按 [案例边界](business-ui-example-rules.md)。
+- 页面先呈现可用结构，列表与详情在所属 [内容区滚动](component-reuse-patterns.md#内容区滚动)；通用 CRUD 优先 `/_query/no-paging`，其他列表读取优先业务流式接口，尽量避免分页。按需消费、独立 count 与局部骨架屏依 [加载流程](state-management-rules.md#列表与局部加载流程) 组合，不让慢数据阻塞整页。
 
 ## 实现与阶段验收
 

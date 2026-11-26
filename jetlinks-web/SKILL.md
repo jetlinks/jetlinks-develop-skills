@@ -12,7 +12,8 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 1. 核验当前模块、相邻实现及本次所需组件 / 接口事实，保留用户已明确的目标与交互选择。
 2. 新页面或主路径变化读 [页面设计](references/web-development-rules.md)，按未决问题选择语义或页面分型细则；已有合理方案与实施授权就继续。事实先查代码与接口，仅对仍影响业务含义、保存范围或主要路径的未决事项询问。
 3. 能力选型按 [复用规则](references/capability-reuse-rules.md) 从相关锚点核验，找到适用能力即停止扩搜；职责或抽象变化再查 [代码组织](references/code-organization-rules.md)。
-4. 沿用 Vue 3 SFC、`script setup lang="ts"`、组件库和样式 token；阶段末按 [质量验证](references/quality-and-type-rules.md#验证) 与实际改变的交互、类型和状态风险集中验证。
+4. 列表与工作区先确定 [内容区滚动](references/component-reuse-patterns.md#内容区滚动) 和 [按需数据与局部加载流程](references/state-management-rules.md#列表与局部加载流程)：页面先呈现，通用 CRUD 优先 `/_query/no-paging`，其他列表读取优先业务流式接口；按需加载、独立 count 和局部骨架屏不阻塞整页。
+5. 沿用 Vue 3 SFC、`script setup lang="ts"`、组件库和样式 token；阶段末按 [质量验证](references/quality-and-type-rules.md#验证) 与实际改变的交互、类型和状态风险集中验证。
 
 跨页面共享契约、前后端状态链路或公共能力替换发生实质变化时，集成收尾按 [任务整体审查](../jetlinks-review/references/review-method.md#任务整体审查) 核对累计结果与受影响消费者；局部文案、prop 或样式调整沿当前范围验证。
 
@@ -26,6 +27,7 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 | 按钮语义、轻量下拉、选择与选项内容 | [动作与选择](references/action-and-selection-rules.md) |
 | 原位编辑、多语言、字段确认与整表保存 | [公共编辑能力与提交边界](references/component-reuse-patterns.md#公共编辑能力与提交边界) |
 | 分区调宽、折叠、窄屏抽屉与连续表面 | [分区布局与响应式职责](references/component-reuse-patterns.md#分区布局与响应式职责) |
+| 内容区滚动、流式列表、总数与骨架屏 | [滚动归属](references/component-reuse-patterns.md#内容区滚动)、[列表与局部加载流程](references/state-management-rules.md#列表与局部加载流程) |
 | 详情、侧栏、列表及整页组合 | [场景组件](references/component-reuse-patterns.md) |
 | 设计器、联动配置、公式 / 规则编辑或交互分散 | [连续交互](references/task-interaction-rules.md)；整体体验的依据缺口再查 [设计依据](references/interaction-design-foundations.md) |
 | 条件筛选选型、远程选项与路由编解码 | [筛选规则](references/condition-filter-rules.md) |

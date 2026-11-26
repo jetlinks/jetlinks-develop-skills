@@ -17,6 +17,7 @@
 | Core 能力尚未定位 | [能力文档](core-capability-docs.md) |
 | 能力复用与新增边界 | [能力复用](capability-reuse-rules.md)、[代码组织](code-organization-rules.md) |
 | 详情、原位编辑、列表与分区 | [场景组件](component-reuse-patterns.md) |
+| 内容区滚动、no-paging 流式列表、独立 count 与骨架屏 | [滚动归属](component-reuse-patterns.md#内容区滚动)、[加载流程](state-management-rules.md#列表与局部加载流程) |
 | 统计、图表或新增摘要区 | [区块准入](block-admission-rules.md) |
 | 借鉴其他页面 | [案例边界](business-ui-example-rules.md)、[真实样例定位](example-locations.md) |
 | 组合条件、固定筛选选型与回显 | [筛选规则](condition-filter-rules.md) |
