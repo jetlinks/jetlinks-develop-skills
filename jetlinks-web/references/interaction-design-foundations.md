@@ -14,6 +14,8 @@
 | NN/g [Usability Heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/) / [Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/) | 减少无关信息对注意力的竞争；状态可见、用户语言、识别优于回忆，低频细节按需出现，错误可恢复 | 一律删除顶部说明、隐藏必要风险 / 标签，把主动作 / 必需字段藏进多级弹窗，或把点击越少当唯一标准 |
 | NN/g [Recognition and Recall](https://www.nngroup.com/articles/recognition-and-recall/) | 在当前操作处提供能识别的名称、内容与上下文，减轻记忆负担 | 所有信息常驻，或只用没有明确含义的图标替代文字 |
 | NN/g [Icon Usability](https://www.nngroup.com/articles/icon-usability/) | 图标依赖经验，必要文字承担明确含义 | 所有选项加图标，或用 tooltip 替代标签 |
+| NN/g [Cards](https://www.nngroup.com/articles/cards-component/) / [Data Tables](https://www.nngroup.com/articles/data-tables/) | 卡片概括一个概念并提供详情入口；跨记录查找、比较与动作可用对齐列表支持，按任务选择 | 卡片必须有图标和图表、所有记录使用同一主指标，或把卡片视图当成默认美化方案 |
+| Carbon [Search](https://www.carbondesignsystem.com/building-blocks/core/components/search/guidelines) | 搜索适合复杂或较大集合，作用范围在其上下文内；少量可一眼找到的导航不必常驻搜索 | 用固定条数规定搜索门槛、所有左栏都放输入框，或用导航搜索代替业务条件筛选 |
 | Ant Design [Button](https://ant.design/components/button/) / [Dropdown](https://ant.design/components/dropdown/) | 用强调程度区分动作优先级，低频动作可收进菜单；名称和相邻上下文表明影响范围 | 每个操作都是主按钮、所有操作只剩图标，或按按钮名字固定样式 |
 | Carbon [Dropdown](https://carbondesignsystem.com/components/dropdown/usage/) | inline 模式可在内容中降低选择器的表单感，当前值与名称仍可理解；检索需求影响选型 | 禁止所有 Select、删标签与焦点，或认为轻量动作菜单自动具备搜索 / 多选能力 |
 | APG [Menu Button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/) / [Button](https://www.w3.org/WAI/ARIA/apg/patterns/button/) | 展开入口、执行动作与链接语义有别，沿正确宿主保留键盘、展开与焦点行为 | 只换外观就统一强加 menu 角色，或给业务页再造键盘状态机 |

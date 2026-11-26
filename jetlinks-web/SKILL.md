@@ -23,6 +23,7 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 | --- | --- |
 | 核实组件 API / 导出 | [组件事实源](references/component-source-rules.md)；core 能力不明再查 [分类文档](references/core-capability-docs.md) |
 | 菜单 / 分区语义未明，内容平铺或说明感过强 | [业务语义、界面表达与密度](references/semantic-ui-design-rules.md) |
+| 卡片内容缺少业务重心，或需选择卡片／详情列表 | [按任务建立信息重心](references/semantic-ui-design-rules.md#按任务建立信息重心)；选型依据见 [设计文献](references/interaction-design-foundations.md) |
 | 控件选型、尺寸、密度或搭配不协调 | [选择与搭配](references/component-reuse-patterns.md#组件选择与搭配) |
 | 按钮语义、轻量下拉、选择与选项内容 | [动作与选择](references/action-and-selection-rules.md) |
 | 原位编辑、多语言、字段确认与整表保存 | [公共编辑能力与提交边界](references/component-reuse-patterns.md#公共编辑能力与提交边界) |
