@@ -19,6 +19,7 @@
 | 输入 / 计算 / 输出与试验 | core src/components/Metric/template/TemplateDesigner.vue；rule-engine UI views/MetricTemplate/index.vue，借连续配置与结果联系，不照搬完整画布 |
 | 业务语句、表达式与阶段试算 | device UI views/device/components/PropertyRules/，输入范围沿真实预处理契约 |
 | 阅读 / 编辑与分区 | core InlineEditForm、PlatformSettings、Expression、SelectOption、EqualHeightColumns 的实际契约 |
+| 分区收放与连续表面 | core Splitter、ResponsiveSplitter、ContentPanel 的实际契约；`tests/public-ui/` 核对两种布局组合、留白与本地交互，不当作生产壳层验收 |
 | 摘要与返回 | core DetailHeader、DetailMetaItem、PageChrome、PageBack 及已接入详情，核对职责，不复制局部像素 |
 | 可扩展对象总览 | core ObjectOverview 的授权数据、能力装配与运行时；通用回退分区不替代业务信息架构 |
 | 隔离交互演示 | core src/views/interaction-examples/ 与 semantic-scenarios.md；本地任务组合不证明生产服务接通 |

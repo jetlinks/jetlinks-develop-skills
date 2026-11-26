@@ -24,7 +24,9 @@ description: 在 JetLinks Vue3 前端设计或实现页面、交互、组件与�
 | 菜单 / 分区语义未明，内容平铺或说明感过强 | [业务语义、界面表达与密度](references/semantic-ui-design-rules.md) |
 | 控件选型、尺寸、密度或搭配不协调 | [选择与搭配](references/component-reuse-patterns.md#组件选择与搭配) |
 | 按钮语义、轻量下拉、选择与选项内容 | [动作与选择](references/action-and-selection-rules.md) |
-| 详情、原位编辑、分区、侧栏、列表及整页组合 | [场景组件](references/component-reuse-patterns.md) |
+| 原位编辑、多语言、字段确认与整表保存 | [公共编辑能力与提交边界](references/component-reuse-patterns.md#公共编辑能力与提交边界) |
+| 分区调宽、折叠、窄屏抽屉与连续表面 | [分区布局与响应式职责](references/component-reuse-patterns.md#分区布局与响应式职责) |
+| 详情、侧栏、列表及整页组合 | [场景组件](references/component-reuse-patterns.md) |
 | 设计器、联动配置、公式 / 规则编辑或交互分散 | [连续交互](references/task-interaction-rules.md)；整体体验的依据缺口再查 [设计依据](references/interaction-design-foundations.md) |
 | 条件筛选选型、远程选项与路由编解码 | [筛选规则](references/condition-filter-rules.md) |
 | 后端 EnumDict / I18nEnumDict | [枚举渲染](references/enum-rendering-rules.md) |
