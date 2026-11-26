@@ -18,6 +18,7 @@ JetLinks 开发技能包。每个技能目录直接位于仓库根目录，包�
 | [jetlinks-protocol](jetlinks-protocol/SKILL.md) | 注册、传输、报文与应答 | 产品专属业务 |
 | [jetlinks-conventions](jetlinks-conventions/SKILL.md) | 职责、语义、通用性、运行状态和编码约定 | 各领域已拥有的细则 |
 | [jetlinks-web](jetlinks-web/SKILL.md) | 页面任务、组件、交互及前端状态 | 后端契约与权限实现 |
+| [jetlinks-web-style](jetlinks-web-style/SKILL.md) | 旧名称兼容，转交 jetlinks-web | 独立的布局或交互规范 |
 | [jetlinks-review](jetlinks-review/SKILL.md) | 审查路径、证据、反例与判定 | 开发规则及自动修复授权 |
 | [jetlinks-delivery](jetlinks-delivery/SKILL.md) | 提交信息、分支、推送与 PR | 再做设计或完整诊断 |
 | [jetlinks-capture](jetlinks-capture/SKILL.md) | 稳定知识的归属与维护 | 任务流水和恢复状态 |
@@ -48,6 +49,8 @@ JetLinks 开发技能包。每个技能目录直接位于仓库根目录，包�
 ```
 
 手动安装沿用宿主已经发现的 skills root，完整复制上述技能目录；仓库根级维护脚本、文档和 `.codex/` 不属于技能安装内容。安装后可用下方 mirror 校验确认资源齐全且版本一致。不要在多个 root 放同名副本，也不自动修改用户配置。未发现变更时按宿主方式刷新。
+
+更新已有安装时，同时核对已移除的文件；确认属于本包的历史规则应归档到技能加载目录之外，不保留可被检索重新加载的旧约束。保留用户自有文件和其他来源技能，不将复制覆盖视为已完成清理。
 
 ## 可选宿主适配
 
